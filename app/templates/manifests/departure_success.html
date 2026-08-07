@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>SUCCESSFULLY DEPARTED!</h2>
+
+    <p><strong>{{ trip.boat.name if trip.boat else '-' }}</strong></p>
+    <p>Route: {{ trip.route_origin }} → {{ trip.route_destination }}</p>
+    <p>Time: {{ trip.departed_at.strftime('%I:%M %p') }}</p>
+    <p>Status: Current conditions are normal and within safe limits.</p>
+
+    <p style="color: green;">Passenger manifest has been archived successfully.</p>
+
+    <br>
+    <a href="{{ url_for('dashboard.index') }}">Back to Dashboard</a>
+    &nbsp;|&nbsp;
+    <a href="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}">View Trip Log</a>
+{% endblock %}

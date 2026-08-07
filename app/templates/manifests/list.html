@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Manifest Management</h2>
+
+    <h3>Timetable Slots</h3>
+
+    <form method="POST" action="{{ url_for('manifests.add_slot') }}">
+        <input type="time" name="departure_time" required>
+        <button type="submit">+ Add Time Slot</button>
+    </form>
+
+    <br>
+
+    <table border="1" cellpadding="6">
+        <tr>
+            <th>Departure</th>
+            <th>Boat</th>
+            <th>Crew</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+        {% for slot in slots %}
+        <tr>
+            <td>{{ slot.departure_time.strftime('%I:%M %p') }}</td>
+            <td>{{ slot.boat.name if slot.boat else '-' }}</td>
+            <td>{{ slot.crew_name or '-' }}</td>
+            <td>{{ slot.status }}</td>
+            <td><a href="{{ url_for('manifests.trip_detail', trip_id=slot.id) }}">View →</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

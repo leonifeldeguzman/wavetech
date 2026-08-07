@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Dashboard</h2>
+
+    <p><strong>Active Trips:</strong> {{ active_trips_count }}</p>
+
+    <h3>Active Trip Monitoring</h3>
+    <table border="1" cellpadding="6">
+        <tr>
+            <th>Departure</th>
+            <th>Boat</th>
+            <th>Crew</th>
+            <th>Status</th>
+        </tr>
+        {% for trip in trips %}
+        <tr>
+            <td>{{ trip.departure_time.strftime('%I:%M %p') }}</td>
+            <td>{{ trip.boat.name if trip.boat else '-' }}</td>
+            <td>{{ trip.crew_name or '-' }}</td>
+            <td>{{ trip.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

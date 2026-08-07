@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <ul style="color: red;">
+        {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
+    <h2>Manifest Management</h2>
+
+    <p>
+        <strong>{{ trip.departure_time.strftime('%I:%M %p') }}</strong>
+        — {{ trip.crew_name or 'No crew assigned' }}
+        — {{ current_count }}/{{ capacity or '-' }} Capacity
+        — Status: {{ trip.status }}
+    </p>
+    <h3>Delay Trip</h3>
+<form method="POST" action="{{ url_for('manifests.delay_trip', trip_id=trip.id) }}">
+    <select name="delay_reason" required>
+        <option value="">-- Select Reason --</option>
+        <option value="Weather conditions">Weather conditions</option>
+        <option value="Waiting for passengers">Waiting for passengers</option>
+        <option value="Boat maintenance">Boat maintenance</option>
+        <option value="Coast Guard hold">Coast Guard hold</option>
+    </select>
+    <input type="time" name="new_departure_time" required>
+    <button type="submit">Delay Trip</button>
+</form>
+
+<h3>Cancel Trip</h3>
+<form method="POST" action="{{ url_for('manifests.cancel_trip', trip_id=trip.id) }}">
+    <select name="cancel_reason" required>
+        <option value="">-- Select Reason --</option>
+        <option value="Unsafe water conditions">Unsafe water conditions</option>
+        <option value="Boat unavailable">Boat unavailable</option>
+        <option value="Insufficient passengers">Insufficient passengers</option>
+        <option value="Emergency">Emergency</option>
+    </select>
+    <button type="submit">Cancel Trip</button>
+</form>
+
+    <h3>Trip Information</h3>
+    <form method="POST" action="{{ url_for('manifests.assign_boat', trip_id=trip.id) }}">
+        <label>Crew:</label>
+        <input type="text" name="crew_name" value="{{ trip.crew_name or '' }}"><br><br>
+
+        <label>Boat:</label>
+        <select name="boat_id">
+            <option value="">-- None --</option>
+            {% for boat in boats %}
+                <option value="{{ boat.id }}" {% if trip.boat_id == boat.id %}selected{% endif %}>
+                    {{ boat.name }} (Capacity: {{ boat.capacity }})
+                </option>
+            {% endfor %}
+        </select><br><br>
+
+        <p>Route: {{ trip.route_origin }} → {{ trip.route_destination }}</p>
+
+        <button type="submit">Save Trip Info</button>
+    </form>
+
+    <hr>
+
+    <h3>Pending Registrations</h3>
+    <table border="1" cellpadding="6">
+        <tr>
+            <th>Reference Code</th>
+            <th>Name</th>
+            <th>Time</th>
+            <th>Actions</th>
+        </tr>
+        {% for reg in pending %}
+        <tr>
+            <td>{{ reg.reference_code }}</td>
+            <td>{{ reg.full_name }}</td>
+            <td>{{ reg.submitted_at.strftime('%H:%M:%S') }}</td>
+            <td>
+    <form method="POST" action="{{ url_for('manifests.approve_registration', trip_id=trip.id, reg_id=reg.id) }}" style="display:inline;">
+        <button type="submit">Approve</button>
+    </form>
+    <form method="POST" action="{{ url_for('manifests.reject_registration', trip_id=trip.id, reg_id=reg.id) }}" style="display:inline;">
+        <button type="submit">Reject</button>
+    </form>
+</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">No pending registrations yet.</td></tr>
+        {% endfor %}
+    </table>
+
+    <hr>
+    <h3>Add Walk-In Passenger</h3>
+<form method="POST" action="{{ url_for('manifests.add_walkin', trip_id=trip.id) }}">
+    <input type="text" name="full_name" placeholder="Full Name" required><br><br>
+    <input type="number" name="age" placeholder="Age" required min="0"><br><br>
+    <input type="text" name="address" placeholder="Address"><br><br>
+    <input type="text" name="contact_number" placeholder="Contact Number"><br><br>
+
+    <select name="passenger_type" required>
+        <option value="Regular">Regular</option>
+        <option value="Student">Student</option>
+        <option value="Senior">Senior</option>
+        <option value="PWD">PWD</option>
+        <option value="Child">Child</option>
+    </select><br><br>
+
+    <button type="submit">Register</button>
+</form>
+
+    <h3>Passenger Manifest</h3>
+    <table border="1" cellpadding="6">
+        <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Age</th>
+            <th>Type</th>
+            <th>Check-In</th>
+        </tr>
+        {% for entry in manifest %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ entry.full_name }}</td>
+            <td>{{ entry.age }}</td>
+            <td>{{ entry.passenger_type }}</td>
+            <td>{{ entry.check_in_time.strftime('%H:%M:%S') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">No passengers registered yet.</td></tr>
+        {% endfor %}
+    </table>
+
+    <br>
+    <hr>
+<form method="POST" action="{{ url_for('manifests.confirm_departure', trip_id=trip.id) }}">
+    <label>
+        <input type="checkbox" name="audit_confirmed" value="yes">
+        I confirm that the Coast Guard has visually audited this manifest and provided verbal clearance for this specific time.
+    </label>
+    <br><br>
+    <button type="submit">✔ Confirm Departure</button>
+</form>
+    <a href="{{ url_for('manifests.list_slots') }}">← Back to Timetable</a>
+{% endblock %}

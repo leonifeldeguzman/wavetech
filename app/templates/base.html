@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WaveTech</title>
+</head>
+<body>
+    <nav>
+        <p><strong>WaveTech</strong></p>
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a> |
+        <a href="{{ url_for('manifests.list_slots') }}">Manifests</a> |
+        <a href="#">Monitoring</a> |
+        <a href="#">Analytics</a> |
+        <a href="#">Notices</a> |
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
+    </nav>
+
+    <hr>
+
+    <p>Logged in as: {{ session.get('full_name') }} ({{ session.get('role') }})</p>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
