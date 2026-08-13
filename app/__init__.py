@@ -14,9 +14,11 @@ def create_app():
     from app.blueprints.auth import auth_bp
     from app.blueprints.dashboard import dashboard_bp
     from app.blueprints.manifests import manifests_bp
+    from app.blueprints.passenger import passenger_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(manifests_bp)
+    app.register_blueprint(passenger_bp)
 
     from app.models.user import User
     from app.models.boat import Boat
