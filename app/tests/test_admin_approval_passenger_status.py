@@ -10,7 +10,7 @@ routes in app/blueprints/manifests/routes.py:
     POST /manifests/<trip_id>/pending/<reg_id>/reject
 
 Run with:
-    pytest tests/test_admin_approval_passenger_status.py -v
+    python -m pytest app/tests/test_admin_approval_passenger_status.py -v
 """
 import json
 

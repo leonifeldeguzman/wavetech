@@ -10,7 +10,7 @@ Run with (from repo root, inside your normal project virtualenv where
 requirements.txt is installed):
 
     pip install pytest
-    pytest tests/test_passenger_portal.py -v
+    python -m pytest app/tests/test_passenger_portal.py -v
 """
 import json
 import threading
