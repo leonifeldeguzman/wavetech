@@ -1,0 +1,52 @@
+{% extends "passenger/base.html" %}
+
+{% block content %}
+<h1>Register for Trip #{{ trip.trip_id }}</h1>
+
+<p>Route: {{ trip.route_origin }} -&gt; {{ trip.route_destination }}</p>
+<p>Departure: {{ trip.departure_time }}</p>
+
+{% if field_errors.get('_general') %}
+<p><strong>Error: {{ field_errors['_general'] }}</strong></p>
+{% endif %}
+
+<form method="post" action="{{ url_for('passenger.submit_registration_page', trip_id=trip.trip_id) }}">
+    <p>
+        <label>Full Name:</label><br>
+        <input type="text" name="full_name" value="{{ form_values.get('full_name', '') }}">
+        {% if field_errors.get('full_name') %}<br><span>{{ field_errors['full_name'] }}</span>{% endif %}
+    </p>
+
+    <p>
+        <label>Age:</label><br>
+        <input type="number" name="age" value="{{ form_values.get('age', '') }}">
+        {% if field_errors.get('age') %}<br><span>{{ field_errors['age'] }}</span>{% endif %}
+    </p>
+
+    <p>
+        <label>Address:</label><br>
+        <input type="text" name="address" value="{{ form_values.get('address', '') }}">
+        {% if field_errors.get('address') %}<br><span>{{ field_errors['address'] }}</span>{% endif %}
+    </p>
+
+    <p>
+        <label>Contact Number:</label><br>
+        <input type="text" name="contact_number" value="{{ form_values.get('contact_number', '') }}">
+        {% if field_errors.get('contact_number') %}<br><span>{{ field_errors['contact_number'] }}</span>{% endif %}
+    </p>
+
+    <p>
+        <label>Passenger Type:</label><br>
+        <select name="passenger_type">
+            {% for pt in passenger_types %}
+            <option value="{{ pt }}" {% if form_values.get('passenger_type', 'Regular') == pt %}selected{% endif %}>{{ pt }}</option>
+            {% endfor %}
+        </select>
+        {% if field_errors.get('passenger_type') %}<br><span>{{ field_errors['passenger_type'] }}</span>{% endif %}
+    </p>
+
+    <button type="submit">Submit Registration</button>
+</form>
+
+<p><a href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}">Back to trip details</a></p>
+{% endblock %}

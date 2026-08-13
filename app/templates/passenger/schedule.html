@@ -1,0 +1,48 @@
+{% extends "passenger/base.html" %}
+
+{% block content %}
+<h1>Available Trips</h1>
+
+{% if trips %}
+<table border="1" cellpadding="4">
+    <tr>
+        <th>Trip ID</th>
+        <th>Route</th>
+        <th>Departure</th>
+        <th>Status</th>
+        <th>Remaining Capacity</th>
+        <th></th>
+    </tr>
+    {% for trip in trips %}
+    <tr>
+        <td>{{ trip.trip_id }}</td>
+        <td>{{ trip.route_origin }} -&gt; {{ trip.route_destination }}</td>
+        <td>{{ trip.departure_time }}</td>
+        <td>{{ trip.status }}</td>
+        <td>
+            {% if trip.remaining_capacity is not none %}
+                {{ trip.remaining_capacity }} / {{ trip.capacity }}
+            {% else %}
+                Unknown (no boat assigned)
+            {% endif %}
+        </td>
+        <td>
+            <a href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}">View</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No trips are currently available for registration.</p>
+{% endif %}
+
+<hr>
+
+<h2>Check Registration Status</h2>
+<form method="get" action="{{ url_for('passenger.registration_status_lookup') }}">
+    <label>Reference Code:
+        <input type="text" name="reference_code" placeholder="WT-2026-XXXXXX">
+    </label>
+    <button type="submit">Check Status</button>
+</form>
+{% endblock %}

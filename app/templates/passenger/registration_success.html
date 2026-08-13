@@ -1,0 +1,27 @@
+{% extends "passenger/base.html" %}
+
+{% block content %}
+<h1>Registration Status</h1>
+
+<p>Status: <strong>{{ registration.status }}</strong></p>
+<p>Reference Code: <strong>{{ registration.reference_code }}</strong></p>
+<p>Keep this reference code. You will need it to check your registration status later.</p>
+
+<h2>Trip Summary</h2>
+{% if trip %}
+<p>Trip #{{ trip.trip_id }}</p>
+<p>Route: {{ trip.route_origin }} -&gt; {{ trip.route_destination }}</p>
+<p>Departure: {{ trip.departure_time }}</p>
+<p>Trip Status: {{ trip.status }}</p>
+{% else %}
+<p>Trip details are no longer available.</p>
+{% endif %}
+
+<h2>Passenger Details Submitted</h2>
+<p>Name: {{ registration.full_name }}</p>
+<p>Age: {{ registration.age }}</p>
+<p>Passenger Type: {{ registration.passenger_type }}</p>
+
+<hr>
+<p><a href="{{ url_for('passenger.home') }}">Back to schedule</a></p>
+{% endblock %}

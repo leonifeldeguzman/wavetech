@@ -1,0 +1,39 @@
+{% extends "passenger/base.html" %}
+
+{% block content %}
+<h1>Trip #{{ trip.trip_id }}</h1>
+
+<p>Route: {{ trip.route_origin }} -&gt; {{ trip.route_destination }}</p>
+<p>Departure: {{ trip.departure_time }}</p>
+<p>Status: {{ trip.status }}</p>
+<p>Crew: {{ trip.crew_name or "Not yet assigned" }}</p>
+
+{% if trip.boat %}
+<p>Boat: {{ trip.boat.name }}</p>
+{% else %}
+<p>Boat: Not yet assigned</p>
+{% endif %}
+
+<p>
+    Capacity:
+    {% if trip.remaining_capacity is not none %}
+        {{ trip.remaining_capacity }} seat(s) remaining out of {{ trip.capacity }}
+    {% else %}
+        Unknown (no boat assigned yet)
+    {% endif %}
+</p>
+
+{% if trip.delay_reason %}<p>Delay reason: {{ trip.delay_reason }}</p>{% endif %}
+{% if trip.cancel_reason %}<p>Cancel reason: {{ trip.cancel_reason }}</p>{% endif %}
+{% if trip.new_departure_time %}<p>New departure time: {{ trip.new_departure_time }}</p>{% endif %}
+
+<hr>
+
+{% if trip.accepts_registration %}
+    <p><a href="{{ url_for('passenger.registration_form_page', trip_id=trip.trip_id) }}">Register for this trip</a></p>
+{% else %}
+    <p><strong>{{ trip.notice }}</strong></p>
+{% endif %}
+
+<p><a href="{{ url_for('passenger.home') }}">Back to schedule</a></p>
+{% endblock %}

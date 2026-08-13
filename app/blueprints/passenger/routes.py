@@ -18,7 +18,7 @@ This blueprint reuses the existing Trip, Boat, and PendingRegistration
 models exactly as they are defined elsewhere in the repository. It does
 not add any new tables or columns.
 """
-from flask import request
+from flask import request, render_template, redirect, url_for, abort
 
 from sqlalchemy.exc import IntegrityError
 
@@ -227,6 +227,101 @@ def _validate_payload(payload):
     }
 
 
+class RegistrationResult:
+    """Simple result object returned by _execute_registration(), shared
+    between the JSON API route and the HTML form route below so the
+    transaction/locking/business logic only exists in one place."""
+    def __init__(self, success, error_code=None, message=None, registration=None):
+        self.success = success
+        self.error_code = error_code
+        self.message = message
+        self.registration = registration
+
+
+def _execute_registration(trip_id, cleaned):
+    """Runs the actual registration transaction: lock trip -> check
+    status/capacity -> create PendingRegistration -> commit. Used by
+    both /api/passenger/registrations (JSON) and the plain-HTML
+    registration form route, so the business logic is defined exactly
+    once."""
+    try:
+        # Lock the trip row for the duration of this transaction so that
+        # two concurrent registration requests for the same trip cannot
+        # both read the same "seats remaining" value and both succeed
+        # when only one seat is left. Any second concurrent request for
+        # the same trip_id blocks here until the first commits/rolls back.
+        # NOTE: deliberately using .filter_by(...).with_for_update().first()
+        # rather than .with_for_update().get(trip_id) — SQLAlchemy's
+        # Query.get() shortcut can silently ignore query modifiers such
+        # as with_for_update() in some versions, which would defeat the
+        # row lock entirely without raising any error.
+        trip = Trip.query.filter_by(id=trip_id).with_for_update().first()
+
+        if not trip:
+            db.session.rollback()
+            return RegistrationResult(False, "TRIP_NOT_FOUND", "No trip found with this ID.")
+
+        can_register, error_code, block_reason = _accepts_registration(trip)
+        if not can_register:
+            db.session.rollback()
+            return RegistrationResult(False, error_code, block_reason)
+
+        registration = PendingRegistration(
+            trip_id=trip.id,
+            full_name=cleaned["full_name"],
+            age=cleaned["age"],
+            address=cleaned["address"],
+            contact_number=cleaned["contact_number"],
+            passenger_type=cleaned["passenger_type"],
+            status="pending",
+        )
+
+        # generate_reference_code() is randomized; retry on the (rare)
+        # unique-constraint collision instead of failing the whole
+        # registration outright.
+        for _ in range(REFERENCE_CODE_MAX_ATTEMPTS):
+            registration.reference_code = generate_reference_code()
+            try:
+                db.session.add(registration)
+                db.session.flush()  # surface IntegrityError before commit
+                break
+            except IntegrityError:
+                db.session.rollback()
+                # Re-acquire the trip lock after rollback, since rollback
+                # released it.
+                trip = Trip.query.filter_by(id=trip_id).with_for_update().first()
+                continue
+        else:
+            db.session.rollback()
+            return RegistrationResult(
+                False,
+                "REFERENCE_CODE_GENERATION_FAILED",
+                "Could not generate a unique reference code. Please try again.",
+            )
+
+        # The trip row has been locked (SELECT ... FOR UPDATE) since the
+        # capacity check above, so no other registration for this trip
+        # could have been committed in between — this recomputation just
+        # reflects the seat this registration itself just took, to decide
+        # whether the trip should now flip to "Full" (mirrors the same
+        # pattern already used in app/blueprints/manifests/routes.py).
+        capacity, reserved, remaining = _trip_capacity_info(trip)
+        if remaining is not None and remaining <= 0 and trip.status != "Full":
+            trip.status = "Full"
+
+        db.session.commit()
+
+    except Exception:
+        db.session.rollback()
+        return RegistrationResult(
+            False,
+            "REGISTRATION_FAILED",
+            "Registration could not be completed due to a server error.",
+        )
+
+    return RegistrationResult(True, registration=registration)
+
+
 @passenger_bp.route("/api/passenger/registrations", methods=["POST"])
 def create_registration():
     payload = request.get_json(silent=True)
@@ -246,91 +341,123 @@ def create_registration():
             fields=field_errors,
         )
 
-    trip_id = cleaned["trip_id"]
+    result = _execute_registration(cleaned["trip_id"], cleaned)
 
-    try:
-        # Lock the trip row for the duration of this transaction so that
-        # two concurrent registration requests for the same trip cannot
-        # both read the same "seats remaining" value and both succeed
-        # when only one seat is left. Any second concurrent request for
-        # the same trip_id blocks here until the first commits/rolls back.
-        # NOTE: deliberately using .filter_by(...).with_for_update().first()
-        # rather than .with_for_update().get(trip_id) — SQLAlchemy's
-        # Query.get() shortcut can silently ignore query modifiers such
-        # as with_for_update() in some versions, which would defeat the
-        # row lock entirely without raising any error.
-        trip = Trip.query.filter_by(id=trip_id).with_for_update().first()
-
-        if not trip:
-            db.session.rollback()
-            return error_response("TRIP_NOT_FOUND", "No trip found with this ID.", status=404)
-
-        can_register, error_code, block_reason = _accepts_registration(trip)
-        if not can_register:
-            db.session.rollback()
-            return error_response(error_code, block_reason, status=409)
-
-        registration = PendingRegistration(
-            trip_id=trip.id,
-            full_name=cleaned["full_name"],
-            age=cleaned["age"],
-            address=cleaned["address"],
-            contact_number=cleaned["contact_number"],
-            passenger_type=cleaned["passenger_type"],
-            status="pending",
+    if not result.success:
+        status = 404 if result.error_code == "TRIP_NOT_FOUND" else (
+            409 if result.error_code in ("TRIP_FULL", "TRIP_NOT_AVAILABLE") else 500
         )
-
-        # generate_reference_code() is randomized; retry on the (rare)
-        # unique-constraint collision instead of failing the whole
-        # registration outright.
-        last_error = None
-        for _ in range(REFERENCE_CODE_MAX_ATTEMPTS):
-            registration.reference_code = generate_reference_code()
-            try:
-                db.session.add(registration)
-                db.session.flush()  # surface IntegrityError before commit
-                break
-            except IntegrityError as exc:
-                db.session.rollback()
-                # Re-acquire the trip lock after rollback, since rollback
-                # released it.
-                trip = Trip.query.filter_by(id=trip_id).with_for_update().first()
-                last_error = exc
-                continue
-        else:
-            db.session.rollback()
-            return error_response(
-                "REFERENCE_CODE_GENERATION_FAILED",
-                "Could not generate a unique reference code. Please try again.",
-                status=500,
-            )
-
-        # The trip row has been locked (SELECT ... FOR UPDATE) since the
-        # capacity check above, so no other registration for this trip
-        # could have been committed in between — this recomputation just
-        # reflects the seat this registration itself just took, to decide
-        # whether the trip should now flip to "Full" (mirrors the same
-        # pattern already used in app/blueprints/manifests/routes.py).
-        capacity, reserved, remaining = _trip_capacity_info(trip)
-        if remaining is not None and remaining <= 0 and trip.status != "Full":
-            trip.status = "Full"
-
-        db.session.commit()
-
-    except Exception:
-        db.session.rollback()
-        return error_response(
-            "REGISTRATION_FAILED",
-            "Registration could not be completed due to a server error.",
-            status=500,
-        )
+        return error_response(result.error_code, result.message, status=status)
 
     return success_response(
         message="Registration submitted successfully.",
         data={
-            "reference_code": registration.reference_code,
-            "trip_id": registration.trip_id,
-            "status": registration.status,
+            "reference_code": result.registration.reference_code,
+            "trip_id": result.registration.trip_id,
+            "status": result.registration.status,
         },
         status=201,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Plain-HTML pages (Jinja templates) for manually testing the flow above.
+# No styling — see app/templates/passenger/. These reuse every helper
+# and the shared _execute_registration() function above; no business
+# logic is duplicated here.
+# ---------------------------------------------------------------------------
+
+@passenger_bp.route("/passenger/", methods=["GET"])
+def home():
+    trips = (
+        Trip.query.filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
+        .order_by(Trip.departure_time)
+        .all()
+    )
+    trip_rows = [_serialize_trip_summary(t) for t in trips]
+    return render_template("passenger/schedule.html", trips=trip_rows)
+
+
+@passenger_bp.route("/passenger/trips/<int:trip_id>", methods=["GET"])
+def trip_detail_page(trip_id):
+    trip = db.session.get(Trip, trip_id)
+    if not trip:
+        abort(404)
+    return render_template("passenger/trip_detail.html", trip=_serialize_trip_detail(trip))
+
+
+@passenger_bp.route("/passenger/trips/<int:trip_id>/register", methods=["GET"])
+def registration_form_page(trip_id):
+    trip = db.session.get(Trip, trip_id)
+    if not trip:
+        abort(404)
+    return render_template(
+        "passenger/register_form.html",
+        trip=_serialize_trip_summary(trip),
+        passenger_types=sorted(VALID_PASSENGER_TYPES),
+        field_errors={},
+        form_values={},
+    )
+
+
+@passenger_bp.route("/passenger/trips/<int:trip_id>/register", methods=["POST"])
+def submit_registration_page(trip_id):
+    trip = db.session.get(Trip, trip_id)
+    if not trip:
+        abort(404)
+
+    # request.form is an ImmutableMultiDict; .get() behaves the same way
+    # a plain dict's .get() does, so the existing _validate_payload()
+    # works unmodified against either JSON or form-encoded input.
+    payload = dict(request.form)
+    payload.setdefault("trip_id", trip_id)
+
+    field_errors, cleaned = _validate_payload(payload)
+    if field_errors:
+        return render_template(
+            "passenger/register_form.html",
+            trip=_serialize_trip_summary(trip),
+            passenger_types=sorted(VALID_PASSENGER_TYPES),
+            field_errors=field_errors,
+            form_values=request.form,
+        ), 400
+
+    result = _execute_registration(trip_id, cleaned)
+
+    if not result.success:
+        field_errors = {"_general": result.message}
+        return render_template(
+            "passenger/register_form.html",
+            trip=_serialize_trip_summary(trip),
+            passenger_types=sorted(VALID_PASSENGER_TYPES),
+            field_errors=field_errors,
+            form_values=request.form,
+        ), 409 if result.error_code in ("TRIP_FULL", "TRIP_NOT_AVAILABLE") else 500
+
+    return redirect(url_for(
+        "passenger.registration_status_page",
+        reference_code=result.registration.reference_code,
+    ))
+
+
+@passenger_bp.route("/passenger/registrations", methods=["GET"])
+def registration_status_lookup():
+    """Small convenience redirect so a plain HTML form can look up a
+    registration by reference code without needing JavaScript."""
+    reference_code = request.args.get("reference_code", "").strip()
+    if not reference_code:
+        abort(400)
+    return redirect(url_for("passenger.registration_status_page", reference_code=reference_code))
+
+
+@passenger_bp.route("/passenger/registrations/<reference_code>", methods=["GET"])
+def registration_status_page(reference_code):
+    registration = PendingRegistration.query.filter_by(reference_code=reference_code).first()
+    if not registration:
+        abort(404)
+    trip = db.session.get(Trip, registration.trip_id)
+    return render_template(
+        "passenger/registration_success.html",
+        registration=registration,
+        trip=_serialize_trip_detail(trip) if trip else None,
     )
