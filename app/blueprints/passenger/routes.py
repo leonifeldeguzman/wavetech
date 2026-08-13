@@ -440,6 +440,37 @@ def submit_registration_page(trip_id):
     ))
 
 
+# ---------------------------------------------------------------------------
+# GET /api/passenger/registrations/<reference_code>
+# ---------------------------------------------------------------------------
+
+def _find_registration_by_reference_code(reference_code):
+    """Shared lookup used by both the JSON status endpoint and the HTML
+    status page below, so the query only exists in one place."""
+    return PendingRegistration.query.filter_by(reference_code=reference_code).first()
+
+
+def _serialize_registration_status(registration):
+    """Deliberately minimal — only what a passenger needs to confirm
+    their registration status. Address/contact_number are left out since
+    the passenger already has them; there's no reason to echo them back
+    over an endpoint that only requires knowing a reference code."""
+    return {
+        "reference_code": registration.reference_code,
+        "full_name": registration.full_name,
+        "trip_id": registration.trip_id,
+        "status": registration.status,
+    }
+
+
+@passenger_bp.route("/api/passenger/registrations/<reference_code>", methods=["GET"])
+def get_registration_status(reference_code):
+    registration = _find_registration_by_reference_code(reference_code)
+    if not registration:
+        return error_response("REGISTRATION_NOT_FOUND", "Registration not found.", status=404)
+    return success_response(data=_serialize_registration_status(registration))
+
+
 @passenger_bp.route("/passenger/registrations", methods=["GET"])
 def registration_status_lookup():
     """Small convenience redirect so a plain HTML form can look up a
@@ -452,7 +483,7 @@ def registration_status_lookup():
 
 @passenger_bp.route("/passenger/registrations/<reference_code>", methods=["GET"])
 def registration_status_page(reference_code):
-    registration = PendingRegistration.query.filter_by(reference_code=reference_code).first()
+    registration = _find_registration_by_reference_code(reference_code)
     if not registration:
         abort(404)
     trip = db.session.get(Trip, registration.trip_id)
