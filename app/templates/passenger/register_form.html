@@ -1,52 +1,61 @@
 {% extends "passenger/base.html" %}
+{% block title %}Register{% endblock %}
 
 {% block content %}
-<h1>Register for Trip #{{ trip.trip_id }}</h1>
+<div class="container py-5" style="max-width: 600px;">
 
-<p>Route: {{ trip.route_origin }} -&gt; {{ trip.route_destination }}</p>
-<p>Departure: {{ trip.departure_time }}</p>
+    <a href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}" class="text-decoration-none small text-muted">&larr; Back to trip details</a>
 
-{% if field_errors.get('_general') %}
-<p><strong>Error: {{ field_errors['_general'] }}</strong></p>
-{% endif %}
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-1">Register for Trip</h5>
+            <p class="text-muted small mb-4">
+                {{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }} — {{ trip.departure_time }}
+            </p>
 
-<form method="post" action="{{ url_for('passenger.submit_registration_page', trip_id=trip.trip_id) }}">
-    <p>
-        <label>Full Name:</label><br>
-        <input type="text" name="full_name" value="{{ form_values.get('full_name', '') }}">
-        {% if field_errors.get('full_name') %}<br><span>{{ field_errors['full_name'] }}</span>{% endif %}
-    </p>
+            {% if field_errors.get('_general') %}
+            <div class="alert alert-danger py-2">{{ field_errors['_general'] }}</div>
+            {% endif %}
 
-    <p>
-        <label>Age:</label><br>
-        <input type="number" name="age" value="{{ form_values.get('age', '') }}">
-        {% if field_errors.get('age') %}<br><span>{{ field_errors['age'] }}</span>{% endif %}
-    </p>
+            <form method="post" action="{{ url_for('passenger.submit_registration_page', trip_id=trip.trip_id) }}">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label small text-muted">Full Name</label>
+                        <input type="text" name="full_name" class="form-control" value="{{ form_values.get('full_name', '') }}">
+                        {% if field_errors.get('full_name') %}<div class="text-danger small mt-1">{{ field_errors['full_name'] }}</div>{% endif %}
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small text-muted">Age</label>
+                        <input type="number" name="age" class="form-control" value="{{ form_values.get('age', '') }}">
+                        {% if field_errors.get('age') %}<div class="text-danger small mt-1">{{ field_errors['age'] }}</div>{% endif %}
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small text-muted">Passenger Type</label>
+                        <select name="passenger_type" class="form-select">
+                            {% for pt in passenger_types %}
+                            <option value="{{ pt }}" {% if form_values.get('passenger_type', 'Regular') == pt %}selected{% endif %}>{{ pt }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if field_errors.get('passenger_type') %}<div class="text-danger small mt-1">{{ field_errors['passenger_type'] }}</div>{% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small text-muted">Address</label>
+                        <input type="text" name="address" class="form-control" value="{{ form_values.get('address', '') }}">
+                        {% if field_errors.get('address') %}<div class="text-danger small mt-1">{{ field_errors['address'] }}</div>{% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small text-muted">Contact Number</label>
+                        <input type="text" name="contact_number" class="form-control" value="{{ form_values.get('contact_number', '') }}">
+                        {% if field_errors.get('contact_number') %}<div class="text-danger small mt-1">{{ field_errors['contact_number'] }}</div>{% endif %}
+                    </div>
+                </div>
 
-    <p>
-        <label>Address:</label><br>
-        <input type="text" name="address" value="{{ form_values.get('address', '') }}">
-        {% if field_errors.get('address') %}<br><span>{{ field_errors['address'] }}</span>{% endif %}
-    </p>
+                <button type="submit" class="btn text-white w-100 mt-4" style="background-color: var(--navy);">
+                    Submit Registration
+                </button>
+            </form>
+        </div>
+    </div>
 
-    <p>
-        <label>Contact Number:</label><br>
-        <input type="text" name="contact_number" value="{{ form_values.get('contact_number', '') }}">
-        {% if field_errors.get('contact_number') %}<br><span>{{ field_errors['contact_number'] }}</span>{% endif %}
-    </p>
-
-    <p>
-        <label>Passenger Type:</label><br>
-        <select name="passenger_type">
-            {% for pt in passenger_types %}
-            <option value="{{ pt }}" {% if form_values.get('passenger_type', 'Regular') == pt %}selected{% endif %}>{{ pt }}</option>
-            {% endfor %}
-        </select>
-        {% if field_errors.get('passenger_type') %}<br><span>{{ field_errors['passenger_type'] }}</span>{% endif %}
-    </p>
-
-    <button type="submit">Submit Registration</button>
-</form>
-
-<p><a href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}">Back to trip details</a></p>
+</div>
 {% endblock %}

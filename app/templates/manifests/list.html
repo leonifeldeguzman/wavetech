@@ -1,32 +1,77 @@
 {% extends "base.html" %}
+{% block title %}Manifest Management{% endblock %}
+{% block page_title %}Manifest Management{% endblock %}
+
 {% block content %}
-    <h2>Manifest Management</h2>
 
-    <h3>Timetable Slots</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="fw-bold mb-0">Timetable Slots</h6>
+    <button type="button" class="btn btn-sm text-white" style="background-color: var(--navy);"
+            data-bs-toggle="modal" data-bs-target="#addSlotModal">
+        <i class="bi bi-plus-lg"></i> Add Time Slot
+    </button>
+</div>
+<form method="GET" action="{{ url_for('manifests.list_slots') }}" class="d-flex align-items-center gap-2 mb-3">
+    <a href="{{ url_for('manifests.list_slots', date=prev_date.isoformat()) }}"
+       class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-chevron-left"></i>
+    </a>
 
-    <form method="POST" action="{{ url_for('manifests.add_slot') }}">
-        <input type="time" name="departure_time" required>
-        <button type="submit">+ Add Time Slot</button>
-    </form>
+    <input type="date" name="date" value="{{ selected_date.isoformat() }}"
+           class="form-control form-control-sm" style="width: 160px;"
+           onchange="this.form.submit()">
 
-    <br>
+    <a href="{{ url_for('manifests.list_slots', date=next_date.isoformat()) }}"
+       class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-chevron-right"></i>
+    </a>
 
-    <table border="1" cellpadding="6">
-        <tr>
-            <th>Departure</th>
-            <th>Boat</th>
-            <th>Crew</th>
-            <th>Status</th>
-            <th>Action</th>
-        </tr>
+    <a href="{{ url_for('manifests.list_slots') }}" class="btn btn-outline-secondary btn-sm ms-2">Today</a>
+</form>
+
+<div class="card border-0 shadow-sm">
+    <div class="list-group list-group-flush">
         {% for slot in slots %}
-        <tr>
-            <td>{{ slot.departure_time.strftime('%I:%M %p') }}</td>
-            <td>{{ slot.boat.name if slot.boat else '-' }}</td>
-            <td>{{ slot.crew_name or '-' }}</td>
-            <td>{{ slot.status }}</td>
-            <td><a href="{{ url_for('manifests.trip_detail', trip_id=slot.id) }}">View →</a></td>
-        </tr>
+        <a href="{{ url_for('manifests.trip_detail', trip_id=slot.id) }}"
+           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+            <div>
+                <div class="fw-semibold">{{ slot.departure_time.strftime('%I:%M %p') }}</div>
+                <div class="text-muted small">
+                    {{ slot.boat.name if slot.boat else '-' }}
+                    {% if slot.crew_name %} | {{ slot.crew_name }}{% endif %}
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="status-pill {{ slot.status|lower|replace(' ', '-') }}">{{ slot.status }}</span>
+                <i class="bi bi-chevron-right text-muted"></i>
+            </div>
+        </a>
+        {% else %}
+        <div class="text-center text-muted py-4">No timetable slots for today yet.</div>
         {% endfor %}
-    </table>
+    </div>
+</div>
+
+<!-- Add Time Slot Modal -->
+<div class="modal fade" id="addSlotModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('manifests.add_slot') }}">
+        <div class="modal-header text-white" style="background-color: var(--navy);">
+          <h5 class="modal-title">Add Time Slot</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label small text-muted">Departure Time</label>
+          <input type="time" name="departure_time" class="form-control" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Dismiss</button>
+          <button type="submit" class="btn text-white" style="background-color: var(--navy);">Add Slot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

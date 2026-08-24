@@ -8,17 +8,36 @@ from app.models.boat import Boat
 from app.models.pending_registration import PendingRegistration
 from app.models.manifest_entry import ManifestEntry
 from flask import render_template, request, redirect, url_for, flash
+from datetime import date, datetime, timedelta
 
 @manifests_bp.route("/manifests")
 @login_required
 def list_slots():
-    today = date.today()
+    date_str = request.args.get("date")
+
+    if date_str:
+        try:
+            selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = date.today()
+    else:
+        selected_date = date.today()
 
     slots = Trip.query.filter(
-        db.func.date(Trip.departure_time) == today
+        db.func.date(Trip.departure_time) == selected_date
     ).order_by(Trip.departure_time).all()
 
-    return render_template("manifests/list.html", slots=slots)
+    prev_date = selected_date - timedelta(days=1)
+    next_date = selected_date + timedelta(days=1)
+
+    return render_template(
+        "manifests/list.html",
+        slots=slots,
+        selected_date=selected_date,
+        prev_date=prev_date,
+        next_date=next_date,
+        active_page="manifests"
+    )
 
 
 @manifests_bp.route("/manifests/add-slot", methods=["POST"])
@@ -65,7 +84,8 @@ def trip_detail(trip_id):
         manifest=manifest,
         boats=boats,
         current_count=current_count,
-        capacity=capacity
+        capacity=capacity,
+        active_page="manifests"
     )
 
 

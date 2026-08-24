@@ -1,27 +1,41 @@
 {% extends "passenger/base.html" %}
+{% block title %}Registration Status{% endblock %}
 
 {% block content %}
-<h1>Registration Status</h1>
+<div class="container py-5 text-center" style="max-width: 500px;">
 
-<p>Status: <strong>{{ registration.status }}</strong></p>
-<p>Reference Code: <strong>{{ registration.reference_code }}</strong></p>
-<p>Keep this reference code. You will need it to check your registration status later.</p>
+    <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+    <h5 class="fw-bold mt-2">Registration {{ registration.status|capitalize }}</h5>
 
-<h2>Trip Summary</h2>
-{% if trip %}
-<p>Trip #{{ trip.trip_id }}</p>
-<p>Route: {{ trip.route_origin }} -&gt; {{ trip.route_destination }}</p>
-<p>Departure: {{ trip.departure_time }}</p>
-<p>Trip Status: {{ trip.status }}</p>
-{% else %}
-<p>Trip details are no longer available.</p>
-{% endif %}
+    <div class="card border-0 shadow-sm mt-4 text-start">
+        <div class="card-body p-4">
+            <div class="text-center mb-3">
+                <div class="text-muted small">Reference Code</div>
+                <div class="fw-bold fs-5" style="color: var(--navy);">{{ registration.reference_code }}</div>
+            </div>
 
-<h2>Passenger Details Submitted</h2>
-<p>Name: {{ registration.full_name }}</p>
-<p>Age: {{ registration.age }}</p>
-<p>Passenger Type: {{ registration.passenger_type }}</p>
+            <hr>
 
-<hr>
-<p><a href="{{ url_for('passenger.home') }}">Back to schedule</a></p>
+            <div class="text-muted small mb-1">Trip</div>
+            {% if trip %}
+                <p class="mb-1">{{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }}</p>
+                <p class="text-muted small">Departure: {{ trip.departure_time }} — Status: {{ trip.status }}</p>
+            {% else %}
+                <p class="text-muted">Trip details are no longer available.</p>
+            {% endif %}
+
+            <hr>
+
+            <div class="text-muted small mb-1">Passenger Details</div>
+            <p class="mb-1">{{ registration.full_name }}, {{ registration.age }} — {{ registration.passenger_type }}</p>
+        </div>
+    </div>
+
+    <div class="alert alert-warning mt-4 small">
+        Keep this reference code. You will need it to check your registration status later.
+    </div>
+
+    <a href="{{ url_for('passenger.home') }}" class="btn btn-outline-secondary mt-2">Back to Schedule</a>
+
+</div>
 {% endblock %}

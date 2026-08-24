@@ -1,0 +1,54 @@
+<div class="d-flex align-items-center gap-2 mb-4 px-1 d-none d-lg-flex">
+    <i class="bi bi-sign-turn-right-fill fs-4"></i>
+    <span class="fs-5 fw-bold">WaveTech</span>
+</div>
+
+<ul class="nav nav-pills flex-column gap-1 mb-auto">
+    <li class="nav-item">
+        <a href="{{ url_for('dashboard.index') }}"
+           class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'dashboard' %}active{% endif %}">
+            <i class="bi bi-grid-fill"></i> Dashboard
+        </a>
+    </li>
+    <li class="nav-item">
+        <a href="{{ url_for('manifests.list_slots') }}"
+           class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'manifests' %}active{% endif %}">
+            <i class="bi bi-person-fill"></i> Manifests
+        </a>
+    </li>
+    <li class="nav-item">
+        <a href="#" class="nav-link text-white d-flex align-items-center gap-2 disabled">
+            <i class="bi bi-check-circle-fill"></i> Monitoring
+        </a>
+    </li>
+    <li class="nav-item">
+        <a href="#" class="nav-link text-white d-flex align-items-center gap-2 disabled">
+            <i class="bi bi-graph-up-arrow"></i> Analytics
+        </a>
+    </li>
+    <li class="nav-item">
+        <a href="#" class="nav-link text-white d-flex align-items-center gap-2 disabled">
+            <i class="bi bi-megaphone-fill"></i> Notices
+        </a>
+    </li>
+</ul>
+
+<hr class="text-white-50">
+
+<ul class="nav nav-pills flex-column gap-1">
+    <li class="nav-item">
+        <a href="#" class="nav-link text-white d-flex align-items-center gap-2 disabled">
+            <i class="bi bi-gear-fill"></i> Settings
+        </a>
+    </li>
+    <li class="nav-item">
+        <a href="#" class="nav-link text-white d-flex align-items-center gap-2 disabled">
+            <i class="bi bi-question-circle-fill"></i> Help
+        </a>
+    </li>
+    <li class="nav-item">
+        <a href="{{ url_for('auth.logout') }}" class="nav-link text-white d-flex align-items-center gap-2">
+            <i class="bi bi-box-arrow-left"></i> Logout
+        </a>
+    </li>
+</ul>

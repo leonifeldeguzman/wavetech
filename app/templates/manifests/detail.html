@@ -1,146 +1,277 @@
 {% extends "base.html" %}
+{% block title %}Manifest Management{% endblock %}
+{% block page_title %}Manifest Management{% endblock %}
+
 {% block content %}
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-        <ul style="color: red;">
-        {% for message in messages %}
-            <li>{{ message }}</li>
-        {% endfor %}
-        </ul>
-    {% endif %}
-{% endwith %}
-    <h2>Manifest Management</h2>
 
-    <p>
-        <strong>{{ trip.departure_time.strftime('%I:%M %p') }}</strong>
-        — {{ trip.crew_name or 'No crew assigned' }}
-        — {{ current_count }}/{{ capacity or '-' }} Capacity
-        — Status: {{ trip.status }}
-    </p>
-    <h3>Delay Trip</h3>
-<form method="POST" action="{{ url_for('manifests.delay_trip', trip_id=trip.id) }}">
-    <select name="delay_reason" required>
-        <option value="">-- Select Reason --</option>
-        <option value="Weather conditions">Weather conditions</option>
-        <option value="Waiting for passengers">Waiting for passengers</option>
-        <option value="Boat maintenance">Boat maintenance</option>
-        <option value="Coast Guard hold">Coast Guard hold</option>
-    </select>
-    <input type="time" name="new_departure_time" required>
-    <button type="submit">Delay Trip</button>
-</form>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge rounded-pill text-white px-3 py-2" style="background-color: var(--navy);">
+                {{ trip.departure_time.strftime('%I:%M %p') }}
+            </span>
+            <span>{{ trip.crew_name or 'No crew assigned' }}</span>
+            <span class="text-muted">{{ current_count }}/{{ capacity or '-' }} Capacity</span>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#delayModal">Delay Trip</button>
+            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">Cancel Trip</button>
+        </div>
+    </div>
+</div>
 
-<h3>Cancel Trip</h3>
-<form method="POST" action="{{ url_for('manifests.cancel_trip', trip_id=trip.id) }}">
-    <select name="cancel_reason" required>
-        <option value="">-- Select Reason --</option>
-        <option value="Unsafe water conditions">Unsafe water conditions</option>
-        <option value="Boat unavailable">Boat unavailable</option>
-        <option value="Insufficient passengers">Insufficient passengers</option>
-        <option value="Emergency">Emergency</option>
-    </select>
-    <button type="submit">Cancel Trip</button>
-</form>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Trip Information</h6>
+            <span class="status-pill open">Check-In Open</span>
+        </div>
+        <form method="POST" action="{{ url_for('manifests.assign_boat', trip_id=trip.id) }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Crew</label>
+                    <input type="text" name="crew_name" class="form-control" value="{{ trip.crew_name or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Boat</label>
+                    <select name="boat_id" class="form-select">
+                        <option value="">-- None --</option>
+                        {% for boat in boats %}
+                            <option value="{{ boat.id }}" {% if trip.boat_id == boat.id %}selected{% endif %}>
+                                {{ boat.name }} (Cap: {{ boat.capacity }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Route</label>
+                    <div class="form-control-plaintext">
+                        {{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }}
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-sm w-100 text-white" style="background-color: var(--navy);">Save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 
-    <h3>Trip Information</h3>
-    <form method="POST" action="{{ url_for('manifests.assign_boat', trip_id=trip.id) }}">
-        <label>Crew:</label>
-        <input type="text" name="crew_name" value="{{ trip.crew_name or '' }}"><br><br>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Pending Registrations</h6>
+        </div>
+        <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr class="text-muted small text-uppercase">
+                    <th>Reference Code</th>
+                    <th>Name</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in pending %}
+                <tr>
+                    <td>{{ reg.reference_code }}</td>
+                    <td>{{ reg.full_name }}</td>
+                    <td>{{ reg.submitted_at.strftime('%H:%M:%S') }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('manifests.approve_registration', trip_id=trip.id, reg_id=reg.id) }}" class="d-inline">
+                            <button class="btn btn-sm btn-outline-success">Approved</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('manifests.reject_registration', trip_id=trip.id, reg_id=reg.id) }}" class="d-inline">
+                            <button class="btn btn-sm btn-outline-danger">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-center text-muted py-3">No pending registrations yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
 
-        <label>Boat:</label>
-        <select name="boat_id">
-            <option value="">-- None --</option>
-            {% for boat in boats %}
-                <option value="{{ boat.id }}" {% if trip.boat_id == boat.id %}selected{% endif %}>
-                    {{ boat.name }} (Capacity: {{ boat.capacity }})
-                </option>
-            {% endfor %}
-        </select><br><br>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Passenger Manifest</h6>
+            <button class="btn btn-sm text-white" style="background-color: var(--navy);"
+                    data-bs-toggle="modal" data-bs-target="#walkinModal">
+                <i class="bi bi-plus-lg"></i> Add
+            </button>
+        </div>
+        <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr class="text-muted small text-uppercase">
+                    <th>#</th><th>Name</th><th>Age</th><th>Type</th><th>Check-In</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in manifest %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ entry.full_name }}</td>
+                    <td>{{ entry.age }}</td>
+                    <td>{{ entry.passenger_type }}</td>
+                    <td>{{ entry.check_in_time.strftime('%H:%M:%S') }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-3">No passengers registered yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
 
-        <p>Route: {{ trip.route_origin }} → {{ trip.route_destination }}</p>
+<div class="card border-0 shadow-sm">
+    <div class="card-body d-flex justify-content-between align-items-center">
+        <form method="POST" action="{{ url_for('manifests.confirm_departure', trip_id=trip.id) }}" class="d-flex align-items-center gap-2">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="audit_confirmed" value="yes" id="auditCheck">
+                <label class="form-check-label small" for="auditCheck">
+                    I confirm that the Coast Guard has visually audited this manifest and provided verbal clearance for this specific time.
+                </label>
+            </div>
+        </form>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('manifests.list_slots') }}" class="btn btn-outline-secondary btn-sm">Change Slot</a>
+            <button type="submit" form="" class="btn btn-sm text-white" style="background-color: var(--navy);"
+                    onclick="document.querySelector('form[action*=confirm-departure]').submit(); return false;">
+                <i class="bi bi-check-lg"></i> Confirm Departure
+            </button>
+        </div>
+    </div>
+</div>
 
-        <button type="submit">Save Trip Info</button>
-    </form>
+<!-- Delay Modal -->
+<div class="modal fade" id="delayModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('manifests.delay_trip', trip_id=trip.id) }}">
+        <div class="modal-header text-white" style="background-color: var(--navy);">
+          <h5 class="modal-title">Confirm Trip Delay</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label small text-muted">Reason for Delay</label>
+          <select name="delay_reason" class="form-select mb-3" required>
+              <option value="">Select Reason</option>
+              <option value="Weather conditions">Weather conditions</option>
+              <option value="Waiting for passengers">Waiting for passengers</option>
+              <option value="Boat maintenance">Boat maintenance</option>
+              <option value="Coast Guard hold">Coast Guard hold</option>
+          </select>
+          <label class="form-label small text-muted">New Departure Time</label>
+          <input type="time" name="new_departure_time" class="form-control" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Dismiss</button>
+          <button type="submit" class="btn text-white" style="background-color: var(--navy);">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-    <hr>
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('manifests.cancel_trip', trip_id=trip.id) }}">
+        <div class="modal-header text-white" style="background-color: var(--navy);">
+          <h5 class="modal-title">Confirm Trip Cancellation</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label small text-muted">Reason for cancellation</label>
+          <select name="cancel_reason" class="form-select" required>
+              <option value="">Select Reason</option>
+              <option value="Unsafe water conditions">Unsafe water conditions</option>
+              <option value="Boat unavailable">Boat unavailable</option>
+              <option value="Insufficient passengers">Insufficient passengers</option>
+              <option value="Emergency">Emergency</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Dismiss</button>
+          <button type="submit" class="btn text-white" style="background-color: var(--navy);">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-    <h3>Pending Registrations</h3>
-    <table border="1" cellpadding="6">
-        <tr>
-            <th>Reference Code</th>
-            <th>Name</th>
-            <th>Time</th>
-            <th>Actions</th>
-        </tr>
-        {% for reg in pending %}
-        <tr>
-            <td>{{ reg.reference_code }}</td>
-            <td>{{ reg.full_name }}</td>
-            <td>{{ reg.submitted_at.strftime('%H:%M:%S') }}</td>
-            <td>
-    <form method="POST" action="{{ url_for('manifests.approve_registration', trip_id=trip.id, reg_id=reg.id) }}" style="display:inline;">
-        <button type="submit">Approve</button>
-    </form>
-    <form method="POST" action="{{ url_for('manifests.reject_registration', trip_id=trip.id, reg_id=reg.id) }}" style="display:inline;">
-        <button type="submit">Reject</button>
-    </form>
-</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="4">No pending registrations yet.</td></tr>
-        {% endfor %}
-    </table>
+<!-- Walk-In Modal -->
+<div class="modal fade" id="walkinModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('manifests.add_walkin', trip_id=trip.id) }}">
+        <div class="modal-header text-white" style="background-color: var(--navy);">
+          <h5 class="modal-title">Walk-In Passenger</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-6">
+                <label class="form-label small text-muted">Full Name</label>
+                <input type="text" name="full_name" class="form-control" required>
+            </div>
+            <div class="col-6">
+                <label class="form-label small text-muted">Age</label>
+                <input type="number" name="age" class="form-control" min="0" required>
+            </div>
+            <div class="col-12">
+                <label class="form-label small text-muted">Address</label>
+                <input type="text" name="address" class="form-control">
+            </div>
+            <div class="col-6">
+                <label class="form-label small text-muted">Contact Number</label>
+                <input type="text" name="contact_number" class="form-control">
+            </div>
+            <div class="col-6">
+                <label class="form-label small text-muted">Type</label>
+                <select name="passenger_type" class="form-select" required>
+                    <option value="Regular">Regular</option>
+                    <option value="Student">Student</option>
+                    <option value="Senior">Senior</option>
+                    <option value="PWD">PWD</option>
+                    <option value="Child">Child</option>
+                </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Dismiss</button>
+          <button type="submit" class="btn text-white" style="background-color: var(--navy);">Register</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-    <hr>
-    <h3>Add Walk-In Passenger</h3>
-<form method="POST" action="{{ url_for('manifests.add_walkin', trip_id=trip.id) }}">
-    <input type="text" name="full_name" placeholder="Full Name" required><br><br>
-    <input type="number" name="age" placeholder="Age" required min="0"><br><br>
-    <input type="text" name="address" placeholder="Address"><br><br>
-    <input type="text" name="contact_number" placeholder="Contact Number"><br><br>
-
-    <select name="passenger_type" required>
-        <option value="Regular">Regular</option>
-        <option value="Student">Student</option>
-        <option value="Senior">Senior</option>
-        <option value="PWD">PWD</option>
-        <option value="Child">Child</option>
-    </select><br><br>
-
-    <button type="submit">Register</button>
-</form>
-
-    <h3>Passenger Manifest</h3>
-    <table border="1" cellpadding="6">
-        <tr>
-            <th>#</th>
-            <th>Name</th>
-            <th>Age</th>
-            <th>Type</th>
-            <th>Check-In</th>
-        </tr>
-        {% for entry in manifest %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ entry.full_name }}</td>
-            <td>{{ entry.age }}</td>
-            <td>{{ entry.passenger_type }}</td>
-            <td>{{ entry.check_in_time.strftime('%H:%M:%S') }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="5">No passengers registered yet.</td></tr>
-        {% endfor %}
-    </table>
-
-    <br>
-    <hr>
-<form method="POST" action="{{ url_for('manifests.confirm_departure', trip_id=trip.id) }}">
-    <label>
-        <input type="checkbox" name="audit_confirmed" value="yes">
-        I confirm that the Coast Guard has visually audited this manifest and provided verbal clearance for this specific time.
-    </label>
-    <br><br>
-    <button type="submit">✔ Confirm Departure</button>
-</form>
-    <a href="{{ url_for('manifests.list_slots') }}">← Back to Timetable</a>
 {% endblock %}
+<div class="card border-0 shadow-sm">
+    <form method="POST" action="{{ url_for('manifests.confirm_departure', trip_id=trip.id) }}">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="audit_confirmed" value="yes" id="auditCheck">
+                <label class="form-check-label small" for="auditCheck">
+                    I confirm that the Coast Guard has visually audited this manifest and provided verbal clearance for this specific time.
+                </label>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('manifests.list_slots') }}" class="btn btn-outline-secondary btn-sm">Change Slot</a>
+                <button type="submit" class="btn btn-sm text-white" style="background-color: var(--navy);">
+                    <i class="bi bi-check-lg"></i> Confirm Departure
+                </button>
+            </div>
+        </div>
+    </form>
+</div>

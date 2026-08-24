@@ -1,0 +1,56 @@
+:root {
+  --navy: #0f1b3c;
+  --navy-dark: #0a1329;
+  --bg-light: #f5f7fa;
+  --card-white: #ffffff;
+  --text-muted: #6b7280;
+  --status-blue-text: #3b82f6;
+  --status-blue-bg: #dbeafe;
+  --status-orange-text: #d97706;
+  --status-orange-bg: #fef3c7;
+  --status-green-text: #16a34a;
+  --status-green-bg: #dcfce7;
+  --status-red: #dc2626;
+}
+
+body {
+  background-color: var(--bg-light);
+}
+
+/* Status pills, matching the rounded badges in the mockups */
+.status-pill {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.status-pill.departed   { color: var(--status-blue-text);   background: var(--status-blue-bg); }
+.status-pill.boarding,
+.status-pill.available  { color: var(--status-orange-text); background: var(--status-orange-bg); }
+.status-pill.on-time,
+.status-pill.open,
+.status-pill.completed  { color: var(--status-green-text);  background: var(--status-green-bg); }
+.status-pill.delayed    { color: var(--status-orange-text); background: var(--status-orange-bg); }
+.status-pill.cancelled,
+.status-pill.full       { color: #fff; background: var(--status-red); }
+
+/* Stat cards on dashboard */
+.stat-card {
+  background: var(--card-white);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.stat-card .stat-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.stat-card .stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.table td, .table th {
+  white-space: nowrap;
+}

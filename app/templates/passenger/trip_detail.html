@@ -1,39 +1,65 @@
 {% extends "passenger/base.html" %}
+{% block title %}Trip Details{% endblock %}
 
 {% block content %}
-<h1>Trip #{{ trip.trip_id }}</h1>
+<div class="container py-5" style="max-width: 700px;">
 
-<p>Route: {{ trip.route_origin }} -&gt; {{ trip.route_destination }}</p>
-<p>Departure: {{ trip.departure_time }}</p>
-<p>Status: {{ trip.status }}</p>
-<p>Crew: {{ trip.crew_name or "Not yet assigned" }}</p>
+    <a href="{{ url_for('passenger.home') }}" class="text-decoration-none small text-muted">&larr; Back to schedule</a>
 
-{% if trip.boat %}
-<p>Boat: {{ trip.boat.name }}</p>
-{% else %}
-<p>Boat: Not yet assigned</p>
-{% endif %}
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h5 class="fw-bold mb-1">{{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }}</h5>
+                    <div class="text-muted">Departure: {{ trip.departure_time }}</div>
+                </div>
+                <span class="status-pill {{ trip.status|lower|replace(' ', '-') }}">{{ trip.status }}</span>
+            </div>
 
-<p>
-    Capacity:
-    {% if trip.remaining_capacity is not none %}
-        {{ trip.remaining_capacity }} seat(s) remaining out of {{ trip.capacity }}
-    {% else %}
-        Unknown (no boat assigned yet)
-    {% endif %}
-</p>
+            <hr>
 
-{% if trip.delay_reason %}<p>Delay reason: {{ trip.delay_reason }}</p>{% endif %}
-{% if trip.cancel_reason %}<p>Cancel reason: {{ trip.cancel_reason }}</p>{% endif %}
-{% if trip.new_departure_time %}<p>New departure time: {{ trip.new_departure_time }}</p>{% endif %}
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <div class="text-muted small">Crew</div>
+                    <div class="fw-semibold">{{ trip.crew_name or "Not yet assigned" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">Boat</div>
+                    <div class="fw-semibold">{{ trip.boat.name if trip.boat else "Not yet assigned" }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">Capacity</div>
+                    <div class="fw-semibold">
+                        {% if trip.remaining_capacity is not none %}
+                            {{ trip.remaining_capacity }} seat(s) remaining of {{ trip.capacity }}
+                        {% else %}
+                            Unknown (no boat assigned yet)
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
 
-<hr>
+            {% if trip.delay_reason %}
+            <div class="alert alert-warning py-2 small">Delay reason: {{ trip.delay_reason }}</div>
+            {% endif %}
+            {% if trip.cancel_reason %}
+            <div class="alert alert-danger py-2 small">Cancel reason: {{ trip.cancel_reason }}</div>
+            {% endif %}
+            {% if trip.new_departure_time %}
+            <div class="alert alert-info py-2 small">New departure time: {{ trip.new_departure_time }}</div>
+            {% endif %}
 
-{% if trip.accepts_registration %}
-    <p><a href="{{ url_for('passenger.registration_form_page', trip_id=trip.trip_id) }}">Register for this trip</a></p>
-{% else %}
-    <p><strong>{{ trip.notice }}</strong></p>
-{% endif %}
+            <hr>
 
-<p><a href="{{ url_for('passenger.home') }}">Back to schedule</a></p>
+            {% if trip.accepts_registration %}
+                <a href="{{ url_for('passenger.registration_form_page', trip_id=trip.trip_id) }}" class="btn text-white w-100" style="background-color: var(--navy);">
+                    Register for this trip
+                </a>
+            {% else %}
+                <div class="alert alert-secondary text-center mb-0">{{ trip.notice }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
 {% endblock %}
