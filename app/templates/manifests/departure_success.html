@@ -1,16 +1,52 @@
 {% extends "base.html" %}
+{% block title %}Departure Confirmed{% endblock %}
+{% block page_title %}Manifest Management{% endblock %}
+
 {% block content %}
-    <h2>SUCCESSFULLY DEPARTED!</h2>
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
 
-    <p><strong>{{ trip.boat.name if trip.boat else '-' }}</strong></p>
-    <p>Route: {{ trip.route_origin }} → {{ trip.route_destination }}</p>
-    <p>Time: {{ trip.departed_at.strftime('%I:%M %p') }}</p>
-    <p>Status: Current conditions are normal and within safe limits.</p>
+        <!-- Success Banner -->
+        <div class="rounded text-white text-center py-4 mb-4" style="background-color: #0f1b3c;">
+            <i class="bi bi-check-circle-fill fs-2 text-success d-block mb-2"></i>
+            <div class="fw-bold fs-5">SUCCESSFULLY DEPARTED!</div>
+        </div>
 
-    <p style="color: green;">Passenger manifest has been archived successfully.</p>
+        <!-- Trip Summary Card -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">{{ trip.boat.name if trip.boat else '-' }}</h5>
+                <p class="mb-1">
+                    <span class="text-muted">Route:</span>
+                    {{ trip.route_origin }} <i class="bi bi-arrow-right mx-1"></i> {{ trip.route_destination }}
+                </p>
+                <p class="mb-1">
+                    <span class="text-muted">Time:</span>
+                    {{ trip.departed_at.strftime('%I:%M %p') }}
+                </p>
+                <p class="mb-0">
+                    <span class="text-muted">Status:</span>
+                    {{ conditions_message }}
+                </p>
+            </div>
+        </div>
 
-    <br>
-    <a href="{{ url_for('dashboard.index') }}">Back to Dashboard</a>
-    &nbsp;|&nbsp;
-    <a href="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}">View Trip Log</a>
+        <!-- Archived Confirmation -->
+        <div class="alert alert-success text-center d-flex flex-column align-items-center py-3 mb-4">
+            <i class="bi bi-clipboard-check fs-4 mb-1"></i>
+            Passenger manifest has been archived successfully.
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary">
+                Back to Dashboard
+            </a>
+            <a href="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}" class="btn text-white" style="background-color: #0f1b3c;">
+                View Trip Log
+            </a>
+        </div>
+
+    </div>
+</div>
 {% endblock %}

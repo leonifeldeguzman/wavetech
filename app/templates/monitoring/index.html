@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Lake Condition Monitoring{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Lake Condition Monitoring</h4>
+</div>
+
+<!-- Latest Reading Card -->
+<div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #0f1b3c;">
+    <i class="bi bi-water me-2"></i>Latest Reading
+    </div>
+    <div class="card-body">
+        {% if latest %}
+        <div class="row text-center g-3">
+            <div class="col-6 col-md-2">
+                <div class="text-muted small">Water Level</div>
+                <div class="fs-5 fw-bold">{{ latest.water_level_m }} m</div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="text-muted small">Wave Height</div>
+                <div class="fs-5 fw-bold">
+                    {{ latest.wave_height_m if latest.wave_height_m is not none else "Not yet recorded" }}
+                    {% if latest.wave_height_m is not none %}m{% endif %}
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="text-muted small">Wind Speed</div>
+                <div class="fs-5 fw-bold">
+                    {{ latest.wind_speed_kmh if latest.wind_speed_kmh is not none else "Not yet recorded" }}
+                    {% if latest.wind_speed_kmh is not none %}km/h{% endif %}
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="text-muted small">Wind Direction</div>
+                <div class="fs-5 fw-bold">
+                    {{ latest.wind_direction if latest.wind_direction else "Not yet recorded" }}
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="text-muted small">Weather</div>
+                <div class="fs-5 fw-bold">
+                    {{ latest.weather_condition if latest.weather_condition else "Not yet recorded" }}
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="text-muted small">Temperature</div>
+                <div class="fs-5 fw-bold">
+                    {{ latest.temperature_c if latest.temperature_c is not none else "Not yet recorded" }}
+                    {% if latest.temperature_c is not none %}&deg;C{% endif %}
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between text-muted small">
+            <span>Source: {{ latest.source|capitalize }}</span>
+            <span>Recorded: {{ latest.retrieved_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+            No readings yet. Use the form below to add the first one.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Manual Entry Form -->
+<div class="card mb-4">
+    <div class="card-header text-white" style="background-color: #0f1b3c;">
+    <i class="bi bi-pencil-square me-2"></i>Add Manual Reading
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('monitoring.add_reading') }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Water Level (m) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" class="form-control" name="water_level_m" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Wave Height (m)</label>
+                    <input type="number" step="0.01" class="form-control" name="wave_height_m">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Wind Speed (km/h)</label>
+                    <input type="number" step="0.01" class="form-control" name="wind_speed_kmh">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Wind Direction</label>
+                    <input type="text" class="form-control" name="wind_direction" placeholder="e.g. NE">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Weather Condition</label>
+                    <input type="text" class="form-control" name="weather_condition" placeholder="e.g. Sunny">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Temperature (&deg;C)</label>
+                    <input type="number" step="0.1" class="form-control" name="temperature_c">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Location Label</label>
+                    <input type="text" class="form-control" name="location_label" placeholder="e.g. Cabuyao Terminal">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn w-100 text-white" style="background-color: #0f1b3c; border-color: #0f1b3c;">
+                    <i class="bi bi-plus-lg me-1"></i>Add Reading
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- History Table -->
+<div class="card">
+    <div class="card-header text-white" style="background-color: #0f1b3c;">
+    <i class="bi bi-clock-history me-2"></i>Recent Readings
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Source</th>
+                        <th>Water Level (m)</th>
+                        <th>Entered By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reading in history %}
+                    <tr>
+                        <td>{{ reading.retrieved_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                        <td>{{ reading.source|capitalize }}</td>
+                        <td>{{ reading.water_level_m }}</td>
+                        <td>
+                            {% if reading.entered_by_user_id %}
+                                {{ reading.entered_by.full_name if reading.entered_by else "—" }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-3">No readings recorded yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

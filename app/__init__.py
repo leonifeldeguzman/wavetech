@@ -1,6 +1,7 @@
-from flask import Flask, app
+from flask import Flask
 from app.config import Config
 from app.extensions import db, migrate
+
 
 def create_app():
     app = Flask(__name__)
@@ -15,6 +16,8 @@ def create_app():
     from app.blueprints.dashboard import dashboard_bp
     from app.blueprints.manifests import manifests_bp
     from app.blueprints.passenger import passenger_bp
+    from app.blueprints.monitoring import monitoring_bp
+    app.register_blueprint(monitoring_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(manifests_bp)
@@ -25,6 +28,7 @@ def create_app():
     from app.models.trip import Trip
     from app.models.manifest_entry import ManifestEntry
     from app.models.pending_registration import PendingRegistration
+    from app.models.environmental_reading import EnvironmentalReading
 
     @app.route("/")
     def index():

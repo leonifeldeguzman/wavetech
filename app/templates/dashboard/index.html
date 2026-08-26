@@ -25,10 +25,21 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-label">Safety Status</div>
-            <div class="fw-bold text-secondary">Pending Setup</div>
-            <div class="text-muted small">Lake Monitoring not yet connected</div>
+    <div class="stat-card">
+        <div class="stat-label">Safety Status</div>
+        <div class="stat-value
+            {% if safety_status == 'clear' %} text-success
+            {% elif safety_status in ['critical-low', 'critical-high'] %} text-danger
+            {% else %} text-secondary
+            {% endif %}">
+            {{ safety_label }}
+        </div>
+        <div class="text-muted small">
+            {% if latest_reading %}
+                Last check: {{ latest_reading.retrieved_at.strftime('%I:%M %p') }}
+            {% else %}
+                Lake Monitoring not yet connected
+            {% endif %}
         </div>
     </div>
 </div>

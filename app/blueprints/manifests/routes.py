@@ -9,6 +9,7 @@ from app.models.pending_registration import PendingRegistration
 from app.models.manifest_entry import ManifestEntry
 from flask import render_template, request, redirect, url_for, flash
 from datetime import date, datetime, timedelta
+from app.models.environmental_reading import EnvironmentalReading
 
 @manifests_bp.route("/manifests")
 @login_required
@@ -268,4 +269,24 @@ def confirm_departure(trip_id):
 @login_required
 def departure_success(trip_id):
     trip = Trip.query.get_or_404(trip_id)
-    return render_template("manifests/departure_success.html", trip=trip)
+
+    latest_reading = EnvironmentalReading.query.order_by(
+        EnvironmentalReading.retrieved_at.desc()
+    ).first()
+
+    if latest_reading is None:
+        conditions_message = "Environmental conditions not yet recorded."
+    elif latest_reading.water_level_m < 10.50:
+        conditions_message = "Water level is critically low. Verify conditions before future departures."
+    elif latest_reading.water_level_m > 12.50:
+        conditions_message = "Water level is critically high. Verify conditions before future departures."
+    else:
+        conditions_message = "Current conditions are normal and within safe limits."
+
+    return render_template(
+        "manifests/departure_success.html",
+        trip=trip,
+        conditions_message=conditions_message,
+        latest_reading=latest_reading,
+        active_page="manifests"
+    )

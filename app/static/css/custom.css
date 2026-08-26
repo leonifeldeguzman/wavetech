@@ -54,3 +54,7 @@ body {
 .table td, .table th {
   white-space: nowrap;
 }
+
+.navy-header {
+    background-color: #0f1b3c;
+}
