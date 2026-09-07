@@ -3,7 +3,7 @@ from app.blueprints.monitoring import monitoring_bp
 from app.utils.decorators import login_required
 from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
-
+from datetime import datetime, timezone
 
 
 @monitoring_bp.route("/monitoring")
@@ -49,7 +49,8 @@ def add_reading():
         wind_direction=wind_direction or None,
         weather_condition=weather_condition or None,
         temperature_c=float(temperature) if temperature else None,
-        entered_by_user_id=session.get("user_id")
+        entered_by_user_id=session.get("user_id"),
+        recorded_at=datetime.now(timezone.utc)
     )
     db.session.add(new_reading)
     db.session.commit()

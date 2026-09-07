@@ -20,7 +20,15 @@ class EnvironmentalReading(db.Model):
     entered_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     # Only set when source == "manual" — who encoded it
 
+    recorded_at = db.Column(db.DateTime, nullable=True)
+    # The timestamp the SOURCE (e.g. LLDA) reports for the reading itself.
+    # Distinct from retrieved_at below, which is when WaveTech pulled it.
+    # Null for manual entries, where "recorded" and "retrieved" are the same moment.
+
     retrieved_at = db.Column(db.DateTime, server_default=db.func.now())
+    # When WaveTech stored this row. For "llda" rows this is also the
+    # moment the live fetch succeeded, so it doubles as the "Retrieved"
+    # timestamp shown on the dashboard when a cached reading is displayed.
 
     entered_by = db.relationship("User")
 
