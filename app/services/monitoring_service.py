@@ -26,10 +26,14 @@ from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
 from app.services import llda_service
 from app.services.llda_service import LLDAServiceError
+from app.services import windy_service
+from app.services.windy_service import WindyServiceError
+from datetime import datetime, timezone, timedelta
 
 STATUS_LIVE = "live"
 STATUS_CACHED = "cached"
 STATUS_UNAVAILABLE = "unavailable"
+REFRESH_INTERVAL = timedelta(seconds=10)
 
 
 def _latest_llda_reading():
@@ -41,30 +45,20 @@ def _latest_llda_reading():
 
 
 def get_llda_conditions():
-    """Attempt a live LLDA fetch; fall back to cached, then to unavailable.
+    cached = _latest_llda_reading()
+    if cached is not None:
+        cached_time = cached.retrieved_at
+        if cached_time.tzinfo is None:
+            cached_time = cached_time.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - cached_time < REFRESH_INTERVAL:
+            return {"status": STATUS_LIVE, "reading": cached, "message": None}
 
-    Returns a dict:
-        {
-            "status": "live" | "cached" | "unavailable",
-            "reading": EnvironmentalReading | None,
-            "message": str | None,   # explanation, mainly for cached/unavailable
-        }
-    """
     try:
         live = llda_service.fetch_water_level()
     except LLDAServiceError as exc:
-        cached = _latest_llda_reading()
         if cached is not None:
-            return {
-                "status": STATUS_CACHED,
-                "reading": cached,
-                "message": str(exc),
-            }
-        return {
-            "status": STATUS_UNAVAILABLE,
-            "reading": None,
-            "message": "Manual verification is required.",
-        }
+            return {"status": STATUS_CACHED, "reading": cached, "message": str(exc)}
+        return {"status": STATUS_UNAVAILABLE, "reading": None, "message": "Manual verification is required."}
 
     reading = EnvironmentalReading(
         source="llda",
@@ -76,11 +70,7 @@ def get_llda_conditions():
     db.session.add(reading)
     db.session.commit()
 
-    return {
-        "status": STATUS_LIVE,
-        "reading": reading,
-        "message": None,
-    }
+    return {"status": STATUS_LIVE, "reading": reading, "message": None}
 
 
 def no_data_blocks_recommendation(conditions: dict) -> bool:
@@ -96,3 +86,44 @@ def no_data_blocks_recommendation(conditions: dict) -> bool:
     into the same rule instead of re-deciding it.)
     """
     return conditions.get("status") != STATUS_LIVE
+
+
+def _latest_windy_reading():
+    return (
+        EnvironmentalReading.query.filter_by(source="windy")
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+
+
+def get_windy_conditions():
+    cached = _latest_windy_reading()
+    
+    if cached is not None:
+        cached_time = cached.retrieved_at
+        if cached_time.tzinfo is None:
+            cached_time = cached_time.replace(tzinfo=timezone.utc)
+        delta = datetime.now(timezone.utc) - cached_time
+        if timedelta(0) <= delta < REFRESH_INTERVAL:
+            return {"status": STATUS_LIVE, "reading": cached, "message": None}
+
+    try:
+        live = windy_service.fetch_conditions()
+    except WindyServiceError as exc:
+        if cached is not None:
+            return {"status": STATUS_CACHED, "reading": cached, "message": str(exc)}
+        return {"status": STATUS_UNAVAILABLE, "reading": None, "message": "Manual verification is required."}
+
+    reading = EnvironmentalReading(
+        source="windy",
+        wind_speed_kmh=live.wind_speed_kmh,
+        wind_direction=live.wind_direction,
+        weather_condition=live.weather_condition,
+        temperature_c=live.temperature_c,
+        recorded_at=live.recorded_at,
+        retrieved_at=live.retrieved_at,
+    )
+    db.session.add(reading)
+    db.session.commit()
+
+    return {"status": STATUS_LIVE, "reading": reading, "message": None}

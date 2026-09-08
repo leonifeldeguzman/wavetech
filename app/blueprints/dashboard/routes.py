@@ -36,9 +36,13 @@ def index():
         boarding_now_count = ManifestEntry.query.filter_by(trip_id=boarding_trip.id).count()
         boarding_now_boat = boarding_trip.boat.name if boarding_trip.boat else None
 
-    latest_reading = EnvironmentalReading.query.order_by(
-    EnvironmentalReading.retrieved_at.desc()
-    ).first()
+    latest_reading = (
+        EnvironmentalReading.query
+        .filter(EnvironmentalReading.water_level_m.isnot(None))
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+
 
     if latest_reading is None:
         safety_status = "pending"

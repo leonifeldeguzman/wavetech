@@ -57,6 +57,61 @@
     </div>
 </div>
 
+<!-- Windy Live/Cached/Unavailable Card -->
+<div class="card mb-4">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #0f1b3c;">
+        <span><i class="bi bi-cloud-wind me-2"></i>Windy Weather Conditions</span>
+        {% if windy_status == "live" %}
+        <span class="badge bg-success">LIVE</span>
+        {% elif windy_status == "cached" %}
+        <span class="badge bg-warning text-dark">CACHED DATA</span>
+        {% else %}
+        <span class="badge bg-secondary">UNAVAILABLE</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if windy_status in ("live", "cached") and windy_reading %}
+        <div class="row text-center g-3">
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Wind Speed</div>
+                <div class="fs-5 fw-bold">{{ windy_reading.wind_speed_kmh }} km/h</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Wind Direction</div>
+                <div class="fs-5 fw-bold">{{ windy_reading.wind_direction }}</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Temperature</div>
+                <div class="fs-5 fw-bold">{{ windy_reading.temperature_c }}&deg;C</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="text-muted small">Source</div>
+                <div class="fs-6 fw-bold">Windy</div>
+            </div>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between text-muted small">
+            {% if windy_status == "live" %}
+            <span>Status: LIVE</span>
+            <span>Retrieved: {{ windy_reading.retrieved_at.strftime('%B %d, %Y %I:%M %p') }}</span>
+            {% else %}
+            <span>Status: CACHED DATA</span>
+            <span>Last Updated: {{ windy_reading.retrieved_at.strftime('%B %d, %Y %I:%M %p') }}</span>
+            {% endif %}
+        </div>
+        {% if windy_status == "cached" and windy_message %}
+        <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i>{{ windy_message }}</div>
+        {% endif %}
+        {% else %}
+        <div class="text-center text-muted py-3">
+            <i class="bi bi-exclamation-triangle fs-2 d-block mb-2"></i>
+            <div class="fw-bold">Weather Data Unavailable</div>
+            <div class="small">Manual verification is required.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <!-- Latest Reading Card (manual entries / combined history) -->
 <div class="card mb-4">
     <div class="card-header text-white" style="background-color: #0f1b3c;">
@@ -143,7 +198,12 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Weather Condition</label>
-                    <input type="text" class="form-control" name="weather_condition" placeholder="e.g. Sunny">
+                    <select class="form-select" name="weather_condition">
+                        <option value="" {% if not suggested_weather_condition %}selected{% endif %}>— Select —</option>
+                        <option value="Sunny" {% if suggested_weather_condition == "Sunny" %}selected{% endif %}>Sunny</option>
+                        <option value="Cloudy" {% if suggested_weather_condition == "Cloudy" %}selected{% endif %}>Cloudy</option>
+                        <option value="Rainy" {% if suggested_weather_condition == "Rainy" %}selected{% endif %}>Rainy</option>
+                    </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Temperature (&deg;C)</label>

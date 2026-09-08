@@ -20,3 +20,9 @@ class Config:
     LLDA_API_URL = os.environ.get("LLDA_API_URL", "")
     LLDA_API_KEY = os.environ.get("LLDA_API_KEY", "")
     LLDA_API_TIMEOUT_SECONDS = float(os.environ.get("LLDA_API_TIMEOUT_SECONDS", "10"))
+        # --- Windy Point Forecast integration ---
+    WINDY_API_URL = os.environ.get("WINDY_API_URL", "https://api.windy.com/api/point-forecast/v2")
+    WINDY_API_KEY = os.environ.get("WINDY_API_KEY", "")
+    WINDY_API_TIMEOUT_SECONDS = float(os.environ.get("WINDY_API_TIMEOUT_SECONDS", "10"))
+    WINDY_LAT = float(os.environ.get("WINDY_LAT", "14.4"))   # Talim Island / Laguna de Bay
+    WINDY_LON = float(os.environ.get("WINDY_LON", "121.2"))
