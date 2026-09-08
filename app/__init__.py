@@ -10,6 +10,9 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
 
+    from app.utils.timezone import format_ph_time
+    app.jinja_env.filters["ph_time"] = format_ph_time
+
     from app import models
 
     from app.blueprints.auth import auth_bp

@@ -60,7 +60,7 @@
 <!-- Windy Live/Cached/Unavailable Card -->
 <div class="card mb-4">
     <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #0f1b3c;">
-        <span><i class="bi bi-cloud-wind me-2"></i>Windy Weather Conditions</span>
+        <span><i class="bi bi-wind me-2"></i>Windy Wind &amp; Weather</span>
         {% if windy_status == "live" %}
         <span class="badge bg-success">LIVE</span>
         {% elif windy_status == "cached" %}
@@ -81,22 +81,22 @@
                 <div class="fs-5 fw-bold">{{ windy_reading.wind_direction }}</div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="text-muted small">Temperature</div>
-                <div class="fs-5 fw-bold">{{ windy_reading.temperature_c }}&deg;C</div>
+                <div class="text-muted small">Weather</div>
+                <div class="fs-5 fw-bold">{{ windy_reading.weather_condition }}</div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="text-muted small">Source</div>
-                <div class="fs-6 fw-bold">Windy</div>
+                <div class="text-muted small">Temperature</div>
+                <div class="fs-5 fw-bold">{{ windy_reading.temperature_c }}&deg;C</div>
             </div>
         </div>
         <hr>
         <div class="d-flex justify-content-between text-muted small">
             {% if windy_status == "live" %}
             <span>Status: LIVE</span>
-            <span>Retrieved: {{ windy_reading.retrieved_at.strftime('%B %d, %Y %I:%M %p') }}</span>
+            <span>Retrieved: {{ windy_reading.retrieved_at | ph_time }}</span>
             {% else %}
             <span>Status: CACHED DATA</span>
-            <span>Last Updated: {{ windy_reading.retrieved_at.strftime('%B %d, %Y %I:%M %p') }}</span>
+            <span>Last Updated: {{ windy_reading.retrieved_at | ph_time }}</span>
             {% endif %}
         </div>
         {% if windy_status == "cached" and windy_message %}
@@ -105,7 +105,7 @@
         {% else %}
         <div class="text-center text-muted py-3">
             <i class="bi bi-exclamation-triangle fs-2 d-block mb-2"></i>
-            <div class="fw-bold">Weather Data Unavailable</div>
+            <div class="fw-bold">Environmental Monitoring Unavailable</div>
             <div class="small">Manual verification is required.</div>
         </div>
         {% endif %}
@@ -122,7 +122,10 @@
         <div class="row text-center g-3">
             <div class="col-6 col-md-2">
                 <div class="text-muted small">Water Level</div>
-                <div class="fs-5 fw-bold">{{ latest.water_level_m }} m</div>
+                <div class="fs-5 fw-bold">
+                    {{ latest.water_level_m if latest.water_level_m is not none else "Not yet recorded" }}
+                    {% if latest.water_level_m is not none %}m{% endif %}
+                </div>
             </div>
             <div class="col-6 col-md-2">
                 <div class="text-muted small">Wave Height</div>
@@ -161,7 +164,7 @@
         <hr>
         <div class="d-flex justify-content-between text-muted small">
             <span>Source: {{ latest.source|capitalize }}</span>
-            <span>Recorded: {{ latest.retrieved_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+            <span>Recorded: {{ latest.retrieved_at.strftime('%B %d, %Y %I:%M %p') }} PHT</span>
         </div>
         {% else %}
         <div class="text-center text-muted py-4">
@@ -198,12 +201,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Weather Condition</label>
-                    <select class="form-select" name="weather_condition">
-                        <option value="" {% if not suggested_weather_condition %}selected{% endif %}>— Select —</option>
-                        <option value="Sunny" {% if suggested_weather_condition == "Sunny" %}selected{% endif %}>Sunny</option>
-                        <option value="Cloudy" {% if suggested_weather_condition == "Cloudy" %}selected{% endif %}>Cloudy</option>
-                        <option value="Rainy" {% if suggested_weather_condition == "Rainy" %}selected{% endif %}>Rainy</option>
-                    </select>
+                    <input type="text" class="form-control" name="weather_condition" placeholder="e.g. Sunny">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Temperature (&deg;C)</label>
@@ -263,4 +261,11 @@
         </div>
     </div>
 </div>
+
+<script>
+    setTimeout(() => {
+        window.location.reload();
+    }, 10000);
+</script>
+
 {% endblock %}
