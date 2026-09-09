@@ -4,7 +4,7 @@ fallback flow described in the SRS failure-handling diagram, and the
 guarantee that a scheduling recommendation can never be based on stale or
 missing environmental data.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -51,7 +51,15 @@ class TestLiveSuccess:
 class TestCachedFallback:
     def test_failure_with_prior_reading_falls_back_to_cached(self, app):
         with app.app_context():
-            db.session.add(EnvironmentalReading(source="llda", location_label="West Bay", water_level_m=11.8))
+            db.session.add(
+                EnvironmentalReading(
+                    source="llda",
+                    location_label="West Bay",
+                    water_level_m=11.8,
+                    recorded_at=(datetime.now(timezone.utc) - timedelta(hours=1)).replace(tzinfo=None),
+                    retrieved_at=(datetime.now(timezone.utc) - timedelta(hours=1)).replace(tzinfo=None),
+                )
+            )
             db.session.commit()
 
             with patch("app.services.monitoring_service.llda_service.fetch_water_level", side_effect=LLDATimeoutError("timed out")):
@@ -63,7 +71,15 @@ class TestCachedFallback:
 
     def test_cached_reading_still_blocks_recommendation(self, app):
         with app.app_context():
-            db.session.add(EnvironmentalReading(source="llda", location_label="West Bay", water_level_m=11.8))
+            db.session.add(
+                EnvironmentalReading(
+                    source="llda",
+                    location_label="West Bay",
+                    water_level_m=11.8,
+                    recorded_at=(datetime.now(timezone.utc) - timedelta(hours=1)).replace(tzinfo=None),
+                    retrieved_at=(datetime.now(timezone.utc) - timedelta(hours=1)).replace(tzinfo=None),
+                )
+            )
             db.session.commit()
 
             with patch("app.services.monitoring_service.llda_service.fetch_water_level", side_effect=LLDATimeoutError("timed out")):
@@ -101,3 +117,30 @@ class TestUnavailable:
                 conditions = monitoring_service.get_llda_conditions()
 
             assert monitoring_service.no_data_blocks_recommendation(conditions) is True
+
+def test_fresh_windy_reading_avoids_duplicate_api_request_and_record(app):
+    """A fresh Windy row is reused inside the refresh window."""
+
+    with app.app_context():
+        now = datetime.now(timezone.utc)
+        stored = EnvironmentalReading(
+            source="windy",
+            wind_speed_kmh=12.0,
+            wind_direction="NE",
+            weather_condition="Sunny",
+            temperature_c=28.0,
+            recorded_at=now.replace(tzinfo=None),
+            retrieved_at=now.replace(tzinfo=None),
+        )
+        db.session.add(stored)
+        db.session.commit()
+
+        with patch(
+            "app.services.monitoring_service.windy_service.fetch_conditions"
+        ) as mocked_fetch:
+            conditions = monitoring_service.get_windy_conditions()
+
+        mocked_fetch.assert_not_called()
+        assert conditions["status"] == "live"
+        assert conditions["reading"].id == stored.id
+        assert EnvironmentalReading.query.filter_by(source="windy").count() == 1

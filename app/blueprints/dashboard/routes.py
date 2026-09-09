@@ -1,12 +1,12 @@
-from datetime import date
-from flask import render_template
+from datetime import date, datetime
+from flask import current_app, render_template, request
 from app.blueprints.dashboard import dashboard_bp
 from app.utils.decorators import login_required
 from app.extensions import db
 from app.models.trip import Trip
 from app.models.manifest_entry import ManifestEntry
-from datetime import datetime
 from app.models.environmental_reading import EnvironmentalReading
+from app.services import scheduling_service
 
 
 @dashboard_bp.route("/dashboard")
@@ -16,6 +16,11 @@ def index():
 
     all_trips_today = Trip.query.filter(
         db.func.date(Trip.departure_time) == today
+    ).order_by(Trip.departure_time).all()
+
+    scheduled_trips = Trip.query.filter(
+        Trip.departure_time >= datetime.now(),
+        Trip.status.notin_(["Cancelled", "Departed"]),
     ).order_by(Trip.departure_time).all()
 
     active_trips_count = Trip.query.filter(
@@ -43,6 +48,16 @@ def index():
         .first()
     )
 
+    # Scheduling Decision-Support is read-only. The selected trip is used
+    # only as context for the operator; no Trip or manifest row is changed.
+    selected_trip = None
+    scheduling_assessment = None
+    trip_id = request.args.get("trip_id", type=int)
+    if trip_id is not None:
+        selected_trip = db.session.get(Trip, trip_id)
+        if selected_trip is not None:
+            scheduling_assessment = scheduling_service.get_assessment(selected_trip.departure_time)
+
 
     if latest_reading is None:
         safety_status = "pending"
@@ -63,6 +78,7 @@ def index():
     return render_template(
         "dashboard/index.html",
         trips=all_trips_today,
+        scheduled_trips=scheduled_trips,
         active_trips_count=active_trips_count,
         passengers_today=passengers_today,
         boarding_now_count=boarding_now_count,
@@ -70,5 +86,8 @@ def index():
         safety_status=safety_status,
         safety_label=safety_label,
         latest_reading=latest_reading,
+        selected_trip=selected_trip,
+        scheduling_assessment=scheduling_assessment,
+        refresh_interval_seconds=current_app.config["REFRESH_INTERVAL_SECONDS"],
         active_page="dashboard"
     )

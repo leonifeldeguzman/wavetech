@@ -26,16 +26,37 @@ decision here (rather than in routes/templates) is what lets
 `no_data_blocks_recommendation()` guarantee that stale/missing data can
 never silently feed a future scheduling recommendation.
 """
+from flask import current_app
 from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
 from app.services import llda_service, windy_service
 from app.services.llda_service import LLDAServiceError
 from app.services.windy_service import WindyServiceError
 from app.utils.timezone import to_naive_utc
+from datetime import datetime, timedelta, timezone
 
 STATUS_LIVE = "live"
 STATUS_CACHED = "cached"
 STATUS_UNAVAILABLE = "unavailable"
+
+
+def _fresh_reading(source: str):
+    """Return the latest reading when it is within the configured refresh window."""
+    cached = _latest_reading(source)
+    if cached is None or cached.retrieved_at is None:
+        return None
+
+    cached_time = cached.retrieved_at
+    if cached_time.tzinfo is None:
+        cached_time = cached_time.replace(tzinfo=timezone.utc)
+    else:
+        cached_time = cached_time.astimezone(timezone.utc)
+
+    delta = datetime.now(timezone.utc) - cached_time
+    refresh_interval = timedelta(seconds=current_app.config["REFRESH_INTERVAL_SECONDS"])
+    if timedelta(0) <= delta < refresh_interval:
+        return cached
+    return None
 
 
 def _latest_reading(source: str):
@@ -62,6 +83,10 @@ def get_llda_conditions() -> dict:
 
     Returns {"status": "live"|"cached"|"unavailable", "reading": EnvironmentalReading|None, "message": str|None}
     """
+    cached = _fresh_reading("llda")
+    if cached is not None:
+        return {"status": STATUS_LIVE, "reading": cached, "message": None}
+
     try:
         live = llda_service.fetch_water_level()
     except LLDAServiceError as exc:
@@ -84,6 +109,10 @@ def get_windy_conditions() -> dict:
 
     Same shape as get_llda_conditions(), but for wind/weather/temperature.
     """
+    cached = _fresh_reading("windy")
+    if cached is not None:
+        return {"status": STATUS_LIVE, "reading": cached, "message": None}
+
     try:
         live = windy_service.fetch_conditions()
     except WindyServiceError as exc:

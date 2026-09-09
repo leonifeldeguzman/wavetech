@@ -38,6 +38,24 @@ class Config:
     # this below ~30s without checking Windy's plan rate limits.
     REFRESH_INTERVAL_SECONDS = int(os.environ.get("REFRESH_INTERVAL_SECONDS", "600"))
 
+    # --- Scheduling Decision-Support (temporary/system-defined thresholds) ---
+    # These values are NOT Coast Guard/LLDA/PAGASA-approved limits. They are
+    # centralized development thresholds and must be validated before any
+    # production safety decision is made.
+    SCHEDULING_WIND_SAFE_MAX_KMH = float(os.environ.get("SCHEDULING_WIND_SAFE_MAX_KMH", "20"))
+    SCHEDULING_WIND_CAUTION_MAX_KMH = float(os.environ.get("SCHEDULING_WIND_CAUTION_MAX_KMH", "30"))
+    SCHEDULING_WATER_SAFE_MIN_M = float(os.environ.get("SCHEDULING_WATER_SAFE_MIN_M", "10.50"))
+    SCHEDULING_WATER_SAFE_MAX_M = float(os.environ.get("SCHEDULING_WATER_SAFE_MAX_M", "12.50"))
+    SCHEDULING_WATER_CAUTION_MIN_M = float(os.environ.get("SCHEDULING_WATER_CAUTION_MIN_M", "10.00"))
+    SCHEDULING_WATER_CAUTION_MAX_M = float(os.environ.get("SCHEDULING_WATER_CAUTION_MAX_M", "13.00"))
+    SCHEDULING_WEATHER_SAFE = os.environ.get("SCHEDULING_WEATHER_SAFE", "Sunny")
+    SCHEDULING_WEATHER_CAUTION = os.environ.get("SCHEDULING_WEATHER_CAUTION", "Cloudy")
+    SCHEDULING_WEATHER_UNSAFE = os.environ.get("SCHEDULING_WEATHER_UNSAFE", "Rainy")
+
+    # --- Temporary LLDA mock provider for Scheduling Decision-Support ---
+    LLDA_MOCK_WATER_LEVEL_M = float(os.environ.get("LLDA_MOCK_WATER_LEVEL_M", "12.10"))
+    LLDA_MOCK_STATION = os.environ.get("LLDA_MOCK_STATION", "Central Bay, Cardona, Rizal")
+
     # --- WaveTech Monitoring Map ---
     # Default monitoring location: Talim Island, Laguna de Bay
     # --- WaveTech Monitoring Map ---
