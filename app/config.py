@@ -36,4 +36,14 @@ class Config:
     # Unit: SECONDS (the template converts to milliseconds for
     # setInterval()). Kept well above typical API rate limits — do not set
     # this below ~30s without checking Windy's plan rate limits.
-    REFRESH_INTERVAL_SECONDS = int(os.environ.get("REFRESH_INTERVAL_SECONDS", "60"))
+    REFRESH_INTERVAL_SECONDS = int(os.environ.get("REFRESH_INTERVAL_SECONDS", "600"))
+
+    # --- WaveTech Monitoring Map ---
+    # Default monitoring location: Talim Island, Laguna de Bay
+    # --- WaveTech Monitoring Map ---
+    MONITORING_LAT = float(os.environ.get("MONITORING_LAT", "14.317527"))
+    MONITORING_LON = float(os.environ.get("MONITORING_LON", "121.184594"))
+    MONITORING_LOCATION_LABEL = os.environ.get(
+        "MONITORING_LOCATION_LABEL",
+        "Talim Island, Laguna de Bay"
+    )

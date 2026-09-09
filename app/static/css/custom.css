@@ -58,3 +58,36 @@ body {
 .navy-header {
     background-color: #0f1b3c;
 }
+
+/* Lake Monitoring: interactive Leaflet map card */
+.monitoring-map {
+  height: 400px;
+  width: 100%;
+  border-radius: 0 0 0.75rem 0.75rem; /* rounds bottom corners to match card body */
+}
+
+/* =========================
+   Fixed Desktop Sidebar
+   ========================= */
+
+@media (min-width: 992px) {
+  nav.d-lg-flex {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 240px;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1030;
+  }
+
+  /* Main content starts after the fixed sidebar */
+  body > .d-flex {
+    min-height: 100vh;
+  }
+
+  body > .d-flex > .flex-grow-1 {
+    margin-left: 240px;
+    min-width: 0;
+  }
+}

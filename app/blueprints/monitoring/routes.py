@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from flask import (
     current_app,
     flash,
@@ -15,27 +13,27 @@ from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
 from app.services import monitoring_service
 from app.utils.decorators import login_required
-from app.utils.timezone import to_naive_utc
 
 
 @monitoring_bp.route("/monitoring")
 @login_required
 def index():
+    # Get current environmental conditions
     llda_conditions = monitoring_service.get_llda_conditions()
     windy_conditions = monitoring_service.get_windy_conditions()
 
-    # Get the latest environmental reading from any source.
+    # Get the latest environmental reading from any source
     latest = EnvironmentalReading.query.order_by(
         EnvironmentalReading.retrieved_at.desc()
     ).first()
 
-    # Get the 10 most recent environmental readings.
+    # Get the 10 most recent environmental readings
     history = EnvironmentalReading.query.order_by(
         EnvironmentalReading.retrieved_at.desc()
     ).limit(10).all()
 
-    # Windy's derived weather condition becomes the suggested value
-    # for the manual entry form. The admin can still change it.
+    # Windy's weather condition can be suggested in the
+    # manual entry form while still allowing the operator to edit it.
     windy_reading = windy_conditions["reading"]
 
     suggested_weather_condition = (
@@ -46,27 +44,45 @@ def index():
 
     return render_template(
         "monitoring/index.html",
+
+        # Existing readings/history
         latest=latest,
         history=history,
 
-        # LLDA data
+        # -------------------------
+        # LLDA DATA
+        # -------------------------
         llda_status=llda_conditions["status"],
         llda_reading=llda_conditions["reading"],
         llda_message=llda_conditions["message"],
 
-        # Windy data
+        # -------------------------
+        # WINDY DATA
+        # -------------------------
         windy_status=windy_conditions["status"],
         windy_reading=windy_conditions["reading"],
         windy_message=windy_conditions["message"],
 
-        # Windy weather suggestion for manual entry
+        # Suggested value for manual entry
         suggested_weather_condition=suggested_weather_condition,
 
-        # Dashboard refresh interval
+        # -------------------------
+        # AUTO REFRESH
+        # -------------------------
         refresh_interval_seconds=current_app.config[
             "REFRESH_INTERVAL_SECONDS"
         ],
 
+        # -------------------------
+        # MONITORING MAP
+        # -------------------------
+        # Uses the same coordinates configured for Windy.
+        # This keeps the map and Windy monitoring point consistent.
+        monitoring_lat=current_app.config["MONITORING_LAT"],
+        monitoring_lon=current_app.config["MONITORING_LON"],
+        monitoring_location_label=current_app.config["MONITORING_LOCATION_LABEL"],
+
+        # Active sidebar page
         active_page="monitoring",
     )
 
@@ -74,6 +90,7 @@ def index():
 @monitoring_bp.route("/monitoring/add-reading", methods=["POST"])
 @login_required
 def add_reading():
+    # Get values from manual entry form
     water_level = request.form.get("water_level_m")
     wave_height = request.form.get("wave_height_m")
     wind_speed = request.form.get("wind_speed_kmh")
@@ -82,14 +99,16 @@ def add_reading():
     temperature = request.form.get("temperature_c")
     location_label = request.form.get("location_label")
 
+    # Water level is required
     if not water_level:
         flash("Water level is required.")
         return redirect(url_for("monitoring.index"))
 
+    # Create manual environmental reading
     new_reading = EnvironmentalReading(
         source="manual",
 
-        # Use the entered location, or the default monitoring location.
+        # Save entered location, or use the default monitoring location
         location_label=(
             location_label
             or "Central Bay, Cardona, Rizal"
@@ -120,12 +139,6 @@ def add_reading():
         ),
 
         entered_by_user_id=session.get("user_id"),
-
-        # Store manual reading timestamp as naive UTC,
-        # matching the project's timestamp convention.
-        recorded_at=to_naive_utc(
-            datetime.now(timezone.utc)
-        ),
     )
 
     db.session.add(new_reading)

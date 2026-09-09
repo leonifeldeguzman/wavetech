@@ -38,10 +38,10 @@
         <div class="d-flex justify-content-between text-muted small">
             {% if llda_status == "live" %}
             <span>Status: LIVE</span>
-            <span>Retrieved: {{ llda_reading.retrieved_at.strftime('%B %d, %Y %I:%M %p') }}</span>
+            <span>Retrieved: {{ llda_reading.retrieved_at | ph_time }}</span>
             {% else %}
             <span>Status: CACHED DATA</span>
-            <span>Last Updated: {{ llda_reading.retrieved_at.strftime('%B %d, %Y %I:%M %p') }}</span>
+            <span>Last Updated: {{ llda_reading.retrieved_at | ph_time }}</span>
             {% endif %}
         </div>
         {% if llda_status == "cached" and llda_message %}
@@ -60,7 +60,7 @@
 <!-- Windy Live/Cached/Unavailable Card -->
 <div class="card mb-4">
     <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #0f1b3c;">
-        <span><i class="bi bi-wind me-2"></i>Windy Wind &amp; Weather</span>
+        <span><i class="bi bi-wind me-2"></i>Windy Weather Condition</span>
         {% if windy_status == "live" %}
         <span class="badge bg-success">LIVE</span>
         {% elif windy_status == "cached" %}
@@ -109,6 +109,25 @@
             <div class="small">Manual verification is required.</div>
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Monitoring Map Card -->
+<div class="card mb-4">
+    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #0f1b3c;">
+        <span><i class="bi bi-geo-alt me-2"></i>Monitoring Map</span>
+    </div>
+    <div class="card-body p-0">
+        <div id="monitoring-map" class="monitoring-map"
+             data-lat="{{ monitoring_lat }}"
+             data-lon="{{ monitoring_lon }}"
+             data-location-label="{{ monitoring_location_label }}"
+             data-windy-status="{{ windy_status }}"
+             data-windy-updated="{{ (windy_reading.retrieved_at | ph_time) if windy_reading else '' }}"
+             data-llda-status="{{ llda_status }}"
+             data-llda-water-level="{{ llda_reading.water_level_m if (llda_status in ('live', 'cached') and llda_reading) else '' }}"
+             data-llda-updated="{{ (llda_reading.retrieved_at | ph_time) if (llda_status in ('live', 'cached') and llda_reading) else '' }}">
+        </div>
     </div>
 </div>
 
@@ -164,7 +183,7 @@
         <hr>
         <div class="d-flex justify-content-between text-muted small">
             <span>Source: {{ latest.source|capitalize }}</span>
-            <span>Recorded: {{ latest.retrieved_at.strftime('%B %d, %Y %I:%M %p') }} PHT</span>
+            <span>Recorded: {{ latest.retrieved_at | ph_time }}</span>
         </div>
         {% else %}
         <div class="text-center text-muted py-4">
@@ -240,9 +259,9 @@
                 <tbody>
                     {% for reading in history %}
                     <tr>
-                        <td>{{ reading.retrieved_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                        <td>{{ reading.retrieved_at | ph_time }}</td>
                         <td>{{ reading.source|capitalize }}</td>
-                        <td>{{ reading.water_level_m }}</td>
+                        <td>{{ reading.water_level_m if reading.water_level_m is not none else "—" }}</td>
                         <td>
                             {% if reading.entered_by_user_id %}
                                 {{ reading.entered_by.full_name if reading.entered_by else "—" }}
@@ -261,11 +280,97 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    setTimeout(() => {
-        window.location.reload();
-    }, 10000);
-</script>
+    // --- Monitoring Map ---
+    // Single Leaflet instance per page load, guarded against re-init in
+    // case this script block ever runs more than once on the same page.
+    // The marker's popup is built from data-* attributes on #monitoring-map
+    // (rendered server-side in monitoring/index.html) rather than hardcoded
+    // values, so wiring in a real live LLDA feed later only means updating
+    // those data attributes (or calling updateMonitoringPopup directly from
+    // an AJAX refresh) — this function does not need to change.
+    function initMonitoringMap() {
+        const mapEl = document.getElementById('monitoring-map');
+        if (!mapEl || window.__wavetechMonitoringMap) {
+            return;
+        }
 
+        const lat = parseFloat(mapEl.dataset.lat);
+        const lon = parseFloat(mapEl.dataset.lon);
+
+        const map = L.map(mapEl).setView([lat, lon], 12);
+        window.__wavetechMonitoringMap = map;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        const marker = L.marker([lat, lon]).addTo(map);
+        window.__wavetechMonitoringMarker = marker;
+
+        updateMonitoringPopup(marker, mapEl.dataset);
+    }
+
+    // Rebuilds and (re)opens the marker popup from a data object shaped
+    // like #monitoring-map's dataset. Kept separate from initMonitoringMap
+    // so a future AJAX refresh can call this alone, without touching the
+    // map/tile layer/marker.
+    function updateMonitoringPopup(marker, data) {
+        const windyLine = data.windyStatus === 'live'
+            ? `LIVE${data.windyUpdated ? ' — updated ' + data.windyUpdated : ''}`
+            : (data.windyStatus === 'cached'
+                ? `CACHED DATA${data.windyUpdated ? ' — last updated ' + data.windyUpdated : ''}`
+                : 'UNAVAILABLE');
+
+        // Per project requirement: never show a fabricated LLDA water level.
+        // Only render a number when the status is live/cached (i.e. it came
+        // from a real reading); otherwise just show the status word.
+        let lldaLine;
+        if ((data.lldaStatus === 'live' || data.lldaStatus === 'cached') && data.lldaWaterLevel) {
+            const label = data.lldaStatus === 'live' ? 'LIVE' : 'CACHED DATA';
+            lldaLine = `${label} — ${data.lldaWaterLevel} m${data.lldaUpdated ? ' (' + data.lldaUpdated + ')' : ''}`;
+        } else {
+            lldaLine = 'UNAVAILABLE';
+        }
+
+        const popupHtml = `
+            <div class="small">
+                <div class="fw-bold mb-1">${data.locationLabel}</div>
+                <div><strong>Windy:</strong> ${windyLine}</div>
+                <div><strong>LLDA:</strong> ${lldaLine}</div>
+            </div>
+        `;
+        marker.bindPopup(popupHtml);
+    }
+
+    initMonitoringMap();
+
+    // --- Dashboard auto-refresh ---
+    // REFRESH_INTERVAL_SECONDS is configured in app/config.py and passed in
+    // as `refresh_interval_seconds` (unit: SECONDS). A single timer per
+    // page load reloads the page so LLDA/Windy cards and the map marker
+    // all pick up fresh live/cached/unavailable data together — this is
+    // intentionally the ONLY refresh timer on this page to avoid multiple
+    // competing timers. It's paused while the manual-entry form has focus
+    // so an in-progress entry isn't wiped out mid-reload.
+    const REFRESH_INTERVAL_MS = Number("{{ refresh_interval_seconds }}") * 1000;
+
+    function isEditingManualForm() {
+        const active = document.activeElement;
+        const form = document.querySelector('form[action*="add-reading"]');
+        return !!(form && active && form.contains(active));
+    }
+
+    setInterval(function () {
+        if (!isEditingManualForm()) {
+            window.location.reload();
+        }
+    }, REFRESH_INTERVAL_MS);
+</script>
 {% endblock %}
