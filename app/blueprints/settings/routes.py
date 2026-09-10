@@ -10,7 +10,6 @@ from app.utils.security import hash_password, verify_password
 
 ROLE_ADMIN = "Admin"
 
-
 @settings_bp.route("/settings")
 @login_required
 def index():
@@ -64,6 +63,13 @@ def change_password():
     user.password_hash = hash_password(new_password)
     db.session.commit()
 
+    activity_log_service.log_action(
+        user_id=session.get("user_id"),
+        admin_name=session.get("full_name", "Unknown"),
+        action=activity_log_service.ACTION_CHANGED_PASSWORD,
+        details="Password changed successfully.",
+    )
+
     flash("Password updated successfully.")
     return redirect(url_for("settings.index"))
 
@@ -111,6 +117,8 @@ def update_safety_thresholds():
 @settings_bp.route("/settings/refresh-interval", methods=["POST"])
 @login_required
 def update_refresh_interval():
+    old_seconds = settings_service.get_refresh_interval_seconds()
+
     try:
         seconds = settings_service.update_refresh_interval(
             request.form.get("refresh_interval_seconds")
@@ -118,6 +126,14 @@ def update_refresh_interval():
     except SettingsValidationError as exc:
         flash(str(exc))
         return redirect(url_for("settings.index"))
+
+    if old_seconds != seconds:
+        activity_log_service.log_action(
+            user_id=session.get("user_id"),
+            admin_name=session.get("full_name", "Unknown"),
+            action=activity_log_service.ACTION_UPDATED_REFRESH_INTERVAL,
+            details=f"Refresh interval: {old_seconds} -> {seconds} seconds.",
+        )
 
     flash(f"Refresh interval set to {seconds} seconds.")
     return redirect(url_for("settings.index"))
