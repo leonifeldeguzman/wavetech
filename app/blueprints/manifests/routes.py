@@ -289,7 +289,7 @@ def departure_success(trip_id):
         EnvironmentalReading.retrieved_at.desc()
     ).first()
 
-    if latest_reading is None:
+    if latest_reading is None or latest_reading.water_level_m is None:
         conditions_message = "Environmental conditions not yet recorded."
     elif latest_reading.water_level_m < 10.50:
         conditions_message = "Water level is critically low. Verify conditions before future departures."

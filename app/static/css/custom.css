@@ -1,26 +1,46 @@
 :root {
+  /* =========================
+     Colors
+     ========================= */
+
   --navy: #0f1b3c;
   --navy-dark: #0a1329;
+
   --bg-light: #f5f7fa;
   --card-white: #ffffff;
+
   --text-muted: #6b7280;
 
+  /* Sidebar */
   --sidebar-bg: #f3f4f6;
   --sidebar-text: #1f2937;
   --sidebar-hover: #e5e7eb;
 
+  /* Status */
   --status-blue-text: #3b82f6;
   --status-blue-bg: #dbeafe;
+
   --status-orange-text: #d97706;
   --status-orange-bg: #fef3c7;
+
   --status-green-text: #16a34a;
   --status-green-bg: #dcfce7;
+
   --status-red: #dc2626;
+
+  /* Capacity */
+  --capacity-bg: #e9ecef;
 }
+
+
+/* =========================
+   Base
+   ========================= */
 
 body {
   background-color: var(--bg-light);
 }
+
 
 /* =========================
    Status Pills
@@ -36,35 +56,36 @@ body {
 
 .status-pill.departed {
   color: var(--status-blue-text);
-  background: var(--status-blue-bg);
+  background-color: var(--status-blue-bg);
 }
 
 .status-pill.boarding,
 .status-pill.available,
 .status-pill.delayed {
   color: var(--status-orange-text);
-  background: var(--status-orange-bg);
+  background-color: var(--status-orange-bg);
 }
 
 .status-pill.on-time,
 .status-pill.open,
 .status-pill.completed {
   color: var(--status-green-text);
-  background: var(--status-green-bg);
+  background-color: var(--status-green-bg);
 }
 
 .status-pill.cancelled,
 .status-pill.full {
   color: #fff;
-  background: var(--status-red);
+  background-color: var(--status-red);
 }
+
 
 /* =========================
    Dashboard Stat Cards
    ========================= */
 
 .stat-card {
-  background: var(--card-white);
+  background-color: var(--card-white);
   border-radius: 0.75rem;
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -80,6 +101,7 @@ body {
   font-weight: 700;
 }
 
+
 /* =========================
    Tables
    ========================= */
@@ -89,6 +111,40 @@ body {
   white-space: nowrap;
 }
 
+
+/* =========================
+   Capacity Bar
+   ========================= */
+
+.capacity-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.capacity-bar {
+  width: 70px;
+  height: 6px;
+  background-color: var(--capacity-bg);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.capacity-fill {
+  width: var(--capacity-width);
+  height: 100%;
+  background-color: var(--navy);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.capacity-text {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+
 /* =========================
    Headers
    ========================= */
@@ -97,15 +153,17 @@ body {
   background-color: var(--navy);
 }
 
+
 /* =========================
    Lake Monitoring Map
    ========================= */
 
 .monitoring-map {
-  height: 400px;
   width: 100%;
+  height: 400px;
   border-radius: 0 0 0.75rem 0.75rem;
 }
+
 
 /* =========================
    Sidebar
@@ -113,55 +171,51 @@ body {
 
 @media (min-width: 992px) {
 
-  /* Sidebar container */
+  /* Sidebar */
   nav.d-lg-flex {
     position: fixed;
     top: 0;
     left: 0;
+    z-index: 1030;
 
     width: 240px;
     height: 100vh;
 
     overflow-y: auto;
-    z-index: 1030;
 
     background-color: var(--sidebar-bg) !important;
     color: var(--sidebar-text);
   }
 
-  /* WaveTech brand */
+  /* Brand */
   nav.d-lg-flex .fs-5.fw-bold {
     color: var(--sidebar-text) !important;
   }
 
-  /* Navigation links */
-  nav.d-lg-flex a {
-    color: var(--sidebar-text) !important;
-  }
-
-  /* Navigation icons */
+  /* Navigation links and icons */
+  nav.d-lg-flex a,
   nav.d-lg-flex a i {
     color: var(--sidebar-text) !important;
   }
 
   /* Navigation hover */
-  nav.d-lg-flex a:hover {
-    background-color: var(--sidebar-hover);
-    color: var(--navy) !important;
-  }
-
+  nav.d-lg-flex a:hover,
   nav.d-lg-flex a:hover i {
     color: var(--navy) !important;
   }
 
+  nav.d-lg-flex a:hover {
+    background-color: var(--sidebar-hover);
+  }
+
   /* Active navigation */
-  nav.d-lg-flex a.active {
-    background-color: var(--navy) !important;
+  nav.d-lg-flex a.active,
+  nav.d-lg-flex a.active i {
     color: #ffffff !important;
   }
 
-  nav.d-lg-flex a.active i {
-    color: #ffffff !important;
+  nav.d-lg-flex a.active {
+    background-color: var(--navy) !important;
   }
 
   /* Sidebar muted text */
@@ -184,8 +238,7 @@ body {
   }
 
   body > .d-flex > .flex-grow-1 {
-    margin-left: 240px;
     min-width: 0;
+    margin-left: 240px;
   }
 }
-

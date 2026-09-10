@@ -52,38 +52,86 @@ page_title %}Settings{% endblock %} {% block content %}
         >
           <div class="col-12">
             <label class="form-label small text-muted">Current Password</label>
-            <input
-              type="password"
-              name="current_password"
-              class="form-control"
-              required
-              autocomplete="current-password"
-            />
+            <div class="col-12">
+  <div class="position-relative">
+    <input
+      type="password"
+      name="current_password"
+      id="current-password"
+      class="form-control pe-5"
+      required
+      autocomplete="current-password"
+    />
+
+    <button
+      type="button"
+      class="btn position-absolute top-50 end-0 translate-middle-y border-0 p-0 me-3"
+      style="color: #6b7280;"
+      onclick="togglePassword('current-password', this)"
+      aria-label="Show password"
+    >
+      <i class="bi bi-eye"></i>
+    </button>
+  </div>
+</div>
           </div>
+
           <div class="col-12">
             <label class="form-label small text-muted">New Password</label>
-            <input
-              type="password"
-              name="new_password"
-              class="form-control"
-              required
-              minlength="8"
-              autocomplete="new-password"
-            />
+            <div class="col-12">
+  <div class="position-relative">
+    <input
+      type="password"
+      name="new_password"
+      id="new-password"
+      class="form-control pe-5"
+      required
+      minlength="8"
+      autocomplete="new-password"
+    />
+
+    <button
+      type="button"
+      class="btn position-absolute top-50 end-0 translate-middle-y border-0 p-0 me-3"
+      style="color: #6b7280;"
+      onclick="togglePassword('new-password', this)"
+      aria-label="Show password"
+    >
+      <i class="bi bi-eye"></i>
+    </button>
+  </div>
+</div>
           </div>
+
           <div class="col-12">
-            <label class="form-label small text-muted"
-              >Confirm New Password</label
-            >
-            <input
-              type="password"
-              name="confirm_password"
-              class="form-control"
-              required
-              minlength="8"
-              autocomplete="new-password"
-            />
+            <label class="form-label small text-muted">
+              Confirm New Password
+            </label>
+            <div class="col-12">
+  <div class="position-relative">
+    <input
+      type="password"
+      name="confirm_password"
+      id="confirm-password"
+      class="form-control pe-5"
+      required
+      minlength="8"
+      autocomplete="new-password"
+    />
+
+    <button
+      type="button"
+      class="btn position-absolute top-50 end-0 translate-middle-y border-0 p-0 me-3"
+      style="color: #6b7280;"
+      onclick="togglePassword('confirm-password', this)"
+      aria-label="Show password"
+    >
+      <i class="bi bi-eye"></i>
+    </button>
+  </div>
+</div>
           </div>
+
           <div class="col-12">
             <button
               type="submit"
@@ -130,7 +178,8 @@ page_title %}Settings{% endblock %} {% block content %}
               <option
                 value="{{ option }}"
                 {%
-                if option == refresh_interval
+                if
+                option==refresh_interval
                 %}selected{%
                 endif
                 %}
@@ -428,5 +477,20 @@ page_title %}Settings{% endblock %} {% block content %}
     {% endif %}
   </div>
 </div>
+<script>
+  function togglePassword(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector("i");
 
+    if (input.type === "password") {
+      input.type = "text";
+      icon.classList.remove("bi-eye");
+      icon.classList.add("bi-eye-slash");
+    } else {
+      input.type = "password";
+      icon.classList.remove("bi-eye-slash");
+      icon.classList.add("bi-eye");
+    }
+  }
+</script>
 {% endblock %} ```
