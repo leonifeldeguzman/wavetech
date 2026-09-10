@@ -13,7 +13,7 @@ from typing import Any
 
 from flask import current_app
 
-from app.services import llda_mock_service, monitoring_service, windy_service
+from app.services import llda_mock_service, monitoring_service
 from app.utils.timezone import to_ph_time
 
 RECOMMENDATION_PROCEED = "PROCEED"
@@ -46,7 +46,6 @@ class SchedulingAssessment:
     wind_direction: str | None
     temperature_c: float | None
     windy_retrieved_at: datetime | None
-    windy_forecast_at: datetime | None
     llda_recorded_at: datetime | None
     last_updated_at: datetime | None
     llda_source_label: str
@@ -128,7 +127,7 @@ def evaluate_conditions(windy_reading: Any, llda_reading: Any) -> SchedulingAsse
         windy_retrieved = getattr(windy_reading, "retrieved_at", None)
 
     if llda_reading is None:
-        water = ConditionResult("Water Level", None, STATUS_UNAVAILABLE, "LLDA mock data is unavailable.")
+        water = ConditionResult("Water Level", None, STATUS_UNAVAILABLE, "Water level data is unavailable.")
         llda_recorded = None
     else:
         water = _classify_water(getattr(llda_reading, "water_level_m", None), thresholds)
@@ -182,34 +181,27 @@ def evaluate_conditions(windy_reading: Any, llda_reading: Any) -> SchedulingAsse
         wind_direction=direction,
         temperature_c=temperature,
         windy_retrieved_at=windy_retrieved,
-        windy_forecast_at=getattr(windy_reading, "recorded_at", None) if windy_reading is not None else None,
         llda_recorded_at=llda_recorded,
         last_updated_at=last_updated_at,
         llda_source_label="MOCK/DEVELOPMENT DATA",
     )
 
 
-def get_assessment(trip_departure_time: datetime | None = None) -> SchedulingAssessment:
-    """Assess conditions for a selected trip's departure time.
+def get_assessment() -> SchedulingAssessment:
+    """Assess the latest/current environmental conditions.
 
-    For a scheduled trip, Windy is queried for the forecast point nearest the
-    trip departure. If no trip time is supplied, the existing monitoring
-    reading is used for backwards compatibility. The LLDA value remains the
-    temporary development mock until an authorized LLDA machine-readable
-    source is available.
+    The assessment uses the latest available monitoring readings and does not
+    use a trip's future departure time or forecast data. The assessment is
+    recommendation-only and never changes a Trip or passenger manifest.
+    The LLDA value remains the temporary development mock until an authorized
+    LLDA machine-readable source is available.
     """
-    if trip_departure_time is not None:
-        try:
-            windy_reading = windy_service.fetch_forecast_for_time(trip_departure_time)
-        except windy_service.WindyServiceError:
-            windy_reading = None
-    else:
-        windy = monitoring_service.get_windy_conditions()
-        windy_reading = (
-            windy.get("reading")
-            if windy.get("status") == monitoring_service.STATUS_LIVE
-            else None
-        )
+    windy = monitoring_service.get_windy_conditions()
+    windy_reading = (
+        windy.get("reading")
+        if windy.get("status") == monitoring_service.STATUS_LIVE
+        else None
+    )
 
     try:
         llda_reading = llda_mock_service.fetch_water_level()

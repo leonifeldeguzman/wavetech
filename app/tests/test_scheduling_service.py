@@ -142,34 +142,13 @@ def test_assessment_does_not_modify_trip_or_manifest(app, make_boat, make_trip):
         assert after_trip.status == before_status == "Open"
         assert after_manifest_count == before_manifest_count == 0
 
-
-def test_dashboard_uses_selected_trip_departure_for_windy_forecast(app, make_boat, make_trip):
-    boat_id = make_boat(capacity=5)
-    trip_id = make_trip(boat_id=boat_id, status="Open")
-    target = db.session.get(Trip, trip_id).departure_time
-
-    forecast = _wind()
-    with patch(
-        "app.services.scheduling_service.windy_service.fetch_forecast_for_time",
-        return_value=forecast,
-    ) as mocked_forecast, patch(
-        "app.services.scheduling_service.llda_mock_service.fetch_water_level",
-        return_value=_water(),
-    ):
-        with app.app_context():
-            result = scheduling_service.get_assessment(target)
-
-    mocked_forecast.assert_called_once_with(target)
-    assert result.recommendation == scheduling_service.RECOMMENDATION_PROCEED
-
-
 def test_dashboard_assessment_does_not_change_trip(admin_client, app, make_boat, make_trip):
     boat_id = make_boat(capacity=5)
     trip_id = make_trip(boat_id=boat_id, status="Open")
 
     with patch(
-        "app.services.scheduling_service.windy_service.fetch_forecast_for_time",
-        return_value=_wind(),
+        "app.services.scheduling_service.monitoring_service.get_windy_conditions",
+        return_value={"status": "live", "reading": _wind(), "message": None},
     ):
         response = admin_client.get(f"/dashboard?trip_id={trip_id}")
 

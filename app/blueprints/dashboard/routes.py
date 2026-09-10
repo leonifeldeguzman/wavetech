@@ -56,7 +56,7 @@ def index():
     if trip_id is not None:
         selected_trip = db.session.get(Trip, trip_id)
         if selected_trip is not None:
-            scheduling_assessment = scheduling_service.get_assessment(selected_trip.departure_time)
+            scheduling_assessment = scheduling_service.get_assessment()
 
 
     if latest_reading is None:

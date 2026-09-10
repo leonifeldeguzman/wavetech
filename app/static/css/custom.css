@@ -4,6 +4,11 @@
   --bg-light: #f5f7fa;
   --card-white: #ffffff;
   --text-muted: #6b7280;
+
+  --sidebar-bg: #f3f4f6;
+  --sidebar-text: #1f2937;
+  --sidebar-hover: #e5e7eb;
+
   --status-blue-text: #3b82f6;
   --status-blue-bg: #dbeafe;
   --status-orange-text: #d97706;
@@ -17,7 +22,10 @@ body {
   background-color: var(--bg-light);
 }
 
-/* Status pills, matching the rounded badges in the mockups */
+/* =========================
+   Status Pills
+   ========================= */
+
 .status-pill {
   display: inline-block;
   padding: 0.25rem 0.75rem;
@@ -25,63 +33,152 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
 }
-.status-pill.departed   { color: var(--status-blue-text);   background: var(--status-blue-bg); }
+
+.status-pill.departed {
+  color: var(--status-blue-text);
+  background: var(--status-blue-bg);
+}
+
 .status-pill.boarding,
-.status-pill.available  { color: var(--status-orange-text); background: var(--status-orange-bg); }
+.status-pill.available,
+.status-pill.delayed {
+  color: var(--status-orange-text);
+  background: var(--status-orange-bg);
+}
+
 .status-pill.on-time,
 .status-pill.open,
-.status-pill.completed  { color: var(--status-green-text);  background: var(--status-green-bg); }
-.status-pill.delayed    { color: var(--status-orange-text); background: var(--status-orange-bg); }
-.status-pill.cancelled,
-.status-pill.full       { color: #fff; background: var(--status-red); }
+.status-pill.completed {
+  color: var(--status-green-text);
+  background: var(--status-green-bg);
+}
 
-/* Stat cards on dashboard */
+.status-pill.cancelled,
+.status-pill.full {
+  color: #fff;
+  background: var(--status-red);
+}
+
+/* =========================
+   Dashboard Stat Cards
+   ========================= */
+
 .stat-card {
   background: var(--card-white);
   border-radius: 0.75rem;
   padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
+
 .stat-card .stat-label {
   color: var(--text-muted);
   font-size: 0.85rem;
 }
+
 .stat-card .stat-value {
   font-size: 1.75rem;
   font-weight: 700;
 }
 
-.table td, .table th {
+/* =========================
+   Tables
+   ========================= */
+
+.table td,
+.table th {
   white-space: nowrap;
 }
 
-.navy-header {
-    background-color: #0f1b3c;
-}
+/* =========================
+   Headers
+   ========================= */
 
-/* Lake Monitoring: interactive Leaflet map card */
-.monitoring-map {
-  height: 400px;
-  width: 100%;
-  border-radius: 0 0 0.75rem 0.75rem; /* rounds bottom corners to match card body */
+.navy-header {
+  background-color: var(--navy);
 }
 
 /* =========================
-   Fixed Desktop Sidebar
+   Lake Monitoring Map
+   ========================= */
+
+.monitoring-map {
+  height: 400px;
+  width: 100%;
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+/* =========================
+   Sidebar
    ========================= */
 
 @media (min-width: 992px) {
+
+  /* Sidebar container */
   nav.d-lg-flex {
     position: fixed;
     top: 0;
     left: 0;
+
     width: 240px;
     height: 100vh;
+
     overflow-y: auto;
     z-index: 1030;
+
+    background-color: var(--sidebar-bg) !important;
+    color: var(--sidebar-text);
   }
 
-  /* Main content starts after the fixed sidebar */
+  /* WaveTech brand */
+  nav.d-lg-flex .fs-5.fw-bold {
+    color: var(--sidebar-text) !important;
+  }
+
+  /* Navigation links */
+  nav.d-lg-flex a {
+    color: var(--sidebar-text) !important;
+  }
+
+  /* Navigation icons */
+  nav.d-lg-flex a i {
+    color: var(--sidebar-text) !important;
+  }
+
+  /* Navigation hover */
+  nav.d-lg-flex a:hover {
+    background-color: var(--sidebar-hover);
+    color: var(--navy) !important;
+  }
+
+  nav.d-lg-flex a:hover i {
+    color: var(--navy) !important;
+  }
+
+  /* Active navigation */
+  nav.d-lg-flex a.active {
+    background-color: var(--navy) !important;
+    color: #ffffff !important;
+  }
+
+  nav.d-lg-flex a.active i {
+    color: #ffffff !important;
+  }
+
+  /* Sidebar muted text */
+  nav.d-lg-flex .text-muted {
+    color: var(--sidebar-text) !important;
+  }
+
+  /* Navigation spacing */
+  nav.d-lg-flex .nav-link {
+    margin-bottom: 0.25rem;
+  }
+
+  nav.d-lg-flex .nav {
+    gap: 0.15rem;
+  }
+
+  /* Main content */
   body > .d-flex {
     min-height: 100vh;
   }
