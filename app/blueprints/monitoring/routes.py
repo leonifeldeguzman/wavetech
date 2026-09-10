@@ -11,7 +11,7 @@ from flask import (
 from app.blueprints.monitoring import monitoring_bp
 from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import monitoring_service
+from app.services import monitoring_service, settings_service
 from app.utils.decorators import login_required
 
 
@@ -69,9 +69,7 @@ def index():
         # -------------------------
         # AUTO REFRESH
         # -------------------------
-        refresh_interval_seconds=current_app.config[
-            "REFRESH_INTERVAL_SECONDS"
-        ],
+        refresh_interval_seconds=settings_service.get_refresh_interval_seconds(),
 
         # -------------------------
         # MONITORING MAP

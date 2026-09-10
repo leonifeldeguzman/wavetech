@@ -38,7 +38,7 @@
 
 <ul class="nav nav-pills flex-column gap-1">
     <li class="nav-item">
-        <a href="#" class="nav-link text-white d-flex align-items-center gap-2 disabled">
+        <a href="{{ url_for('settings.index') }}" class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'settings' %}active{% endif %}">
             <i class="bi bi-gear-fill"></i> Settings
         </a>
     </li>

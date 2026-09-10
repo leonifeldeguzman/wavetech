@@ -15,7 +15,7 @@ with app.app_context():
             admin_id="admin001",
             password_hash=hash_password("changeme123"),
             full_name="Capt. Juan",
-            role="Operator"
+            role="Admin"
         )
         db.session.add(new_admin)
         db.session.commit()

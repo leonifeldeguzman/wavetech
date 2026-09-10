@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}Admin Settings{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <div class="text-muted small">Manage your account, safety thresholds, refresh interval, and security.</div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-xl-6">
+
+        <!-- Account -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header navy-header text-white">
+                <i class="bi bi-person-fill me-2"></i>Account
+            </div>
+            <div class="card-body">
+                <h6 class="fw-bold">Profile</h6>
+                <table class="table table-sm mb-4">
+                    <tbody>
+                        <tr>
+                            <th scope="row" class="text-muted fw-normal" style="width: 40%;">Admin Name</th>
+                            <td>{{ user.full_name if user else session.get('full_name') }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row" class="text-muted fw-normal">Admin ID</th>
+                            <td>{{ user.admin_id if user else '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row" class="text-muted fw-normal">Role</th>
+                            <td>{{ user.role if user else session.get('role') }}</td>
+                        </tr>
+                        {% if user and user.created_at %}
+                        <tr>
+                            <th scope="row" class="text-muted fw-normal">Account Created</th>
+                            <td>{{ user.created_at | ph_time }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+
+                <h6 class="fw-bold">Change Password</h6>
+                <form method="POST" action="{{ url_for('settings.change_password') }}" class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label small text-muted">Current Password</label>
+                        <input type="password" name="current_password" class="form-control" required autocomplete="current-password">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small text-muted">New Password</label>
+                        <input type="password" name="new_password" class="form-control" required minlength="8" autocomplete="new-password">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small text-muted">Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control" required minlength="8" autocomplete="new-password">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-sm" style="background-color: var(--navy); color: #fff;">
+                            Update Password
+                        </button>
+                    </div>
+                </form>
+
+                <hr>
+
+                <h6 class="fw-bold">Logout</h6>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-box-arrow-left me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Refresh Interval -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header navy-header text-white">
+                <i class="bi bi-arrow-repeat me-2"></i>Refresh Interval
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    Controls how often the Lake Condition Monitoring dashboard automatically
+                    re-checks LLDA/Windy for new environmental data.
+                </p>
+                <form method="POST" action="{{ url_for('settings.update_refresh_interval') }}" class="row g-3 align-items-end">
+                    <div class="col-8">
+                        <label class="form-label small text-muted">Refresh every</label>
+                        <select name="refresh_interval_seconds" class="form-select">
+                            {% for option in refresh_interval_options %}
+                            <option value="{{ option }}" {% if option == refresh_interval %}selected{% endif %}>
+                                {{ option }} seconds
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <button type="submit" class="btn btn-sm w-100" style="background-color: var(--navy); color: #fff;">
+                            Save
+                        </button>
+                    </div>
+                </form>
+                <div class="text-muted small mt-2">Current interval: {{ refresh_interval }} seconds</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="col-12 col-xl-6">
+
+        <!-- Safety Thresholds -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header navy-header text-white">
+                <i class="bi bi-shield-fill me-2"></i>Safety Thresholds
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning small mb-3">
+                    <strong>Temporary/System-Defined Thresholds.</strong>
+                    These values are for system development and evaluation and have not been
+                    validated as official maritime safety limits.
+                </div>
+
+                {% if not is_admin %}
+                <div class="text-muted">
+                    <i class="bi bi-lock-fill me-1"></i>
+                    Only Admin accounts can view and modify Safety Thresholds.
+                </div>
+                {% else %}
+                <form method="POST" action="{{ url_for('settings.update_safety_thresholds') }}">
+
+                    <h6 class="fw-bold mt-2">Wind Speed (km/h)</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Safe limit (max)</label>
+                            <input type="number" step="0.1" min="0" name="wind_safe_max_kmh" class="form-control"
+                                   value="{{ thresholds.wind_safe_max_kmh }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Caution limit (max)</label>
+                            <input type="number" step="0.1" min="0" name="wind_caution_max_kmh" class="form-control"
+                                   value="{{ thresholds.wind_caution_max_kmh }}" required>
+                        </div>
+                        <div class="col-12 text-muted small">Above the caution limit is classified Unsafe.</div>
+                    </div>
+
+                    <h6 class="fw-bold">Water Level (m)</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Safe range (min)</label>
+                            <input type="number" step="0.01" min="0" name="water_safe_min_m" class="form-control"
+                                   value="{{ thresholds.water_safe_min_m }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Safe range (max)</label>
+                            <input type="number" step="0.01" min="0" name="water_safe_max_m" class="form-control"
+                                   value="{{ thresholds.water_safe_max_m }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Caution range (min)</label>
+                            <input type="number" step="0.01" min="0" name="water_caution_min_m" class="form-control"
+                                   value="{{ thresholds.water_caution_min_m }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Caution range (max)</label>
+                            <input type="number" step="0.01" min="0" name="water_caution_max_m" class="form-control"
+                                   value="{{ thresholds.water_caution_max_m }}" required>
+                        </div>
+                        <div class="col-12 text-muted small">
+                            The caution range must fully surround the safe range. Outside the
+                            caution range is classified Unsafe.
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold">Weather Conditions</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Safe conditions (comma-separated)</label>
+                            <input type="text" name="weather_safe" class="form-control"
+                                   value="{{ thresholds.weather_safe }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Caution conditions (comma-separated)</label>
+                            <input type="text" name="weather_caution" class="form-control"
+                                   value="{{ thresholds.weather_caution }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Unsafe conditions (comma-separated)</label>
+                            <input type="text" name="weather_unsafe" class="form-control"
+                                   value="{{ thresholds.weather_unsafe }}" required>
+                        </div>
+                        <div class="col-12 text-muted small">
+                            A condition (e.g. "Sunny") can only belong to one category.
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-sm" style="background-color: var(--navy); color: #fff;">
+                        Save Safety Thresholds
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Security & Activity -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header navy-header text-white">
+                <i class="bi bi-shield-lock-fill me-2"></i>Security &amp; Activity
+            </div>
+            <div class="card-body">
+                {% if not is_admin %}
+                <div class="text-muted">
+                    <i class="bi bi-lock-fill me-1"></i>
+                    Only Admin accounts can view Session Settings and the Activity Log.
+                </div>
+                {% else %}
+                <h6 class="fw-bold">Session Settings</h6>
+                <form method="POST" action="{{ url_for('settings.update_session_timeout') }}" class="row g-3 align-items-end mb-4">
+                    <div class="col-8">
+                        <label class="form-label small text-muted">Session timeout (minutes)</label>
+                        <input type="number" min="1" max="1440" name="session_timeout_minutes" class="form-control"
+                               value="{{ session_timeout }}" required>
+                    </div>
+                    <div class="col-4">
+                        <button type="submit" class="btn btn-sm w-100" style="background-color: var(--navy); color: #fff;">
+                            Save
+                        </button>
+                    </div>
+                </form>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Activity Log</h6>
+                    <a href="{{ url_for('settings.activity_log') }}" class="small">View full log</a>
+                </div>
+                <div class="table-responsive mt-2" style="max-height: 320px; overflow-y: auto;">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Admin</th>
+                                <th>Action</th>
+                                <th>Date/Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in activity_logs %}
+                            <tr>
+                                <td>{{ log.admin_name }}</td>
+                                <td>
+                                    {{ log.action }}
+                                    {% if log.details %}
+                                    <div class="text-muted small">{{ log.details }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-nowrap">{{ log.created_at | ph_time }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-muted text-center">No activity recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

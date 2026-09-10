@@ -26,10 +26,9 @@ decision here (rather than in routes/templates) is what lets
 `no_data_blocks_recommendation()` guarantee that stale/missing data can
 never silently feed a future scheduling recommendation.
 """
-from flask import current_app
 from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import llda_service, windy_service
+from app.services import llda_service, settings_service, windy_service
 from app.services.llda_service import LLDAServiceError
 from app.services.windy_service import WindyServiceError
 from app.utils.timezone import to_naive_utc
@@ -53,7 +52,7 @@ def _fresh_reading(source: str):
         cached_time = cached_time.astimezone(timezone.utc)
 
     delta = datetime.now(timezone.utc) - cached_time
-    refresh_interval = timedelta(seconds=current_app.config["REFRESH_INTERVAL_SECONDS"])
+    refresh_interval = timedelta(seconds=settings_service.get_refresh_interval_seconds())
     if timedelta(0) <= delta < refresh_interval:
         return cached
     return None

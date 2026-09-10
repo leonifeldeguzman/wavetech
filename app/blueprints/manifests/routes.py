@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from flask import render_template, request, redirect, url_for
+from flask import render_template, request, redirect, url_for, session
 from app.blueprints.manifests import manifests_bp
 from app.utils.decorators import login_required
 from app.extensions import db
@@ -10,6 +10,7 @@ from app.models.manifest_entry import ManifestEntry
 from flask import render_template, request, redirect, url_for, flash
 from datetime import date, datetime, timedelta
 from app.models.environmental_reading import EnvironmentalReading
+from app.services import activity_log_service
 
 @manifests_bp.route("/manifests")
 @login_required
@@ -228,6 +229,13 @@ def approve_registration(trip_id, reg_id):
         trip.status = "Full"
         db.session.commit()
 
+    activity_log_service.log_action(
+        user_id=session.get("user_id"),
+        admin_name=session.get("full_name", "Unknown"),
+        action=activity_log_service.ACTION_PASSENGER_APPROVED,
+        details=f"Approved {registration.full_name} for trip #{trip.id}.",
+    )
+
     flash(f"{registration.full_name} approved and added to manifest.")
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
@@ -238,6 +246,13 @@ def reject_registration(trip_id, reg_id):
     registration = PendingRegistration.query.get_or_404(reg_id)
     registration.status = "rejected"
     db.session.commit()
+
+    activity_log_service.log_action(
+        user_id=session.get("user_id"),
+        admin_name=session.get("full_name", "Unknown"),
+        action=activity_log_service.ACTION_PASSENGER_REJECTED,
+        details=f"Rejected {registration.full_name} for trip #{trip_id}.",
+    )
 
     flash(f"{registration.full_name}'s registration was rejected.")
     return redirect(url_for("manifests.trip_detail", trip_id=trip_id))

@@ -11,9 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from flask import current_app
-
-from app.services import llda_mock_service, monitoring_service
+from app.services import llda_mock_service, monitoring_service, settings_service
 from app.utils.timezone import to_ph_time
 
 RECOMMENDATION_PROCEED = "PROCEED"
@@ -52,13 +50,21 @@ class SchedulingAssessment:
 
 
 def _thresholds() -> dict[str, float]:
+    """Read the current Safety Thresholds.
+
+    These come from the centralized Admin Settings service (backed by the
+    `system_settings` table), NOT directly from app.config, so that a
+    threshold saved in Admin Settings takes effect on the very next
+    Scheduling Decision-Support evaluation. See app/services/settings_service.py.
+    """
+    saved = settings_service.get_safety_thresholds()
     return {
-        "wind_safe_max": float(current_app.config["SCHEDULING_WIND_SAFE_MAX_KMH"]),
-        "wind_caution_max": float(current_app.config["SCHEDULING_WIND_CAUTION_MAX_KMH"]),
-        "water_safe_min": float(current_app.config["SCHEDULING_WATER_SAFE_MIN_M"]),
-        "water_safe_max": float(current_app.config["SCHEDULING_WATER_SAFE_MAX_M"]),
-        "water_caution_min": float(current_app.config["SCHEDULING_WATER_CAUTION_MIN_M"]),
-        "water_caution_max": float(current_app.config["SCHEDULING_WATER_CAUTION_MAX_M"]),
+        "wind_safe_max": float(saved["wind_safe_max_kmh"]),
+        "wind_caution_max": float(saved["wind_caution_max_kmh"]),
+        "water_safe_min": float(saved["water_safe_min_m"]),
+        "water_safe_max": float(saved["water_safe_max_m"]),
+        "water_caution_min": float(saved["water_caution_min_m"]),
+        "water_caution_max": float(saved["water_caution_max_m"]),
     }
 
 
@@ -95,15 +101,13 @@ def _classify_weather(value: Any) -> ConditionResult:
         return ConditionResult("Weather", value, STATUS_UNAVAILABLE, "Weather condition is missing.")
 
     normalized = value.strip().lower()
-    safe = str(current_app.config["SCHEDULING_WEATHER_SAFE"]).strip().lower()
-    caution = str(current_app.config["SCHEDULING_WEATHER_CAUTION"]).strip().lower()
-    unsafe = str(current_app.config["SCHEDULING_WEATHER_UNSAFE"]).strip().lower()
+    categories = settings_service.get_weather_categories()
 
-    if normalized == safe:
+    if normalized in categories["safe"]:
         return ConditionResult("Weather", value, STATUS_SAFE, "Weather condition is classified as temporarily safe.")
-    if normalized == caution:
+    if normalized in categories["caution"]:
         return ConditionResult("Weather", value, STATUS_CAUTION, "Weather condition is classified as temporarily cautionary.")
-    if normalized == unsafe:
+    if normalized in categories["unsafe"]:
         return ConditionResult("Weather", value, STATUS_UNSAFE, "Weather condition is classified as temporarily unsafe.")
 
     return ConditionResult("Weather", value, STATUS_UNAVAILABLE, "Weather condition is not recognized by the decision rules.")

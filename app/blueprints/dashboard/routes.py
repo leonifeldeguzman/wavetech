@@ -6,7 +6,7 @@ from app.extensions import db
 from app.models.trip import Trip
 from app.models.manifest_entry import ManifestEntry
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import scheduling_service
+from app.services import scheduling_service, settings_service
 
 
 @dashboard_bp.route("/dashboard")
@@ -88,6 +88,6 @@ def index():
         latest_reading=latest_reading,
         selected_trip=selected_trip,
         scheduling_assessment=scheduling_assessment,
-        refresh_interval_seconds=current_app.config["REFRESH_INTERVAL_SECONDS"],
+        refresh_interval_seconds=settings_service.get_refresh_interval_seconds(),
         active_page="dashboard"
     )
