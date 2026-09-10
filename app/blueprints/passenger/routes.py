@@ -27,7 +27,7 @@ from app.extensions import db
 from app.models.trip import Trip
 from app.models.pending_registration import PendingRegistration, generate_reference_code
 from app.utils.api_responses import success_response, error_response
-
+from app.models.announcement import Announcement
 
 # ---------------------------------------------------------------------------
 # Business rules (documented here since they are not fully explicit in the
@@ -369,13 +369,32 @@ def create_registration():
 
 @passenger_bp.route("/passenger/", methods=["GET"])
 def home():
+    announcements = (
+        Announcement.query
+        .filter_by(status=Announcement.STATUS_ACTIVE)
+        .order_by(Announcement.published_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "passenger/home.html",
+        announcements=announcements
+    )
+
+@passenger_bp.route("/passenger/schedule", methods=["GET"])
+def schedule():
     trips = (
         Trip.query.filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
         .order_by(Trip.departure_time)
         .all()
     )
+
     trip_rows = [_serialize_trip_summary(t) for t in trips]
-    return render_template("passenger/schedule.html", trips=trip_rows)
+
+    return render_template(
+        "passenger/schedule.html",
+        trips=trip_rows
+    )
 
 
 @passenger_bp.route("/passenger/trips/<int:trip_id>", methods=["GET"])

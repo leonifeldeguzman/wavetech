@@ -38,6 +38,19 @@ def to_naive_utc(dt: datetime | None) -> datetime | None:
         return dt.replace(tzinfo=None)
     return dt
 
+def utc_now_naive() -> datetime:
+    """Return current UTC time as a naive datetime for database storage."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+def ph_to_naive_utc(dt: datetime | None) -> datetime | None:
+    """Convert a Philippine Time datetime to naive UTC."""
+    if dt is None:
+        return None
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=PH_TZ)
+
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 def to_ph_time(dt: datetime | None) -> datetime | None:
     """Convert a stored (naive, assumed-UTC) datetime to Asia/Manila for display."""

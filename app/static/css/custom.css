@@ -242,3 +242,86 @@ body {
     margin-left: 240px;
   }
 }
+
+/* =========================
+   Announcement Management
+   ========================= */
+
+.announcement-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: var(--card-white);
+}
+
+.announcement-icon {
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.announcement-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.announcement-normal .announcement-icon {
+  color: var(--status-blue-text);
+}
+
+.announcement-safety .announcement-icon {
+  color: var(--status-red);
+}
+
+.announcement-scheduled .announcement-icon {
+  color: var(--status-orange-text);
+}
+
+.announcement-inactive {
+  opacity: 0.65;
+}
+
+.announcement-type {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* =========================
+   Passenger Announcements
+   ========================= */
+
+.passenger-announcement-icon {
+  flex-shrink: 0;
+  width: 36px;
+  font-size: 1.25rem;
+  color: var(--status-blue-text);
+}
+
+.passenger-safety-alert {
+  border-left: 4px solid var(--status-red) !important;
+}
+
+.passenger-safety-alert .passenger-announcement-icon {
+  color: var(--status-red);
+}
+
+.announcement-type {
+  flex-shrink: 0;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background-color: var(--bg-light);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.passenger-safety-alert .announcement-type {
+  background-color: #fee2e2;
+  color: var(--status-red);
+}
