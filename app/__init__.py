@@ -1,8 +1,28 @@
+import os
 from datetime import timedelta
 
 from flask import Flask, session
 from app.config import Config
 from app.extensions import db, migrate
+
+
+def _should_start_announcement_scheduler(app) -> bool:
+    """Decide whether this process should run the Announcement background
+    scheduler (see app/services/announcement_service.py).
+
+    - Never in tests (TESTING=True): tests exercise publish_due_
+      announcements() directly, or via the route-level fallback, so they
+      don't need a real background thread ticking during the run.
+    - Under Flask's debug reloader, the reloader's parent "watcher"
+      process re-imports and runs this whole module too, but only the
+      actual serving child process has WERKZEUG_RUN_MAIN=true — starting
+      the scheduler in both would be a second, conflicting instance.
+    """
+    if app.config.get("TESTING"):
+        return False
+    if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return False
+    return True
 
 
 def create_app():
@@ -60,5 +80,13 @@ def create_app():
     @app.route("/")
     def index():
         return "WaveTech is running!"
+
+    # Announcement Management: automatically publish Scheduled
+    # announcements whose time has arrived, without requiring anyone to
+    # open or refresh a page (see app/services/announcement_service.py).
+    if _should_start_announcement_scheduler(app):
+        from app.services import announcement_service
+
+        announcement_service.start_background_scheduler(app)
 
     return app

@@ -4,17 +4,30 @@ This is the single place Announcement rows are created/validated/updated,
 mirroring how app/services/settings_service.py centralizes Admin Settings
 and app/services/activity_log_service.py centralizes audit logging.
 
-Automatic scheduled publishing (task requirement 9): this project has no
-background scheduler/cron/Celery/Redis. `publish_due_announcements()` is
-the "simplest approach compatible with the existing project" — it is
-called at the top of the admin Announcement Management page and the
-passenger-facing announcements page (see app/blueprints/announcements/
-routes.py), so any announcement whose scheduled time has passed is
-activated the next time either page is loaded, with no manual publish
-step required.
+Automatic scheduled publishing (task requirement 9): `publish_due_
+announcements()` is the single source of truth for "which Scheduled
+announcements are due" and for actually publishing them. It is invoked
+from two places, both safe to call repeatedly (idempotent, cheap query):
+
+  1. A background scheduler thread (`start_background_scheduler`, below),
+     started once from app/__init__.py, that calls it on a fixed interval
+     (Config.ANNOUNCEMENT_SCHEDULER_INTERVAL_SECONDS) for as long as the
+     process is running. This is what makes a Scheduled announcement go
+     live at its scheduled time even if nobody has any WaveTech page open
+     — no admin/operator page load or refresh is required.
+  2. The admin Announcement Management page and the passenger-facing
+     announcements page (see app/blueprints/announcements/routes.py),
+     kept as a fallback so an announcement is never more than one page
+     load stale even in the (very short) window before the background
+     scheduler's next tick.
+
+This project has no Celery/Redis/cron; the background scheduler is a
+single daemon thread using only the standard library (`threading`), which
+is enough for WaveTech's current single-process deployment.
 """
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timezone
 
 from app.extensions import db
@@ -27,6 +40,8 @@ VALID_STATUSES = {Announcement.STATUS_ACTIVE, Announcement.STATUS_INACTIVE}
 SCHEDULE_DATETIME_FORMAT = "%Y-%m-%dT%H:%M"  # matches <input type="datetime-local">
 
 TITLE_MAX_LENGTH = 200
+
+DEFAULT_SCHEDULER_INTERVAL_SECONDS = 30
 
 
 class AnnouncementValidationError(ValueError):
@@ -111,6 +126,11 @@ def publish_due_announcements() -> int:
     Safe to call on every request that touches announcements — it's a
     cheap, idempotent query. Returns the number of announcements that were
     just published, mostly useful for tests.
+
+    This is the ONLY place that performs the actual publish (status ->
+    Active, published_at -> now) — both the background scheduler and the
+    route-level fallback calls below invoke this same function rather than
+    duplicating its query/update logic.
     """
     now = utc_now_naive()
     due = Announcement.query.filter(
@@ -128,6 +148,89 @@ def publish_due_announcements() -> int:
         db.session.commit()
 
     return len(due)
+
+
+# ---------------------------------------------------------------------------
+# Background scheduler
+#
+# A single daemon thread per process that calls publish_due_announcements()
+# on a fixed interval, so Scheduled announcements go live automatically —
+# no admin/operator needs to open or refresh any page. Started once from
+# app/__init__.py; module-level state below guards against a second
+# instance ever running in the same process (e.g. if start_background_
+# scheduler were accidentally called twice, or the Flask debug reloader's
+# watcher process also imports this module).
+# ---------------------------------------------------------------------------
+
+_scheduler_thread: threading.Thread | None = None
+_scheduler_stop_event: threading.Event | None = None
+_scheduler_lock = threading.Lock()
+
+
+def start_background_scheduler(app, interval_seconds: int | None = None) -> bool:
+    """Start the background scheduler thread for `app`, if it isn't
+    already running in this process.
+
+    Returns True if a new thread was started, False if one was already
+    running (in which case this call is a safe no-op — it never creates a
+    second, conflicting scheduler instance).
+    """
+    global _scheduler_thread, _scheduler_stop_event
+
+    if interval_seconds is None:
+        interval_seconds = app.config.get(
+            "ANNOUNCEMENT_SCHEDULER_INTERVAL_SECONDS",
+            DEFAULT_SCHEDULER_INTERVAL_SECONDS,
+        )
+
+    with _scheduler_lock:
+        if _scheduler_thread is not None and _scheduler_thread.is_alive():
+            return False
+
+        stop_event = threading.Event()
+
+        def _run():
+            # stop_event.wait(...) doubles as our sleep: it returns True
+            # (and the loop exits) the moment stop_event is set, or False
+            # after interval_seconds with nothing having happened.
+            while not stop_event.wait(interval_seconds):
+                try:
+                    with app.app_context():
+                        publish_due_announcements()
+                except Exception:
+                    app.logger.exception(
+                        "Background announcement publishing failed"
+                    )
+
+        thread = threading.Thread(
+            target=_run,
+            name="announcement-scheduler",
+            daemon=True,
+        )
+        _scheduler_thread = thread
+        _scheduler_stop_event = stop_event
+        thread.start()
+        return True
+
+
+def stop_background_scheduler(timeout: float = 2) -> None:
+    """Stop the background scheduler thread, if one is running.
+
+    The thread is a daemon thread, so it would never block process exit
+    even if this is never called — this exists mainly so tests can start
+    a scheduler against a short-lived test app without leaking a thread
+    (and its now-invalid app context) into later tests.
+    """
+    global _scheduler_thread, _scheduler_stop_event
+
+    with _scheduler_lock:
+        if _scheduler_stop_event is not None:
+            _scheduler_stop_event.set()
+        thread, _scheduler_thread = _scheduler_thread, None
+        _scheduler_stop_event = None
+
+    if thread is not None:
+        thread.join(timeout=timeout)
 
 
 # ---------------------------------------------------------------------------

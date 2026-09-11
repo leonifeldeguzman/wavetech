@@ -8,6 +8,13 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Read from the environment (rather than only via Flask's normal
+    # app.config.update(TESTING=True) in conftest.py) so create_app() can
+    # decide whether to start the Announcement background scheduler (see
+    # below) at app-creation time, before any fixture gets a chance to
+    # flip the flag afterwards.
+    TESTING = os.environ.get("TESTING", "false").lower() == "true"
+
     # --- LLDA environmental data integration ---
     # As of this writing, LLDA has NOT published an official machine-readable
     # (API/JSON/XML/CSV) endpoint for Laguna de Bay water-level data — see
@@ -64,4 +71,14 @@ class Config:
     MONITORING_LOCATION_LABEL = os.environ.get(
         "MONITORING_LOCATION_LABEL",
         "Talim Island, Laguna de Bay"
+    )
+
+    # --- Announcement Management: automatic scheduled publishing ---
+    # How often the background scheduler (app/services/announcement_service.py
+    # start_background_scheduler) checks for Scheduled announcements whose
+    # scheduled_at has passed. Keep this reasonably short (seconds, not
+    # minutes) so a Scheduled announcement goes live close to its scheduled
+    # time even if nobody has any WaveTech page open.
+    ANNOUNCEMENT_SCHEDULER_INTERVAL_SECONDS = int(
+        os.environ.get("ANNOUNCEMENT_SCHEDULER_INTERVAL_SECONDS", "30")
     )

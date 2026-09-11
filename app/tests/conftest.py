@@ -51,6 +51,14 @@ else:
     os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
+# Read by app/config.py before app/__init__.py decides (at create_app()
+# time) whether to start the Announcement background scheduler thread —
+# see app/services/announcement_service.py. Tests exercise
+# publish_due_announcements() directly/via routes instead, so the real
+# scheduler thread is never started during the test run. This must be set
+# BEFORE create_app() is imported/called below; flask_app.config.update(
+# TESTING=True) in the `app` fixture happens too late for that decision.
+os.environ.setdefault("TESTING", "true")
 
 from app import create_app  # noqa: E402
 from app.extensions import db  # noqa: E402
@@ -58,6 +66,7 @@ from app.models.boat import Boat  # noqa: E402
 from app.models.trip import Trip  # noqa: E402
 from app.models.pending_registration import PendingRegistration  # noqa: E402
 from app.models.manifest_entry import ManifestEntry  # noqa: E402
+from app.services import announcement_service  # noqa: E402
 
 
 @pytest.fixture()
@@ -69,6 +78,11 @@ def app():
         yield flask_app
         db.session.remove()
         db.drop_all()
+    # Safety net: some tests deliberately start the background scheduler
+    # against this app (e.g. to test automatic publishing without any
+    # page load/refresh). Stop it here too, in case a test fails before
+    # reaching its own cleanup, so a stray thread never outlives its app.
+    announcement_service.stop_background_scheduler()
 
 
 @pytest.fixture()

@@ -1,13 +1,17 @@
 """Tests for the Announcement Management module.
 
 Covers: Activity Log integration for admin announcement actions, admin-only
-authorization on every management route, and the read-only Operator
+authorization on every management route, the read-only Operator
 Announcements view (including that scheduled/inactive announcements are
-never returned to Operators, even by the backend query).
+never returned to Operators, even by the backend query), and the
+background scheduler that automatically publishes Scheduled announcements
+without any admin/operator page load or refresh.
 
 Run with:
     python -m pytest app/tests/test_announcements.py -v
 """
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 
 from werkzeug.security import generate_password_hash
@@ -411,3 +415,108 @@ def test_scheduled_announcement_auto_publishes_when_due(app):
         announcement = db.session.get(Announcement, announcement_id)
         assert announcement.status == Announcement.STATUS_ACTIVE
         assert announcement.published_at is not None
+
+
+# ---------------------------------------------------------------------------
+# Background scheduler — publishes without any admin/operator page load
+# ---------------------------------------------------------------------------
+
+def test_scheduler_is_not_started_automatically_during_tests(app):
+    """create_app() must not start a real background thread while
+    TESTING=True — tests control publishing explicitly (via routes or by
+    calling start_background_scheduler themselves)."""
+    scheduler_threads = [
+        t for t in threading.enumerate() if t.name == "announcement-scheduler"
+    ]
+    assert scheduler_threads == []
+
+
+def test_background_scheduler_publishes_without_any_page_load(app):
+    """The scheduler thread itself — not any route's fallback call — must
+    flip a due Scheduled announcement to Active and stamp published_at."""
+    announcement_id = _make_announcement(
+        app,
+        title="Background Publish Me",
+        status=Announcement.STATUS_INACTIVE,
+        scheduled_at=datetime.utcnow() + timedelta(seconds=1),
+        published_at=None,
+    )
+
+    try:
+        started = announcement_service.start_background_scheduler(
+            app, interval_seconds=1
+        )
+        assert started is True
+
+        # Give the thread a few ticks to notice the announcement is due
+        # and publish it — no HTTP request made anywhere in this test.
+        # Each poll uses a fresh app context (and therefore a fresh
+        # session) so it always sees the latest committed state.
+        status = None
+        published_at = None
+        deadline = time.time() + 6
+        while time.time() < deadline:
+            time.sleep(0.5)
+            with app.app_context():
+                announcement = db.session.get(Announcement, announcement_id)
+                status = announcement.status
+                published_at = announcement.published_at
+            if status == Announcement.STATUS_ACTIVE:
+                break
+
+        assert status == Announcement.STATUS_ACTIVE
+        assert published_at is not None
+    finally:
+        announcement_service.stop_background_scheduler()
+
+
+def test_starting_scheduler_twice_does_not_create_a_second_instance(app):
+    try:
+        first_started = announcement_service.start_background_scheduler(
+            app, interval_seconds=30
+        )
+        second_started = announcement_service.start_background_scheduler(
+            app, interval_seconds=30
+        )
+        assert first_started is True
+        assert second_started is False
+
+        scheduler_threads = [
+            t for t in threading.enumerate() if t.name == "announcement-scheduler"
+        ]
+        assert len(scheduler_threads) == 1
+    finally:
+        announcement_service.stop_background_scheduler()
+
+
+def test_stop_scheduler_actually_stops_the_thread(app):
+    announcement_service.start_background_scheduler(app, interval_seconds=30)
+    announcement_service.stop_background_scheduler()
+
+    scheduler_threads = [
+        t for t in threading.enumerate() if t.name == "announcement-scheduler"
+    ]
+    assert scheduler_threads == []
+
+
+def test_background_scheduler_keeps_philippine_time_display_conversion(app):
+    """The background scheduler reuses publish_due_announcements(), which
+    only ever writes naive UTC to published_at — the ph_time template
+    filter is what converts it for display, unchanged by this feature."""
+    announcement_id = _make_announcement(
+        app,
+        title="PHT Display Check",
+        status=Announcement.STATUS_INACTIVE,
+        scheduled_at=datetime.utcnow() - timedelta(minutes=1),
+        published_at=None,
+    )
+
+    with app.app_context():
+        announcement_service.publish_due_announcements()
+        announcement = db.session.get(Announcement, announcement_id)
+        assert announcement.published_at.tzinfo is None  # stored naive UTC
+
+    admin_client, _ = _admin(app)
+    response = admin_client.get("/announcements")
+    assert response.status_code == 200
+    assert b"PHT" in response.data
