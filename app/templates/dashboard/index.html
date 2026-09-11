@@ -169,7 +169,7 @@
                 </div>
             </div>
 
-            <div class="mt-3">
+            <div class="mt-3 d-flex gap-2">
                 <button type="button"
                         class="btn btn-outline-secondary btn-sm"
                         data-bs-toggle="modal"
@@ -177,6 +177,18 @@
                     <i class="bi bi-eye me-1"></i>
                     View Details
                 </button>
+
+                {% if safety_alert_action and session.get('role') == 'Admin' %}
+                <a href="{{ url_for('announcements.index',
+                        prefill_title=safety_alert_action.title,
+                        prefill_content=safety_alert_action.content,
+                        prefill_type=safety_alert_action.type,
+                        _anchor='announcement-form') }}"
+                   class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Create Safety Alert
+                </a>
+                {% endif %}
             </div>
 
         </div>

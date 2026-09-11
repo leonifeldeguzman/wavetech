@@ -159,3 +159,125 @@ def test_dashboard_assessment_does_not_change_trip(admin_client, app, make_boat,
     with app.app_context():
         trip = db.session.get(Trip, trip_id)
         assert trip.status == "Open"
+
+
+# ---------------------------------------------------------------------------
+# DSS -> Safety Alert generation (scheduling_service.build_safety_alert)
+# ---------------------------------------------------------------------------
+
+def _trip(origin="Cabuyao Terminal", destination="Talim Island", departure_time=None):
+    return SimpleNamespace(
+        route_origin=origin,
+        route_destination=destination,
+        departure_time=departure_time or datetime(2026, 9, 15, 7, 30),
+    )
+
+
+def test_build_safety_alert_rainy_unsafe_format(app):
+    with app.app_context():
+        assessment = scheduling_service.evaluate_conditions(
+            _wind(wind=10.0, weather="Rainy"), _water(level=12.1)
+        )
+        assert assessment.recommendation == scheduling_service.RECOMMENDATION_UNSAFE
+
+        alert = scheduling_service.build_safety_alert(assessment, _trip())
+
+        assert alert is not None
+        assert alert["title"] == "Safety Alert: Unsafe Travel Conditions"
+        assert alert["type"] == "Safety Alert"
+        assert "Travel Alert" in alert["content"]
+        assert "Cabuyao Terminal to Talim Island" in alert["content"]
+        assert "September 15, 2026 07:30 AM" in alert["content"]
+        assert "UNSAFE due to rainy weather conditions" in alert["content"]
+        assert "Weather: Rainy" in alert["content"]
+        assert "Wind Speed: 10.0 km/h" in alert["content"]
+        assert "Water Level: 12.1 m" in alert["content"]
+        assert "prioritize their safety" in alert["content"]
+
+
+def test_build_safety_alert_cloudy_caution_format(app):
+    with app.app_context():
+        assessment = scheduling_service.evaluate_conditions(
+            _wind(wind=10.0, weather="Cloudy"), _water(level=12.1)
+        )
+        assert assessment.recommendation == scheduling_service.RECOMMENDATION_CAUTION
+
+        alert = scheduling_service.build_safety_alert(assessment, _trip())
+
+        assert alert is not None
+        assert alert["title"] == "Safety Alert: Caution on Travel Conditions"
+        assert "Travel Advisory" in alert["content"]
+        assert "CAUTION/DELAY due to cloudy weather conditions" in alert["content"]
+        assert "Weather: Cloudy" in alert["content"]
+        assert "remain alert and monitor" in alert["content"]
+
+
+def test_build_safety_alert_returns_none_for_proceed(app):
+    with app.app_context():
+        assessment = scheduling_service.evaluate_conditions(_wind(), _water())
+        assert assessment.recommendation == scheduling_service.RECOMMENDATION_PROCEED
+        assert scheduling_service.build_safety_alert(assessment, _trip()) is None
+
+
+def test_build_safety_alert_returns_none_when_data_unavailable(app):
+    with app.app_context():
+        assessment = scheduling_service.evaluate_conditions(_wind(wind=None), _water())
+        assert assessment.recommendation == scheduling_service.RECOMMENDATION_UNAVAILABLE
+        assert scheduling_service.build_safety_alert(assessment, _trip()) is None
+
+
+def test_build_safety_alert_returns_none_without_a_trip(app):
+    with app.app_context():
+        assessment = scheduling_service.evaluate_conditions(
+            _wind(wind=35), _water()
+        )
+        assert scheduling_service.build_safety_alert(assessment, None) is None
+
+
+def test_build_safety_alert_states_actual_reason_for_unsafe_wind(app):
+    """Weather is Sunny (safe); wind alone is unsafe. The alert must not
+    claim this was caused by weather."""
+    with app.app_context():
+        assessment = scheduling_service.evaluate_conditions(
+            _wind(wind=35, weather="Sunny"), _water(level=12.1)
+        )
+        assert assessment.recommendation == scheduling_service.RECOMMENDATION_UNSAFE
+        assert assessment.weather.status == scheduling_service.STATUS_SAFE
+
+        alert = scheduling_service.build_safety_alert(assessment, _trip())
+
+        assert "UNSAFE due to wind speed conditions" in alert["content"]
+        assert "Weather: Sunny" in alert["content"]
+
+
+def test_build_safety_alert_states_actual_reason_for_unsafe_water(app):
+    with app.app_context():
+        assessment = scheduling_service.evaluate_conditions(
+            _wind(wind=10.0, weather="Sunny"), _water(level=14.0)
+        )
+        assert assessment.recommendation == scheduling_service.RECOMMENDATION_UNSAFE
+        assert assessment.weather.status == scheduling_service.STATUS_SAFE
+
+        alert = scheduling_service.build_safety_alert(assessment, _trip())
+
+        assert "due to water level conditions" in alert["content"]
+        assert "Water Level: 14.0 m" in alert["content"]
+
+
+def test_build_safety_alert_uses_actual_trip_and_environmental_values(app):
+    with app.app_context():
+        trip = _trip(
+            origin="Custom Origin",
+            destination="Custom Destination",
+            departure_time=datetime(2026, 12, 1, 15, 45),
+        )
+        assessment = scheduling_service.evaluate_conditions(
+            _wind(wind=40.0, weather="Rainy"), _water(level=9.0)
+        )
+
+        alert = scheduling_service.build_safety_alert(assessment, trip)
+
+        assert "Custom Origin to Custom Destination" in alert["content"]
+        assert "December 01, 2026 03:45 PM" in alert["content"]
+        assert "Wind Speed: 40.0 km/h" in alert["content"]
+        assert "Water Level: 9.0 m" in alert["content"]

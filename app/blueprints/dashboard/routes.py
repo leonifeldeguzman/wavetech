@@ -52,11 +52,19 @@ def index():
     # only as context for the operator; no Trip or manifest row is changed.
     selected_trip = None
     scheduling_assessment = None
+    safety_alert_action = None
     trip_id = request.args.get("trip_id", type=int)
     if trip_id is not None:
         selected_trip = db.session.get(Trip, trip_id)
         if selected_trip is not None:
             scheduling_assessment = scheduling_service.get_assessment()
+            # Only offered for CAUTION/DELAY and UNSAFE results — see
+            # scheduling_service.build_safety_alert(). This never creates
+            # an Announcement itself; it only supplies the text used to
+            # prefill the existing Create Announcement form.
+            safety_alert_action = scheduling_service.build_safety_alert(
+                scheduling_assessment, selected_trip
+            )
 
 
     if latest_reading is None:
@@ -88,6 +96,7 @@ def index():
         latest_reading=latest_reading,
         selected_trip=selected_trip,
         scheduling_assessment=scheduling_assessment,
+        safety_alert_action=safety_alert_action,
         refresh_interval_seconds=settings_service.get_refresh_interval_seconds(),
         active_page="dashboard"
     )

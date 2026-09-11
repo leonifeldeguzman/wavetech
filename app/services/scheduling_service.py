@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from app.models.announcement import Announcement
 from app.services import llda_mock_service, monitoring_service, settings_service
 from app.utils.timezone import to_ph_time
 
@@ -218,3 +219,117 @@ def format_timestamp(dt: datetime | None) -> str:
     if dt is None:
         return "—"
     return to_ph_time(dt).strftime("%B %d, %Y %I:%M %p PHT")
+
+
+# ---------------------------------------------------------------------------
+# Safety Alert generation (DSS -> Announcement integration)
+#
+# This turns a SchedulingAssessment + the selected Trip into the title/
+# content text for a "Safety Alert" Announcement. It deliberately does NOT
+# create, validate, or publish an Announcement itself — see
+# app/services/announcement_service.py and app/blueprints/announcements/
+# routes.py, which remain the only place Announcement rows are written.
+# The dashboard uses this only to prefill the existing Create Announcement
+# form so an admin can review/edit before explicitly publishing.
+# ---------------------------------------------------------------------------
+
+_SAFETY_ALERT_TITLES = {
+    STATUS_UNSAFE: "Safety Alert: Unsafe Travel Conditions",
+    STATUS_CAUTION: "Safety Alert: Caution on Travel Conditions",
+}
+
+_SAFETY_ALERT_HEADERS = {
+    STATUS_UNSAFE: "Travel Alert",
+    STATUS_CAUTION: "Travel Advisory",
+}
+
+_SAFETY_ALERT_RECOMMENDATION_LABELS = {
+    STATUS_UNSAFE: "UNSAFE",
+    STATUS_CAUTION: "CAUTION/DELAY",
+}
+
+_SAFETY_ALERT_CLOSINGS = {
+    STATUS_UNSAFE: (
+        "Passengers are advised to prioritize their safety and await "
+        "further instructions from the authorized operator."
+    ),
+    STATUS_CAUTION: (
+        "Passengers are advised to remain alert and monitor further "
+        "updates from the operator."
+    ),
+}
+
+# Statuses a Safety Alert action is offered for. PROCEED and UNAVAILABLE
+# never generate one — see build_safety_alert() below.
+_SAFETY_ALERT_STATUSES = (STATUS_CAUTION, STATUS_UNSAFE)
+
+
+def _safety_alert_driving_conditions(assessment: SchedulingAssessment) -> list[ConditionResult]:
+    """The evaluated condition(s) that actually produced the current
+    Caution/Unsafe overall status, so the generated alert can name the
+    real reason instead of assuming it was always the weather."""
+    status = assessment.overall_status
+    if status not in _SAFETY_ALERT_STATUSES:
+        return []
+    return [
+        condition
+        for condition in (assessment.wind_speed, assessment.water_level, assessment.weather)
+        if condition.status == status
+    ]
+
+
+def _safety_alert_reason_phrase(assessment: SchedulingAssessment) -> str:
+    """A short phrase describing why the trip was flagged, based on the
+    condition(s) that actually drove the result. Only attributes the
+    warning to "weather" when weather is the sole driving condition."""
+    driving = _safety_alert_driving_conditions(assessment)
+    weather = assessment.weather
+
+    if len(driving) == 1 and driving[0] is weather:
+        normalized = str(weather.value).strip().lower() if weather.value else ""
+        return f"{normalized} weather conditions" if normalized else "weather conditions"
+
+    if driving:
+        names = " and ".join(condition.name.lower() for condition in driving)
+        return f"{names} conditions"
+
+    return "current environmental conditions"
+
+
+def build_safety_alert(assessment: SchedulingAssessment | None, trip: Any) -> dict[str, str] | None:
+    """Generate the title/type/message for a Safety Alert Announcement
+    from a Scheduling Decision-Support assessment and the selected trip.
+
+    Returns None when a Safety Alert action isn't offered for this result
+    — PROCEED (normally safe to travel) or UNAVAILABLE (no assessment to
+    alert on). The dashboard uses that to decide whether to show the
+    "Create Safety Alert" action at all.
+    """
+    if assessment is None or trip is None:
+        return None
+
+    status = assessment.overall_status
+    if status not in _SAFETY_ALERT_STATUSES:
+        return None
+
+    reason_phrase = _safety_alert_reason_phrase(assessment)
+    departure_label = trip.departure_time.strftime("%B %d, %Y %I:%M %p")
+
+    weather_value = assessment.weather.value if assessment.weather.value else "—"
+
+    content = (
+        f"{_SAFETY_ALERT_HEADERS[status]}\n\n"
+        f"The scheduled trip from {trip.route_origin} to {trip.route_destination} "
+        f"at {departure_label} has been assessed as "
+        f"{_SAFETY_ALERT_RECOMMENDATION_LABELS[status]} due to {reason_phrase}.\n\n"
+        f"Weather: {weather_value}\n"
+        f"Wind Speed: {assessment.wind_speed.value} km/h\n"
+        f"Water Level: {assessment.water_level.value} m\n\n"
+        f"{_SAFETY_ALERT_CLOSINGS[status]}"
+    )
+
+    return {
+        "type": Announcement.TYPE_SAFETY_ALERT,
+        "title": _SAFETY_ALERT_TITLES[status],
+        "content": content,
+    }
