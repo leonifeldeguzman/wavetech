@@ -19,6 +19,14 @@ ACTION_PASSENGER_APPROVED = "Passenger approval"
 ACTION_PASSENGER_REJECTED = "Passenger rejection"
 ACTION_REPORT_GENERATED = "Report generation"
 
+ACTION_ANNOUNCEMENT_PUBLISHED = "Published Announcement"
+ACTION_ANNOUNCEMENT_SCHEDULED = "Scheduled Announcement"
+ACTION_ANNOUNCEMENT_EDITED = "Edited Announcement"
+ACTION_ANNOUNCEMENT_ACTIVATED = "Activated Announcement"
+ACTION_ANNOUNCEMENT_DEACTIVATED = "Deactivated Announcement"
+ACTION_ANNOUNCEMENT_CANCELLED = "Cancelled Announcement"
+ACTION_ANNOUNCEMENT_DELETED = "Deleted Announcement"
+
 
 def _format_threshold_changes(changes: dict) -> str:
     if not changes:

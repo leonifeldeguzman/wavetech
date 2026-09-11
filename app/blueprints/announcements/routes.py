@@ -3,20 +3,39 @@ from flask import abort, flash, redirect, render_template, request, session, url
 from app.blueprints.announcements import announcements_bp
 from app.extensions import db
 from app.models.announcement import Announcement
-from app.services import announcement_service
+from app.services import activity_log_service, announcement_service
 from app.services.announcement_service import AnnouncementValidationError
 from app.utils.api_responses import success_response
 from app.utils.decorators import admin_required, login_required
 
+ROLE_ADMIN = "Admin"
+
+
+def _log(action, details=None):
+    """Record one Activity Log entry for an announcement action, using the
+    same admin-name/user-id convention as the Settings blueprint (see
+    app/blueprints/settings/routes.py)."""
+    activity_log_service.log_action(
+        user_id=session.get("user_id"),
+        admin_name=session.get("full_name", "Unknown"),
+        action=action,
+        details=details,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Admin: Announcement Management
 #
-# Like the Manifests blueprint (app/blueprints/manifests/routes.py), this
-# uses login_required rather than admin_required: any authenticated staff
-# member (Admin or Operator) can manage announcements, the same way any
-# logged-in staff member manages trips/manifests. It's only the stricter
-# Admin-only Settings (Safety Thresholds, Security & Activity) that use
-# admin_required elsewhere in this project.
+# Announcement Management is Admin-only (see app/utils/decorators.py). Every
+# route below that creates, publishes, schedules, edits, activates,
+# deactivates/cancels, or deletes an announcement is protected with the
+# existing admin_required decorator, so Operators get a 403 on direct
+# access, matching how Admin-only Settings (Safety Thresholds, Security &
+# Activity) are protected elsewhere in this project.
+#
+# Operators still have a locked, read-only Announcements view — see
+# `index()` below, which branches by role and never exposes management
+# controls or non-Active announcements to Operators.
 # ---------------------------------------------------------------------------
 
 
@@ -27,7 +46,20 @@ def index():
     # Active the next time this (or the passenger-facing) page is loaded.
     announcement_service.publish_due_announcements()
 
+    # Active announcements only — used as-is for the Operator view, and as
+    # the "Published Announcements" section for the Admin view below.
     published = announcement_service.get_published_announcements()
+
+    if session.get("role") != ROLE_ADMIN:
+        # Operator view: read-only, Active announcements only. Enforced
+        # here in the query (not just hidden in the template) — Operators
+        # never fetch get_scheduled_announcements()/get_inactive_announcements().
+        return render_template(
+            "announcements/operator.html",
+            published=published,
+            active_page="announcements",
+        )
+
     scheduled = announcement_service.get_scheduled_announcements()
     inactive = announcement_service.get_inactive_announcements()
 
@@ -57,13 +89,14 @@ def index():
 def create():
     form = request.form
     action = form.get("action")  # "publish_now" or "schedule"
+    publish_now = action == "publish_now"
 
     try:
-        announcement_service.create_announcement(
+        announcement = announcement_service.create_announcement(
             title=form.get("title"),
             content=form.get("content"),
             type_=form.get("type"),
-            publish_now=(action == "publish_now"),
+            publish_now=publish_now,
             scheduled_at_raw=form.get("scheduled_at"),
             created_by_user_id=session.get("user_id"),
         )
@@ -71,9 +104,20 @@ def create():
         flash(str(exc))
         return redirect(url_for("announcements.index"))
 
-    if action == "publish_now":
+    if publish_now:
+        _log(
+            activity_log_service.ACTION_ANNOUNCEMENT_PUBLISHED,
+            details=f"'{announcement.title}' ({announcement.type})",
+        )
         flash("Announcement published successfully.")
     else:
+        _log(
+            activity_log_service.ACTION_ANNOUNCEMENT_SCHEDULED,
+            details=(
+                f"'{announcement.title}' ({announcement.type}) "
+                f"scheduled for {announcement.scheduled_at}"
+            ),
+        )
         flash("Announcement scheduled successfully.")
     return redirect(url_for("announcements.index"))
 
@@ -86,7 +130,7 @@ def _get_announcement_or_404(announcement_id):
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/edit", methods=["POST"])
-@login_required
+@admin_required
 def edit(announcement_id):
     announcement = _get_announcement_or_404(announcement_id)
     form = request.form
@@ -103,34 +147,65 @@ def edit(announcement_id):
         flash(str(exc))
         return redirect(url_for("announcements.index"))
 
+    _log(
+        activity_log_service.ACTION_ANNOUNCEMENT_EDITED,
+        details=f"'{announcement.title}' ({announcement.type})",
+    )
     flash("Announcement updated successfully.")
     return redirect(url_for("announcements.index"))
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/delete", methods=["POST"])
-@login_required
+@admin_required
 def delete(announcement_id):
     announcement = _get_announcement_or_404(announcement_id)
+    title, type_ = announcement.title, announcement.type
     announcement_service.delete_announcement(announcement)
+
+    _log(
+        activity_log_service.ACTION_ANNOUNCEMENT_DELETED,
+        details=f"'{title}' ({type_})",
+    )
     flash("Announcement deleted successfully.")
     return redirect(url_for("announcements.index"))
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/activate", methods=["POST"])
-@login_required
+@admin_required
 def activate(announcement_id):
     announcement = _get_announcement_or_404(announcement_id)
     announcement_service.activate_announcement(announcement)
+
+    _log(
+        activity_log_service.ACTION_ANNOUNCEMENT_ACTIVATED,
+        details=f"'{announcement.title}' ({announcement.type})",
+    )
     flash("Announcement activated successfully.")
     return redirect(url_for("announcements.index"))
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/deactivate", methods=["POST"])
-@login_required
+@admin_required
 def deactivate(announcement_id):
     announcement = _get_announcement_or_404(announcement_id)
+    # A still-Scheduled announcement (never actually published) is being
+    # cancelled; an already-Published one is being deactivated. Same
+    # service call either way — see announcement_service.deactivate_announcement.
+    was_never_published = announcement.published_at is None
     announcement_service.deactivate_announcement(announcement)
-    flash("Announcement deactivated successfully.")
+
+    if was_never_published:
+        _log(
+            activity_log_service.ACTION_ANNOUNCEMENT_CANCELLED,
+            details=f"'{announcement.title}' ({announcement.type})",
+        )
+        flash("Scheduled announcement cancelled successfully.")
+    else:
+        _log(
+            activity_log_service.ACTION_ANNOUNCEMENT_DEACTIVATED,
+            details=f"'{announcement.title}' ({announcement.type})",
+        )
+        flash("Announcement deactivated successfully.")
     return redirect(url_for("announcements.index"))
 
 
