@@ -12,6 +12,24 @@ from datetime import date, datetime, timedelta
 from app.models.environmental_reading import EnvironmentalReading
 from app.services import activity_log_service
 
+
+def _apply_search(query, term, *columns):
+    """Case-insensitive, partial-match filter across one or more columns.
+
+    OR's the given columns together so a single search box can match any
+    of them (e.g. reference code OR name; name OR passenger type). Uses
+    SQLAlchemy's ilike() — parameterized, and portable across SQLite/
+    Postgres (it emits LOWER()-based comparisons on backends without a
+    native ILIKE) — so this never concatenates user input into SQL.
+    Returns the query unchanged when there's no search term, and never
+    touches the trip/status scoping already applied by the caller.
+    """
+    if not term:
+        return query
+    like = f"%{term}%"
+    return query.filter(db.or_(*[column.ilike(like) for column in columns]))
+
+
 @manifests_bp.route("/manifests")
 @login_required
 def list_slots():
@@ -66,17 +84,40 @@ def add_slot():
 def trip_detail(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
-    pending = PendingRegistration.query.filter_by(
-        trip_id=trip.id, status="pending"
-    ).order_by(PendingRegistration.submitted_at).all()
+    # Search terms are independent per section and travel via query
+    # params only — they never change which trip/rows are in scope,
+    # they just add an extra .filter() on top of the SAME queries that
+    # were already authorized/scoped to this trip.
+    pending_search = (request.args.get("pending_q") or "").strip()
+    manifest_search = (request.args.get("manifest_q") or "").strip()
 
-    manifest = ManifestEntry.query.filter_by(
-        trip_id=trip.id
-    ).order_by(ManifestEntry.check_in_time).all()
+    pending_query = PendingRegistration.query.filter_by(
+        trip_id=trip.id, status="pending"
+    )
+    pending_query = _apply_search(
+        pending_query,
+        pending_search,
+        PendingRegistration.reference_code,
+        PendingRegistration.full_name,
+    )
+    pending = pending_query.order_by(PendingRegistration.submitted_at).all()
+
+    # Capacity/occupancy must always reflect the TRUE manifest, never the
+    # searched/filtered subset, so this is counted separately from the
+    # (possibly filtered) `manifest` list below.
+    current_count = ManifestEntry.query.filter_by(trip_id=trip.id).count()
+
+    manifest_query = ManifestEntry.query.filter_by(trip_id=trip.id)
+    manifest_query = _apply_search(
+        manifest_query,
+        manifest_search,
+        ManifestEntry.full_name,
+        ManifestEntry.passenger_type,
+    )
+    manifest = manifest_query.order_by(ManifestEntry.check_in_time).all()
 
     boats = Boat.query.all()
 
-    current_count = len(manifest)
     capacity = trip.boat.capacity if trip.boat else None
 
     return render_template(
@@ -87,6 +128,8 @@ def trip_detail(trip_id):
         boats=boats,
         current_count=current_count,
         capacity=capacity,
+        pending_search=pending_search,
+        manifest_search=manifest_search,
         active_page="manifests"
     )
 

@@ -144,7 +144,6 @@ body {
   white-space: nowrap;
 }
 
-
 /* =========================
    Headers
    ========================= */
@@ -324,4 +323,31 @@ body {
 .passenger-safety-alert .announcement-type {
   background-color: #fee2e2;
   color: var(--status-red);
+}
+
+.search-bar {
+  max-width: 360px;
+}
+
+.live-search-wrapper {
+    width: 300px;
+}
+
+.live-search-input {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.live-search-input:focus {
+    border-color: var(--navy);
+    box-shadow: 0 0 0 0.15rem rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 767.98px) {
+    .live-search-wrapper {
+        width: 100%;
+    }
+
+    .live-search-wrapper .input-group {
+        width: 100%;
+    }
 }
