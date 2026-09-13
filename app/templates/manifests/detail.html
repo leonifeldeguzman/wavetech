@@ -4,6 +4,8 @@
 
 {% block content %}
 
+<div id="manifestData" data-trip-id="{{ trip.id }}"></div>
+
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-3">
@@ -13,154 +15,121 @@
             <span>{{ trip.crew_name or 'No crew assigned' }}</span>
             <span class="text-muted">{{ current_count }}/{{ capacity or '-' }} Capacity</span>
         </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#delayModal">Delay Trip</button>
-            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">Cancel Trip</button>
-        </div>
-    </div>
-</div>
 
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0">Trip Information</h6>
-            <span class="status-pill open">Check-In Open</span>
-        </div>
-        <form method="POST" action="{{ url_for('manifests.assign_boat', trip_id=trip.id) }}">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label small text-muted">Crew</label>
-                    <input type="text" name="crew_name" class="form-control" value="{{ trip.crew_name or '' }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small text-muted">Boat</label>
-                    <select name="boat_id" class="form-select">
-                        <option value="">-- None --</option>
-                        {% for boat in boats %}
-                            <option value="{{ boat.id }}" {% if trip.boat_id == boat.id %}selected{% endif %}>
-                                {{ boat.name }} (Cap: {{ boat.capacity }})
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small text-muted">Route</label>
-                    <div class="form-control-plaintext">
-                        {{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }}
-                    </div>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-sm w-100 text-white" style="background-color: var(--navy);">Save</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body">
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-    <h6 class="fw-bold mb-0">Pending Registrations</h6>
-
-    <form method="GET"
-          action="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}"
-          class="d-flex align-items-center gap-2">
-
-        <input type="hidden" name="manifest_q" value="{{ manifest_search }}">
-
-        <div class="live-search-wrapper">
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-white">
-                    <i class="bi bi-search"></i>
-                </span>
-
-                <input type="text"
-                       id="pendingSearch"
-                       name="pending_q"
-                       class="form-control live-search-input"
-                       placeholder="Search reference or name..."
-                       value="{{ pending_search }}"
-                       autocomplete="off">
-            </div>
-        </div>
-
-        <button type="submit"
-                class="btn btn-sm btn-outline-secondary">
-            Search
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-warning"
+                data-bs-toggle="modal"
+                data-bs-target="#delayModal">
+            Delay Trip
         </button>
 
-    </form>
-</div>
-
-
-        <div class="table-responsive">
-        <table id="pendingRegistrationsTable" class="table align-middle">
-            <thead>
-                <tr class="text-muted small text-uppercase">
-                    <th>Reference Code</th>
-                    <th>Name</th>
-                    <th>Time</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reg in pending %}
-                <tr>
-                    <td>{{ reg.reference_code }}</td>
-                    <td>{{ reg.full_name }}</td>
-                    <td>{{ reg.submitted_at.strftime('%H:%M:%S') }}</td>
-                    <td>
-                        <form method="POST" action="{{ url_for('manifests.approve_registration', trip_id=trip.id, reg_id=reg.id) }}" class="d-inline">
-                            <button class="btn btn-sm btn-outline-success">Approved</button>
-                        </form>
-                        <form method="POST" action="{{ url_for('manifests.reject_registration', trip_id=trip.id, reg_id=reg.id) }}" class="d-inline">
-                            <button class="btn btn-sm btn-outline-danger">Reject</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="4" class="text-center text-muted py-3">
-                    {% if pending_search %}
-                        No pending registrations match &ldquo;{{ pending_search }}&rdquo;.
-                    {% else %}
-                        No pending registrations yet.
-                    {% endif %}
-                </td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
+        <button class="btn btn-sm btn-outline-danger"
+                data-bs-toggle="modal"
+                data-bs-target="#cancelModal">
+            Cancel Trip
+        </button>
     </div>
 </div>
 
+</div>
+
+<!-- Trip Information -->
+
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-    <h6 class="fw-bold mb-0">Passenger Manifest</h6>
 
-    <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0">Trip Information</h6>
+        <span class="status-pill open">Check-In Open</span>
+    </div>
+
+    <form method="POST"
+          action="{{ url_for('manifests.assign_boat', trip_id=trip.id) }}">
+
+        <div class="row g-3">
+
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Crew</label>
+                <input type="text"
+                       name="crew_name"
+                       class="form-control"
+                       value="{{ trip.crew_name or '' }}">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Boat</label>
+
+                <select name="boat_id" class="form-select">
+                    <option value="">-- None --</option>
+
+                    {% for boat in boats %}
+                        <option value="{{ boat.id }}"
+                            {% if trip.boat_id == boat.id %}selected{% endif %}>
+                            {{ boat.name }} (Cap: {{ boat.capacity }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small text-muted">Route</label>
+
+                <div class="form-control-plaintext">
+                    {{ trip.route_origin }}
+                    <i class="bi bi-arrow-right"></i>
+                    {{ trip.route_destination }}
+                </div>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit"
+                        class="btn btn-sm w-100 text-white"
+                        style="background-color: var(--navy);">
+                    Save
+                </button>
+            </div>
+
+        </div>
+    </form>
+
+</div>
+
+</div>
+
+<!-- Pending Registrations -->
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h6 class="fw-bold mb-0">Pending Registrations</h6>
 
         <form method="GET"
               action="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}"
-              class="d-flex align-items-center gap-2">
-
-            <input type="hidden" name="pending_q" value="{{ pending_search }}">
+              class="d-flex align-items-center gap-2 mb-0">
 
             <div class="live-search-wrapper">
                 <div class="input-group input-group-sm">
+
                     <span class="input-group-text bg-white">
                         <i class="bi bi-search"></i>
                     </span>
 
                     <input type="text"
-                           id="manifestSearch"
-                           name="manifest_q"
+                           id="pendingSearch"
+                           name="pending_q"
                            class="form-control live-search-input"
-                           placeholder="Search name or type..."
-                           value="{{ manifest_search }}"
+                           placeholder="Search reference code..."
+                           value="{{ pending_search }}"
                            autocomplete="off">
+
                 </div>
             </div>
+
+            <input type="hidden"
+                   name="manifest_q"
+                   value="{{ manifest_search }}">
 
             <button type="submit"
                     class="btn btn-sm btn-outline-secondary">
@@ -169,281 +138,998 @@
 
         </form>
 
-        <button class="btn btn-sm text-white"
-                style="background-color: var(--navy);"
-                data-bs-toggle="modal"
-                data-bs-target="#walkinModal">
-            <i class="bi bi-plus-lg"></i> Add
-        </button>
-
     </div>
-</div>
 
 
-        <div class="table-responsive">
-        <table id="passengerManifestTable" class="table align-middle">
+    <div class="table-responsive">
+
+        <table id="pendingRegistrationsTable"
+               class="table align-middle">
+
             <thead>
                 <tr class="text-muted small text-uppercase">
-                    <th>#</th><th>Name</th><th>Age</th><th>Type</th><th>Check-In</th>
+                    <th>Reference Code</th>
+                    <th>Name</th>
+                    <th>Time</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
+
             <tbody>
-                {% for entry in manifest %}
+
+                {% for reg in pending %}
+
                 <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>{{ entry.full_name }}</td>
-                    <td>{{ entry.age }}</td>
-                    <td>{{ entry.passenger_type }}</td>
-                    <td>{{ entry.check_in_time.strftime('%H:%M:%S') }}</td>
+
+                    <td>{{ reg.reference_code }}</td>
+
+                    <td>{{ reg.full_name }}</td>
+
+                    <td>{{ reg.submitted_at.strftime('%H:%M:%S') }}</td>
+
+                    <td>
+
+                        <form method="POST"
+                              action="{{ url_for('manifests.approve_registration', trip_id=trip.id, reg_id=reg.id) }}"
+                              class="d-inline">
+
+                            <button class="btn btn-sm btn-outline-success">
+                                Approved
+                            </button>
+
+                        </form>
+
+                        <form method="POST"
+                              action="{{ url_for('manifests.reject_registration', trip_id=trip.id, reg_id=reg.id) }}"
+                              class="d-inline">
+
+                            <button class="btn btn-sm btn-outline-danger">
+                                Reject
+                            </button>
+
+                        </form>
+
+                    </td>
+
                 </tr>
+
                 {% else %}
-                <tr><td colspan="5" class="text-center text-muted py-3">
-                    {% if manifest_search %}
-                        No passengers match &ldquo;{{ manifest_search }}&rdquo;.
-                    {% else %}
-                        No passengers registered yet.
-                    {% endif %}
-                </td></tr>
+
+                <tr>
+                    <td colspan="4"
+                        class="text-center text-muted py-3">
+
+                        {% if pending_search %}
+                            No pending registrations match
+                            &ldquo;{{ pending_search }}&rdquo;.
+                        {% else %}
+                            No pending registrations yet.
+                        {% endif %}
+
+                    </td>
+                </tr>
+
                 {% endfor %}
+
             </tbody>
+
         </table>
-        </div>
+
     </div>
+
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body d-flex justify-content-between align-items-center">
-        <form method="POST" action="{{ url_for('manifests.confirm_departure', trip_id=trip.id) }}" class="d-flex align-items-center gap-2">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="audit_confirmed" value="yes" id="auditCheck">
-                <label class="form-check-label small" for="auditCheck">
-                    I confirm that the Coast Guard has visually audited this manifest and provided verbal clearance for this specific time.
-                </label>
-            </div>
-        </form>
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('manifests.list_slots') }}" class="btn btn-outline-secondary btn-sm">Change Slot</a>
-            <button type="submit" form="" class="btn btn-sm text-white" style="background-color: var(--navy);"
-                    onclick="document.querySelector('form[action*=confirm-departure]').submit(); return false;">
-                <i class="bi bi-check-lg"></i> Confirm Departure
+</div>
+
+<!-- Passenger Manifest -->
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h6 class="fw-bold mb-0">Passenger Manifest</h6>
+
+        <div class="d-flex align-items-center gap-2">
+
+            <form method="GET"
+                  action="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}"
+                  class="d-flex align-items-center gap-2 mb-0">
+
+                <input type="hidden"
+                       name="pending_q"
+                       value="{{ pending_search }}">
+
+                <div class="live-search-wrapper">
+
+                    <div class="input-group input-group-sm">
+
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+
+                        <input type="text"
+                               id="manifestSearch"
+                               name="manifest_q"
+                               class="form-control live-search-input"
+                               placeholder="Search name or type..."
+                               value="{{ manifest_search }}"
+                               autocomplete="off">
+
+                    </div>
+
+                </div>
+
+                <button type="submit"
+                        class="btn btn-sm btn-outline-secondary">
+                    Search
+                </button>
+
+            </form>
+
+
+            <button class="btn btn-sm text-white"
+                    style="background-color: var(--navy);"
+                    data-bs-toggle="modal"
+                    data-bs-target="#walkinModal">
+
+                <i class="bi bi-plus-lg"></i> Add
+
             </button>
+
         </div>
+
     </div>
+
+
+    <div class="table-responsive">
+
+        <table id="passengerManifestTable"
+               class="table align-middle">
+
+            <thead>
+                <tr class="text-muted small text-uppercase">
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Type</th>
+                    <th>Check-In</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for entry in manifest %}
+
+                <tr>
+
+                    <td>{{ loop.index }}</td>
+
+                    <td>{{ entry.full_name }}</td>
+
+                    <td>{{ entry.age }}</td>
+
+                    <td>{{ entry.passenger_type }}</td>
+
+                    <td>{{ entry.check_in_time.strftime('%H:%M:%S') }}</td>
+
+                    <td>
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editEntryModal"
+                                data-entry-id="{{ entry.id }}"
+                                data-full-name="{{ entry.full_name }}"
+                                data-age="{{ entry.age }}"
+                                data-address="{{ entry.address or '' }}"
+                                data-contact="{{ entry.contact_number or '' }}"
+                                data-passenger-type="{{ entry.passenger_type }}"
+                                onclick="populateEditEntryModalFromButton(this)">
+
+                            <i class="bi bi-pencil"></i> Edit
+
+                        </button>
+
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#deleteEntryModal"
+                                data-entry-id="{{ entry.id }}"
+                                data-full-name="{{ entry.full_name }}"
+                                onclick="populateDeleteEntryModalFromButton(this)">
+
+                            <i class="bi bi-trash"></i> Delete
+
+                        </button>
+
+                    </td>
+
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td colspan="6"
+                        class="text-center text-muted py-3">
+
+                        {% if manifest_search %}
+                            No passengers match
+                            &ldquo;{{ manifest_search }}&rdquo;.
+                        {% else %}
+                            No passengers registered yet.
+                        {% endif %}
+
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</div>
+
+<!-- Confirm Departure -->
+
+<div class="card border-0 shadow-sm mb-3">
+
+<form method="POST"
+      action="{{ url_for('manifests.confirm_departure', trip_id=trip.id) }}">
+
+    <div class="card-body d-flex justify-content-between align-items-center">
+
+        <div class="form-check">
+
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="audit_confirmed"
+                   value="yes"
+                   id="auditCheck">
+
+            <label class="form-check-label small"
+                   for="auditCheck">
+
+                I confirm that the Coast Guard has visually audited this
+                manifest and provided verbal clearance for this specific time.
+
+            </label>
+
+        </div>
+
+
+        <div class="d-flex gap-2">
+
+            <a href="{{ url_for('manifests.list_slots') }}"
+               class="btn btn-outline-secondary btn-sm">
+
+                Change Slot
+
+            </a>
+
+            <button type="submit"
+                    class="btn btn-sm text-white"
+                    style="background-color: var(--navy);">
+
+                <i class="bi bi-check-lg"></i>
+                Confirm Departure
+
+            </button>
+
+        </div>
+
+    </div>
+
+</form>
+
 </div>
 
 <!-- Delay Modal -->
+
 <div class="modal fade" id="delayModal" tabindex="-1">
-  <div class="modal-dialog">
+
+<div class="modal-dialog">
+
     <div class="modal-content">
-      <form method="POST" action="{{ url_for('manifests.delay_trip', trip_id=trip.id) }}">
-        <div class="modal-header text-white" style="background-color: var(--navy);">
-          <h5 class="modal-title">Confirm Trip Delay</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <label class="form-label small text-muted">Reason for Delay</label>
-          <select name="delay_reason" class="form-select mb-3" required>
-              <option value="">Select Reason</option>
-              <option value="Weather conditions">Weather conditions</option>
-              <option value="Waiting for passengers">Waiting for passengers</option>
-              <option value="Boat maintenance">Boat maintenance</option>
-              <option value="Coast Guard hold">Coast Guard hold</option>
-          </select>
-          <label class="form-label small text-muted">New Departure Time</label>
-          <input type="time" name="new_departure_time" class="form-control" required>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Dismiss</button>
-          <button type="submit" class="btn text-white" style="background-color: var(--navy);">Confirm</button>
-        </div>
-      </form>
+
+        <form method="POST"
+              action="{{ url_for('manifests.delay_trip', trip_id=trip.id) }}">
+
+            <div class="modal-header text-white"
+                 style="background-color: var(--navy);">
+
+                <h5 class="modal-title">Confirm Trip Delay</h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <label class="form-label small text-muted">
+                    Reason for Delay
+                </label>
+
+                <select name="delay_reason"
+                        class="form-select mb-3"
+                        required>
+
+                    <option value="">Select Reason</option>
+                    <option value="Weather conditions">Weather conditions</option>
+                    <option value="Waiting for passengers">Waiting for passengers</option>
+                    <option value="Boat maintenance">Boat maintenance</option>
+                    <option value="Coast Guard hold">Coast Guard hold</option>
+
+                </select>
+
+
+                <label class="form-label small text-muted">
+                    New Departure Time
+                </label>
+
+                <input type="time"
+                       name="new_departure_time"
+                       class="form-control"
+                       required>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+
+                    Dismiss
+
+                </button>
+
+                <button type="submit"
+                        class="btn text-white"
+                        style="background-color: var(--navy);">
+
+                    Confirm
+
+                </button>
+
+            </div>
+
+        </form>
+
     </div>
-  </div>
+
+</div>
+
 </div>
 
 <!-- Cancel Modal -->
+
 <div class="modal fade" id="cancelModal" tabindex="-1">
-  <div class="modal-dialog">
+
+<div class="modal-dialog">
+
     <div class="modal-content">
-      <form method="POST" action="{{ url_for('manifests.cancel_trip', trip_id=trip.id) }}">
-        <div class="modal-header text-white" style="background-color: var(--navy);">
-          <h5 class="modal-title">Confirm Trip Cancellation</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <label class="form-label small text-muted">Reason for cancellation</label>
-          <select name="cancel_reason" class="form-select" required>
-              <option value="">Select Reason</option>
-              <option value="Unsafe water conditions">Unsafe water conditions</option>
-              <option value="Boat unavailable">Boat unavailable</option>
-              <option value="Insufficient passengers">Insufficient passengers</option>
-              <option value="Emergency">Emergency</option>
-          </select>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Dismiss</button>
-          <button type="submit" class="btn text-white" style="background-color: var(--navy);">Confirm</button>
-        </div>
-      </form>
+
+        <form method="POST"
+              action="{{ url_for('manifests.cancel_trip', trip_id=trip.id) }}">
+
+            <div class="modal-header text-white"
+                 style="background-color: var(--navy);">
+
+                <h5 class="modal-title">Confirm Trip Cancellation</h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <label class="form-label small text-muted">
+                    Reason for cancellation
+                </label>
+
+                <select name="cancel_reason"
+                        class="form-select"
+                        required>
+
+                    <option value="">Select Reason</option>
+                    <option value="Unsafe water conditions">Unsafe water conditions</option>
+                    <option value="Boat unavailable">Boat unavailable</option>
+                    <option value="Insufficient passengers">Insufficient passengers</option>
+                    <option value="Emergency">Emergency</option>
+
+                </select>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+
+                    Dismiss
+
+                </button>
+
+                <button type="submit"
+                        class="btn text-white"
+                        style="background-color: var(--navy);">
+
+                    Confirm
+
+                </button>
+
+            </div>
+
+        </form>
+
     </div>
-  </div>
+
+</div>
+
 </div>
 
 <!-- Walk-In Modal -->
+
 <div class="modal fade" id="walkinModal" tabindex="-1">
-  <div class="modal-dialog">
+
+<div class="modal-dialog">
+
     <div class="modal-content">
-      <form method="POST" action="{{ url_for('manifests.add_walkin', trip_id=trip.id) }}">
-        <div class="modal-header text-white" style="background-color: var(--navy);">
-          <h5 class="modal-title">Walk-In Passenger</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-6">
-                <label class="form-label small text-muted">Full Name</label>
-                <input type="text" name="full_name" class="form-control" required>
+
+        <form method="POST"
+              action="{{ url_for('manifests.add_walkin', trip_id=trip.id) }}">
+
+            <div class="modal-header text-white"
+                 style="background-color: var(--navy);">
+
+                <h5 class="modal-title">Walk-In Passenger</h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
             </div>
-            <div class="col-6">
-                <label class="form-label small text-muted">Age</label>
-                <input type="number" name="age" class="form-control" min="0" required>
+
+            <div class="modal-body">
+
+                <div class="row g-3">
+
+                    <div class="col-6">
+
+                        <label class="form-label small text-muted">
+                            Full Name
+                        </label>
+
+                        <input type="text"
+                               name="full_name"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+
+                    <div class="col-6">
+
+                        <label class="form-label small text-muted">
+                            Age
+                        </label>
+
+                        <input type="number"
+                               name="age"
+                               class="form-control"
+                               min="0"
+                               required>
+
+                    </div>
+
+
+                    <div class="col-12">
+
+                        <label class="form-label small text-muted">
+                            Address
+                        </label>
+
+                        <input type="text"
+                               name="address"
+                               class="form-control">
+
+                    </div>
+
+
+                    <div class="col-6">
+
+                        <label class="form-label small text-muted">
+                            Contact Number
+                        </label>
+
+                        <input type="text"
+                               name="contact_number"
+                               class="form-control">
+
+                    </div>
+
+
+                    <div class="col-6">
+
+                        <label class="form-label small text-muted">
+                            Type
+                        </label>
+
+                        <select name="passenger_type"
+                                class="form-select"
+                                required>
+
+                            <option value="Regular">Regular</option>
+                            <option value="Student">Student</option>
+                            <option value="Senior">Senior</option>
+                            <option value="PWD">PWD</option>
+                            <option value="Child">Child</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
             </div>
-            <div class="col-12">
-                <label class="form-label small text-muted">Address</label>
-                <input type="text" name="address" class="form-control">
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+
+                    Dismiss
+
+                </button>
+
+                <button type="submit"
+                        class="btn text-white"
+                        style="background-color: var(--navy);">
+
+                    Register
+
+                </button>
+
             </div>
-            <div class="col-6">
-                <label class="form-label small text-muted">Contact Number</label>
-                <input type="text" name="contact_number" class="form-control">
-            </div>
-            <div class="col-6">
-                <label class="form-label small text-muted">Type</label>
-                <select name="passenger_type" class="form-select" required>
-                    <option value="Regular">Regular</option>
-                    <option value="Student">Student</option>
-                    <option value="Senior">Senior</option>
-                    <option value="PWD">PWD</option>
-                    <option value="Child">Child</option>
-                </select>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Dismiss</button>
-          <button type="submit" class="btn text-white" style="background-color: var(--navy);">Register</button>
-        </div>
-      </form>
+
+        </form>
+
     </div>
-  </div>
+
+</div>
+
+</div>
+
+<!-- Edit Manifest Entry Modal -->
+
+<div class="modal fade" id="editEntryModal" tabindex="-1">
+
+<div class="modal-dialog">
+
+    <div class="modal-content">
+
+        <form method="POST"
+              id="editEntryForm"
+              action="">
+
+            <div class="modal-header text-white"
+                 style="background-color: var(--navy);">
+
+                <h5 class="modal-title">Edit Passenger</h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div class="row g-3">
+
+                    <div class="col-6">
+
+                        <label class="form-label small text-muted">
+                            Full Name
+                        </label>
+
+                        <input type="text"
+                               name="full_name"
+                               id="editEntryFullName"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+
+                    <div class="col-6">
+
+                        <label class="form-label small text-muted">
+                            Age
+                        </label>
+
+                        <input type="number"
+                               name="age"
+                               id="editEntryAge"
+                               class="form-control"
+                               min="1"
+                               max="120"
+                               required>
+
+                    </div>
+
+
+                    <div class="col-12">
+
+                        <label class="form-label small text-muted">
+                            Address
+                        </label>
+
+                        <input type="text"
+                               name="address"
+                               id="editEntryAddress"
+                               class="form-control">
+
+                    </div>
+
+
+                    <div class="col-6">
+
+                        <label class="form-label small text-muted">
+                            Contact Number
+                        </label>
+
+                        <input type="text"
+                               name="contact_number"
+                               id="editEntryContact"
+                               class="form-control">
+
+                    </div>
+
+
+                    <div class="col-6">
+
+                        <label class="form-label small text-muted">
+                            Type
+                        </label>
+
+                        <select name="passenger_type"
+                                id="editEntryType"
+                                class="form-select"
+                                required>
+
+                            <option value="Regular">Regular</option>
+                            <option value="Student">Student</option>
+                            <option value="Senior">Senior</option>
+                            <option value="PWD">PWD</option>
+                            <option value="Child">Child</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+
+                    Cancel
+
+                </button>
+
+                <button type="submit"
+                        class="btn text-white"
+                        style="background-color: var(--navy);">
+
+                    Save Changes
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</div>
+
+<!-- Delete Manifest Entry Confirmation Modal -->
+
+<div class="modal fade" id="deleteEntryModal" tabindex="-1">
+
+<div class="modal-dialog">
+
+    <div class="modal-content">
+
+        <form method="POST"
+              id="deleteEntryForm"
+              action="">
+
+            <div class="modal-header text-white"
+                 style="background-color: var(--navy);">
+
+                <h5 class="modal-title">Remove Passenger</h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <p class="mb-0">
+
+                    Are you sure you want to remove
+                    <strong id="deleteEntryName"></strong>
+                    from this trip's manifest?
+                    This cannot be undone.
+
+                </p>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+
+                    Cancel
+
+                </button>
+
+                <button type="submit"
+                        class="btn btn-danger">
+
+                    Delete
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
 </div>
 
 <script>
+
 document.addEventListener("DOMContentLoaded", function () {
 
     function setupLiveSearch(inputId, table, columns) {
+
         const input = document.getElementById(inputId);
+
         if (!input) return;
 
         const tbody = table.querySelector("tbody");
+
         if (!tbody) return;
 
         const originalRows = Array.from(
             tbody.querySelectorAll("tr")
         ).filter(row => !row.querySelector("td[colspan]"));
 
+
         input.addEventListener("input", function () {
+
             const search = this.value.trim().toLowerCase();
 
             let visibleCount = 0;
 
+
             originalRows.forEach(function (row) {
+
                 const cells = row.querySelectorAll("td");
 
-                const match = search === "" || columns.some(function (column) {
-                    return cells[column] &&
-                        cells[column].textContent
-                            .toLowerCase()
-                            .includes(search);
-                });
+                const match =
+                    search === "" ||
+                    columns.some(function (column) {
+
+                        return cells[column] &&
+                            cells[column].textContent
+                                .toLowerCase()
+                                .includes(search);
+
+                    });
+
 
                 row.style.display = match ? "" : "none";
 
                 if (match) {
                     visibleCount++;
                 }
+
             });
 
-            let noResults = tbody.querySelector(".live-search-no-results");
+
+            let noResults =
+                tbody.querySelector(".live-search-no-results");
+
 
             if (search !== "" && visibleCount === 0) {
 
                 if (!noResults) {
-                    noResults = document.createElement("tr");
-                    noResults.className = "live-search-no-results";
 
-                    const cell = document.createElement("td");
-                    cell.colSpan = table.querySelectorAll("thead th").length;
-                    cell.className = "text-center text-muted py-3";
+                    noResults = document.createElement("tr");
+
+                    noResults.className =
+                        "live-search-no-results";
+
+
+                    const cell =
+                        document.createElement("td");
+
+                    cell.colSpan =
+                        table.querySelectorAll("thead th").length;
+
+                    cell.className =
+                        "text-center text-muted py-3";
+
 
                     noResults.appendChild(cell);
+
                     tbody.appendChild(noResults);
+
                 }
 
+
                 noResults.querySelector("td").textContent =
-                    'No results found for "' + this.value + '"';
+                    'No results found for "' +
+                    this.value +
+                    '"';
+
 
                 noResults.style.display = "";
+
             }
+
             else if (noResults) {
+
                 noResults.style.display = "none";
+
             }
+
         });
+
     }
 
-    // Pending Registrations
+
+    // Pending Registrations: reference code + name
     const pendingTable =
         document.querySelector("#pendingRegistrationsTable");
 
+
     if (pendingTable) {
+
         setupLiveSearch(
             "pendingSearch",
             pendingTable,
             [0, 1]
         );
+
     }
 
-    // Passenger Manifest
+
+    // Passenger Manifest: name + passenger type
     const manifestTable =
         document.querySelector("#passengerManifestTable");
 
+
     if (manifestTable) {
+
         setupLiveSearch(
             "manifestSearch",
             manifestTable,
             [1, 3]
         );
+
     }
 
 });
+
+
+const MANIFEST_TRIP_ID =
+    document.getElementById("manifestData").dataset.tripId;
+
+
+function populateEditEntryModal(
+    entryId,
+    fullName,
+    age,
+    address,
+    contactNumber,
+    passengerType
+) {
+
+    document.getElementById("editEntryForm").action =
+        `/manifests/${MANIFEST_TRIP_ID}/manifest/${entryId}/edit`;
+
+    document.getElementById("editEntryFullName").value =
+        fullName;
+
+    document.getElementById("editEntryAge").value =
+        age;
+
+    document.getElementById("editEntryAddress").value =
+        address;
+
+    document.getElementById("editEntryContact").value =
+        contactNumber;
+
+    document.getElementById("editEntryType").value =
+        passengerType;
+
+}
+
+
+function populateEditEntryModalFromButton(button) {
+
+    populateEditEntryModal(
+        button.dataset.entryId,
+        button.dataset.fullName,
+        button.dataset.age,
+        button.dataset.address,
+        button.dataset.contact,
+        button.dataset.passengerType
+    );
+
+}
+
+
+function populateDeleteEntryModal(
+    entryId,
+    fullName
+) {
+
+    document.getElementById("deleteEntryForm").action =
+        `/manifests/${MANIFEST_TRIP_ID}/manifest/${entryId}/delete`;
+
+    document.getElementById("deleteEntryName").textContent =
+        fullName;
+
+}
+
+
+function populateDeleteEntryModalFromButton(button) {
+
+    populateDeleteEntryModal(
+        button.dataset.entryId,
+        button.dataset.fullName
+    );
+
+}
+
 </script>
 
 {% endblock %}
-
-<div class="card border-0 shadow-sm">
-    <form method="POST" action="{{ url_for('manifests.confirm_departure', trip_id=trip.id) }}">
-        <div class="card-body d-flex justify-content-between align-items-center">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="audit_confirmed" value="yes" id="auditCheck">
-                <label class="form-check-label small" for="auditCheck">
-                    I confirm that the Coast Guard has visually audited this manifest and provided verbal clearance for this specific time.
-                </label>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{{ url_for('manifests.list_slots') }}" class="btn btn-outline-secondary btn-sm">Change Slot</a>
-                <button type="submit" class="btn btn-sm text-white" style="background-color: var(--navy);">
-                    <i class="bi bi-check-lg"></i> Confirm Departure
-                </button>
-            </div>
-        </div>
-    </form>
-</div>

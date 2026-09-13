@@ -117,7 +117,7 @@ def _serialize_trip_summary(trip):
 
     return {
         "trip_id": trip.id,
-        "departure_time": trip.departure_time.isoformat() if trip.departure_time else None,
+        "departure_time": trip.departure_time.strftime("%b %d, %Y, %I:%M %p") if trip.departure_time else None,
         "route_origin": trip.route_origin,
         "route_destination": trip.route_destination,
         "status": trip.status,
@@ -172,19 +172,19 @@ def get_trip(trip_id):
 # POST /api/passenger/registrations
 # ---------------------------------------------------------------------------
 
-def _validate_payload(payload):
-    fields = {}
+def validate_passenger_fields(payload):
+    """Field-level validation for a passenger's own details — full_name,
+    age, address, contact_number, passenger_type.
 
-    trip_id = payload.get("trip_id")
-    if trip_id is None or str(trip_id).strip() == "":
-        fields["trip_id"] = "This field is required."
-    else:
-        try:
-            trip_id = int(trip_id)
-            if trip_id <= 0:
-                fields["trip_id"] = "Must be a positive integer."
-        except (TypeError, ValueError):
-            fields["trip_id"] = "Must be a valid integer."
+    Shared by the passenger self-registration flow below (which also
+    validates trip_id on top of this) and the Admin/Operator manifest
+    edit route (app/blueprints/manifests/routes.py::edit_manifest_entry),
+    which never lets trip_id change since editing an entry never moves it
+    to a different trip. Extracted here — rather than re-implemented in
+    the manifests blueprint — so there is exactly one set of rules for
+    what a valid passenger record looks like.
+    """
+    fields = {}
 
     full_name = payload.get("full_name")
     if not full_name or not str(full_name).strip():
@@ -217,14 +217,32 @@ def _validate_payload(payload):
             f"Must be one of: {', '.join(sorted(VALID_PASSENGER_TYPES))}."
         )
 
-    return fields, {
-        "trip_id": trip_id if not fields.get("trip_id") else None,
+    cleaned = {
         "full_name": str(full_name).strip() if full_name else None,
         "age": age if not fields.get("age") else None,
         "address": str(address).strip() if address else None,
         "contact_number": str(contact_number).strip() if contact_number else None,
         "passenger_type": passenger_type,
     }
+    return fields, cleaned
+
+
+def _validate_payload(payload):
+    fields, cleaned = validate_passenger_fields(payload)
+
+    trip_id = payload.get("trip_id")
+    if trip_id is None or str(trip_id).strip() == "":
+        fields["trip_id"] = "This field is required."
+    else:
+        try:
+            trip_id = int(trip_id)
+            if trip_id <= 0:
+                fields["trip_id"] = "Must be a positive integer."
+        except (TypeError, ValueError):
+            fields["trip_id"] = "Must be a valid integer."
+
+    cleaned["trip_id"] = trip_id if not fields.get("trip_id") else None
+    return fields, cleaned
 
 
 class RegistrationResult:

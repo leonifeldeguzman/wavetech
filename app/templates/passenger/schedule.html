@@ -1,47 +1,112 @@
-{% extends "passenger/base.html" %}
-{% block title %}Schedule{% endblock %}
-
-{% block content %}
+{% extends "passenger/base.html" %} {% block title %}Schedule{% endblock %} {%
+block content %}
 <div class="container py-5">
+  <h4 class="fw-bold mb-4">Available Trips</h4>
 
-    <h4 class="fw-bold mb-4">Available Trips</h4>
+  <div class="card border-0 shadow-sm mb-5 overflow-hidden">
+    <!-- Table Header -->
+    <div class="schedule-header">
+      <div>Boat Name</div>
+      <div>Departure Time</div>
+      <div>Capacity</div>
+      <div>Status</div>
+    </div>
 
-    <div class="card border-0 shadow-sm mb-5">
-        <div class="list-group list-group-flush">
-            {% for trip in trips %}
-            <a href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}"
-               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
-                <div>
-                    <div class="fw-semibold">{{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }}</div>
-                    <div class="text-muted small">Departure: {{ trip.departure_time }}</div>
-                </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span class="status-pill {{ trip.status|lower|replace(' ', '-') }}">{{ trip.status }}</span>
-                    <span class="text-muted small">
-                        {% if trip.remaining_capacity is not none %}
-                            {{ trip.remaining_capacity }}/{{ trip.capacity }} seats
-                        {% else %}
-                            Boat pending
-                        {% endif %}
-                    </span>
-                    <i class="bi bi-chevron-right text-muted"></i>
-                </div>
-            </a>
+    <div class="list-group list-group-flush">
+      {% for trip in trips %}
+
+      <a
+        href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}"
+        class="list-group-item list-group-item-action py-3"
+      >
+        <div class="row align-items-center g-3">
+          <!-- Boat Name -->
+          <div class="col-12 col-md-3">
+            <div>
+              {% if trip.boat %} {{ trip.boat.name }} {% else %} Boat pending {%
+              endif %}
+            </div>
+          </div>
+
+          <!-- Departure Time -->
+          <div class="col-6 col-md-3">{{ trip.departure_time }}</div>
+
+          <!-- Capacity -->
+          <div class="col-6 col-md-3">
+            {% if trip.capacity is not none and trip.capacity > 0 and
+            trip.remaining_capacity is not none %} {% set capacity =
+            trip.capacity %} {% set remaining = trip.remaining_capacity %} {%
+            set occupied = capacity - remaining %} {% set occupancy_percent =
+            (occupied * 100 / capacity) if capacity > 0 else 0 %}
+
+            <div class="capacity-wrapper" title="{{ remaining }} seats left">
+              <div class="capacity-bar">
+                <div
+                  class="capacity-fill"
+                  style="--capacity-width: {{ occupancy_percent }}%;"
+                ></div>
+              </div>
+
+              {% if remaining <= 0 %}
+              <span class="capacity-text"> Full </span>
+              {% else %}
+              <span class="capacity-text"> {{ remaining }} seats left </span>
+              {% endif %}
+            </div>
+
             {% else %}
-            <div class="text-center text-muted py-4">No trips are currently available for registration.</div>
-            {% endfor %}
-        </div>
-    </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <h6 class="fw-bold mb-3">Check Registration Status</h6>
-            <form method="get" action="{{ url_for('passenger.registration_status_lookup') }}" class="d-flex gap-2">
-                <input type="text" name="reference_code" class="form-control" placeholder="WT-2026-XXXXXX" required>
-                <button type="submit" class="btn text-white" style="background-color: var(--navy);">Check Status</button>
-            </form>
-        </div>
-    </div>
+            <span class="text-muted small"> Not available </span>
 
+            {% endif %}
+          </div>
+
+          <!-- Status -->
+          <div class="col-12 col-md-3">
+            <span class="status-pill {{ trip.status|lower|replace(' ', '-') }}">
+              {{ trip.status }}
+            </span>
+          </div>
+        </div>
+      </a>
+
+      {% else %}
+
+      <div class="text-center text-muted py-4">
+        No trips are currently available for registration.
+      </div>
+
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <h6 class="fw-bold mb-3">Check Registration Status</h6>
+
+      <form
+        method="get"
+        action="{{ url_for('passenger.registration_status_lookup') }}"
+        class="d-flex gap-2"
+      >
+        <input
+          type="text"
+          name="reference_code"
+          class="form-control"
+          placeholder="WT-2026-XXXXXX"
+          required
+        />
+
+        <button
+          type="submit"
+          class="btn text-white"
+          style="background-color: var(--navy)"
+        >
+          Check Status
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
-{% endblock %}
+
+{% endblock %} ```

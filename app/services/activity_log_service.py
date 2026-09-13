@@ -18,6 +18,8 @@ ACTION_CHANGED_PASSWORD = "Changed Password"
 ACTION_PASSENGER_APPROVED = "Passenger approval"
 ACTION_PASSENGER_REJECTED = "Passenger rejection"
 ACTION_REPORT_GENERATED = "Report generation"
+ACTION_MANIFEST_EDITED = "Edited Passenger Manifest"
+ACTION_MANIFEST_DELETED = "Deleted Passenger Manifest"
 
 ACTION_ANNOUNCEMENT_PUBLISHED = "Published Announcement"
 ACTION_ANNOUNCEMENT_SCHEDULED = "Scheduled Announcement"

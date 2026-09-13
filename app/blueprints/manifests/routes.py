@@ -1,16 +1,17 @@
-from datetime import date, datetime
-from flask import render_template, request, redirect, url_for, session
-from app.blueprints.manifests import manifests_bp
-from app.utils.decorators import login_required
-from app.extensions import db
-from app.models.trip import Trip
-from app.models.boat import Boat
-from app.models.pending_registration import PendingRegistration
-from app.models.manifest_entry import ManifestEntry
-from flask import render_template, request, redirect, url_for, flash
 from datetime import date, datetime, timedelta
+
+from flask import render_template, request, redirect, url_for, session, flash, abort
+
+from app.blueprints.manifests import manifests_bp
+from app.blueprints.passenger.routes import validate_passenger_fields
+from app.extensions import db
+from app.models.boat import Boat
 from app.models.environmental_reading import EnvironmentalReading
+from app.models.manifest_entry import ManifestEntry
+from app.models.pending_registration import PendingRegistration
+from app.models.trip import Trip
 from app.services import activity_log_service
+from app.utils.decorators import login_required
 
 
 def _apply_search(query, term, *columns):
@@ -189,6 +190,76 @@ def add_walkin(trip_id):
         db.session.commit()
 
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
+@manifests_bp.route("/manifests/<int:trip_id>/manifest/<int:entry_id>/edit", methods=["POST"])
+@login_required
+def edit_manifest_entry(trip_id, entry_id):
+    """Admin/Operator edit of an existing (already-approved) manifest
+    entry. Only the passenger's own details are editable — id, trip_id,
+    source, and check_in_time are preserved exactly as they are, and no
+    new row is ever created here.
+    """
+    trip = Trip.query.get_or_404(trip_id)
+    entry = ManifestEntry.query.get_or_404(entry_id)
+    if entry.trip_id != trip.id:
+        # Guards against editing an entry that belongs to a different
+        # trip via a mismatched/tampered URL.
+        abort(404)
+
+    field_errors, cleaned = validate_passenger_fields(request.form)
+    if field_errors:
+        flash(
+            "Could not update passenger — "
+            + "; ".join(f"{field}: {message}" for field, message in field_errors.items())
+        )
+        return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
+    entry.full_name = cleaned["full_name"]
+    entry.age = cleaned["age"]
+    entry.address = cleaned["address"]
+    entry.contact_number = cleaned["contact_number"]
+    entry.passenger_type = cleaned["passenger_type"]
+    db.session.commit()
+
+    activity_log_service.log_action(
+        user_id=session.get("user_id"),
+        admin_name=session.get("full_name", "Unknown"),
+        action=activity_log_service.ACTION_MANIFEST_EDITED,
+        details=f"Edited manifest entry for {entry.full_name} on trip #{trip.id}.",
+    )
+
+    flash(f"{entry.full_name}'s manifest entry was updated.")
+    return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
+
+@manifests_bp.route("/manifests/<int:trip_id>/manifest/<int:entry_id>/delete", methods=["POST"])
+@login_required
+def delete_manifest_entry(trip_id, entry_id):
+    """Admin/Operator removal of a single manifest entry. Deletes only
+    the targeted row — the trip and every other passenger's entry are
+    untouched, and the manifest count/capacity shown on the page is
+    always recomputed fresh from the database, so it reflects the
+    deletion immediately with no separate bookkeeping needed here.
+    """
+    trip = Trip.query.get_or_404(trip_id)
+    entry = ManifestEntry.query.get_or_404(entry_id)
+    if entry.trip_id != trip.id:
+        abort(404)
+
+    full_name = entry.full_name
+    db.session.delete(entry)
+    db.session.commit()
+
+    activity_log_service.log_action(
+        user_id=session.get("user_id"),
+        admin_name=session.get("full_name", "Unknown"),
+        action=activity_log_service.ACTION_MANIFEST_DELETED,
+        details=f"Deleted manifest entry for {full_name} on trip #{trip.id}.",
+    )
+
+    flash(f"{full_name}'s manifest entry was deleted.")
+    return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
 
 @manifests_bp.route("/manifests/<int:trip_id>/delay", methods=["POST"])
 @login_required
