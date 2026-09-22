@@ -1,7 +1,7 @@
 import os
 from datetime import timedelta
 
-from flask import Flask, session
+from flask import Flask, session, url_for, redirect
 from app.config import Config
 from app.extensions import db, migrate
 
@@ -79,7 +79,7 @@ def create_app():
 
     @app.route("/")
     def index():
-        return "WaveTech is running!"
+        return redirect(url_for("passenger.home"))
 
     # Announcement Management: automatically publish Scheduled
     # announcements whose time has arrived, without requiring anyone to

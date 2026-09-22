@@ -5,22 +5,26 @@ from app.extensions import db
 from app.models.user import User
 from app.services import activity_log_service, settings_service
 from app.services.settings_service import SettingsValidationError
-from app.utils.decorators import admin_required, login_required
+from app.utils.decorators import login_required
 from app.utils.security import hash_password, verify_password
-
-ROLE_ADMIN = "Admin"
 
 @settings_bp.route("/settings")
 @login_required
 def index():
     user = db.session.get(User, session["user_id"])
-    is_admin = session.get("role") == ROLE_ADMIN
+    # Admin and Operator accounts share identical Settings access (Account,
+    # Safety Thresholds, Refresh Interval, and Security & Activity) — see
+    # app/utils/decorators.py, which no longer distinguishes roles for any
+    # of these routes. `is_admin` is kept as a template variable (rather
+    # than removing the templates' conditionals) so nothing needs to
+    # change if a genuinely Admin-only setting is introduced later.
+    is_admin = True
 
     thresholds = settings_service.get_safety_thresholds()
     refresh_interval = settings_service.get_refresh_interval_seconds()
     session_timeout = settings_service.get_session_timeout_minutes()
 
-    activity_logs = activity_log_service.get_recent_logs(limit=25) if is_admin else []
+    activity_logs = activity_log_service.get_recent_logs(limit=25)
 
     return render_template(
         "settings/index.html",
@@ -75,11 +79,11 @@ def change_password():
 
 
 # ---------------------------------------------------------------------------
-# Safety Thresholds (Admin only)
+# Safety Thresholds (shared Admin/Operator access)
 # ---------------------------------------------------------------------------
 
 @settings_bp.route("/settings/safety-thresholds", methods=["POST"])
-@admin_required
+@login_required
 def update_safety_thresholds():
     form = request.form
     try:
@@ -140,11 +144,11 @@ def update_refresh_interval():
 
 
 # ---------------------------------------------------------------------------
-# Security & Activity (Admin only)
+# Security & Activity (shared Admin/Operator access)
 # ---------------------------------------------------------------------------
 
 @settings_bp.route("/settings/session-timeout", methods=["POST"])
-@admin_required
+@login_required
 def update_session_timeout():
     try:
         minutes = settings_service.update_session_timeout(
@@ -166,7 +170,7 @@ def update_session_timeout():
 
 
 @settings_bp.route("/settings/activity-log")
-@admin_required
+@login_required
 def activity_log():
     logs = activity_log_service.get_recent_logs(limit=200)
     return render_template("settings/activity_log.html", activity_logs=logs, active_page="settings")

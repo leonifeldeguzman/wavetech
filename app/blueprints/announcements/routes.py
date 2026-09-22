@@ -6,9 +6,7 @@ from app.models.announcement import Announcement
 from app.services import activity_log_service, announcement_service
 from app.services.announcement_service import AnnouncementValidationError
 from app.utils.api_responses import success_response
-from app.utils.decorators import admin_required, login_required
-
-ROLE_ADMIN = "Admin"
+from app.utils.decorators import login_required
 
 
 def _log(action, details=None):
@@ -24,18 +22,13 @@ def _log(action, details=None):
 
 
 # ---------------------------------------------------------------------------
-# Admin: Announcement Management
+# Announcement Management (shared Admin/Operator access)
 #
-# Announcement Management is Admin-only (see app/utils/decorators.py). Every
-# route below that creates, publishes, schedules, edits, activates,
-# deactivates/cancels, or deletes an announcement is protected with the
-# existing admin_required decorator, so Operators get a 403 on direct
-# access, matching how Admin-only Settings (Safety Thresholds, Security &
-# Activity) are protected elsewhere in this project.
-#
-# Operators still have a locked, read-only Announcements view — see
-# `index()` below, which branches by role and never exposes management
-# controls or non-Active announcements to Operators.
+# Admin and Operator accounts have identical Announcement/Safety Alert
+# management access. Every route below that creates, publishes, schedules,
+# edits, activates, deactivates/cancels, or deletes an announcement only
+# requires an authenticated session (see app/utils/decorators.py) — the
+# same as the full Announcement Management view in `index()` below.
 # ---------------------------------------------------------------------------
 
 
@@ -46,19 +39,8 @@ def index():
     # Active the next time this (or the passenger-facing) page is loaded.
     announcement_service.publish_due_announcements()
 
-    # Active announcements only — used as-is for the Operator view, and as
-    # the "Published Announcements" section for the Admin view below.
+    # Active announcements — the "Published Announcements" section below.
     published = announcement_service.get_published_announcements()
-
-    if session.get("role") != ROLE_ADMIN:
-        # Operator view: read-only, Active announcements only. Enforced
-        # here in the query (not just hidden in the template) — Operators
-        # never fetch get_scheduled_announcements()/get_inactive_announcements().
-        return render_template(
-            "announcements/operator.html",
-            published=published,
-            active_page="announcements",
-        )
 
     scheduled = announcement_service.get_scheduled_announcements()
     inactive = announcement_service.get_inactive_announcements()
@@ -85,7 +67,7 @@ def index():
 
 
 @announcements_bp.route("/announcements/create", methods=["POST"])
-@admin_required
+@login_required
 def create():
     form = request.form
     action = form.get("action")  # "publish_now" or "schedule"
@@ -130,7 +112,7 @@ def _get_announcement_or_404(announcement_id):
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/edit", methods=["POST"])
-@admin_required
+@login_required
 def edit(announcement_id):
     announcement = _get_announcement_or_404(announcement_id)
     form = request.form
@@ -156,7 +138,7 @@ def edit(announcement_id):
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/delete", methods=["POST"])
-@admin_required
+@login_required
 def delete(announcement_id):
     announcement = _get_announcement_or_404(announcement_id)
     title, type_ = announcement.title, announcement.type
@@ -171,7 +153,7 @@ def delete(announcement_id):
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/activate", methods=["POST"])
-@admin_required
+@login_required
 def activate(announcement_id):
     announcement = _get_announcement_or_404(announcement_id)
     announcement_service.activate_announcement(announcement)
@@ -185,7 +167,7 @@ def activate(announcement_id):
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/deactivate", methods=["POST"])
-@admin_required
+@login_required
 def deactivate(announcement_id):
     announcement = _get_announcement_or_404(announcement_id)
     # A still-Scheduled announcement (never actually published) is being

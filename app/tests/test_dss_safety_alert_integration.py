@@ -1,10 +1,10 @@
 """Integration tests for the DSS -> Safety Alert announcement flow.
 
 Covers: the "Create Safety Alert" action on the dashboard (only offered for
-CAUTION/DELAY and UNSAFE results, and only to Admins), that it merely
-prefills the existing Announcement Management "Create Announcement" form
-(never auto-publishes), and that once an admin explicitly publishes the
-prefilled content it flows through the existing Announcement
+CAUTION/DELAY and UNSAFE results, equally to Admin and Operator accounts),
+that it merely prefills the existing Announcement Management "Create
+Announcement" form (never auto-publishes), and that once the prefilled
+content is explicitly published it flows through the existing Announcement
 service/Activity Log/Operator+Passenger views exactly like any other
 announcement.
 
@@ -116,10 +116,10 @@ def test_dashboard_does_not_offer_safety_alert_for_proceed(app, make_boat, make_
     assert b"Create Safety Alert" not in response.data
 
 
-def test_operator_never_sees_safety_alert_action_even_when_unsafe(app, make_boat, make_trip):
-    """Operators can view the dashboard, but the Safety Alert action leads
-    into Admin-only Announcement Management, so it must never render for
-    them even when the result is UNSAFE."""
+def test_operator_sees_safety_alert_action_when_unsafe(app, make_boat, make_trip):
+    """Operators have the same Announcement Management access as Admin, so
+    the Safety Alert action must render for them too when the result is
+    UNSAFE."""
     boat_id = make_boat(capacity=5)
     trip_id = make_trip(boat_id=boat_id, status="Open")
     operator_client = _operator(app)
@@ -128,7 +128,7 @@ def test_operator_never_sees_safety_alert_action_even_when_unsafe(app, make_boat
         response = operator_client.get(f"/dashboard?trip_id={trip_id}")
 
     assert response.status_code == 200
-    assert b"Create Safety Alert" not in response.data
+    assert b"Create Safety Alert" in response.data
 
 
 def test_safety_alert_action_does_not_touch_trip_or_manifest(app, make_boat, make_trip):

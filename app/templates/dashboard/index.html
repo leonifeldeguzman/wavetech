@@ -178,7 +178,7 @@
                     View Details
                 </button>
 
-                {% if safety_alert_action and session.get('role') == 'Admin' %}
+                {% if safety_alert_action %}
                 <a href="{{ url_for('announcements.index',
                         prefill_title=safety_alert_action.title,
                         prefill_content=safety_alert_action.content,

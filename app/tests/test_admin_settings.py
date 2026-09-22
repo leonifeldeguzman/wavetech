@@ -2,7 +2,7 @@
 
 Covers: Account (profile/change-password/logout), Safety Thresholds,
 Refresh Interval, and Security & Activity (session settings + activity
-log), including access control between Admin and Operator roles.
+log), including that Admin and Operator accounts share identical access.
 
 Run with:
     python -m pytest app/tests/test_admin_settings.py -v
@@ -185,12 +185,12 @@ def test_admin_can_access_thresholds_form(app):
     assert b'name="wind_safe_max_kmh"' in response.data
 
 
-def test_operator_cannot_view_thresholds_form(app):
+def test_operator_can_view_thresholds_form(app):
     operator_client, _ = _operator(app)
     response = operator_client.get("/settings")
     assert response.status_code == 200
-    assert b'name="wind_safe_max_kmh"' not in response.data
-    assert b"Only Admin accounts can view and modify Safety Thresholds" in response.data
+    assert b'name="wind_safe_max_kmh"' in response.data
+    assert b"Only Admin accounts can view and modify Safety Thresholds" not in response.data
 
 
 def test_admin_can_update_thresholds_and_they_persist(app):
@@ -268,21 +268,20 @@ def test_unauthorized_cannot_modify_thresholds(app, client):
     assert "/login" in response.headers["Location"]
 
 
-def test_operator_cannot_modify_thresholds(app):
+def test_operator_can_modify_thresholds(app):
     operator_client, _ = _operator(app)
-
-    with app.app_context():
-        before = settings_service.get_safety_thresholds()
 
     response = operator_client.post(
         "/settings/safety-thresholds",
         data={**VALID_THRESHOLDS, "wind_safe_max_kmh": "1"},
+        follow_redirects=True,
     )
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert b"Safety thresholds updated successfully" in response.data
 
     with app.app_context():
         after = settings_service.get_safety_thresholds()
-        assert before == after
+        assert after["wind_safe_max_kmh"] == 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -386,10 +385,10 @@ def test_unauthorized_cannot_access_activity_log(app, client):
     assert "/login" in response.headers["Location"]
 
 
-def test_operator_cannot_access_activity_log(app):
+def test_operator_can_access_activity_log(app):
     operator_client, _ = _operator(app)
     response = operator_client.get("/settings/activity-log")
-    assert response.status_code == 403
+    assert response.status_code == 200
 
 
 def test_sensitive_credentials_are_not_recorded(app):

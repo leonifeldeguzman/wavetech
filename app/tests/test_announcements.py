@@ -1,9 +1,8 @@
 """Tests for the Announcement Management module.
 
-Covers: Activity Log integration for admin announcement actions, admin-only
-authorization on every management route, the read-only Operator
-Announcements view (including that scheduled/inactive announcements are
-never returned to Operators, even by the backend query), and the
+Covers: Activity Log integration for announcement actions, that Admin and
+Operator accounts share identical Announcement Management access (every
+management route only requires an authenticated session), and the
 background scheduler that automatically publishes Scheduled announcements
 without any admin/operator page load or refresh.
 
@@ -93,7 +92,7 @@ VALID_SCHEDULE = {
 
 
 # ---------------------------------------------------------------------------
-# Admin-only authorization
+# Shared Admin/Operator authorization
 # ---------------------------------------------------------------------------
 
 def test_unauthenticated_cannot_access_announcements(client):
@@ -109,68 +108,71 @@ def test_admin_can_access_announcement_management(app):
     assert b"Create Announcement" in response.data
 
 
-def test_operator_can_access_readonly_view(app):
+def test_operator_can_access_announcement_management(app):
     operator_client, _ = _operator(app)
     response = operator_client.get("/announcements")
     assert response.status_code == 200
-    assert b"Create Announcement" not in response.data
+    assert b"Create Announcement" in response.data
 
 
-def test_operator_cannot_create_announcement(app):
+def test_operator_can_create_announcement(app):
     operator_client, _ = _operator(app)
-    response = operator_client.post("/announcements/create", data=VALID_PUBLISH_NOW)
-    assert response.status_code == 403
+    response = operator_client.post(
+        "/announcements/create", data=VALID_PUBLISH_NOW, follow_redirects=True
+    )
+    assert response.status_code == 200
+    assert b"Announcement published successfully" in response.data
 
     with app.app_context():
-        assert Announcement.query.count() == 0
+        assert Announcement.query.count() == 1
 
 
-def test_operator_cannot_edit_announcement(app):
+def test_operator_can_edit_announcement(app):
     operator_client, _ = _operator(app)
     announcement_id = _make_announcement(app, title="Original")
 
     response = operator_client.post(
         f"/announcements/{announcement_id}/edit",
-        data={"title": "Hacked", "content": "x", "type": Announcement.TYPE_ANNOUNCEMENT},
+        data={"title": "Updated", "content": "x", "type": Announcement.TYPE_ANNOUNCEMENT},
     )
-    assert response.status_code == 403
+    assert response.status_code == 302
 
     with app.app_context():
         announcement = db.session.get(Announcement, announcement_id)
-        assert announcement.title == "Original"
+        assert announcement.title == "Updated"
 
 
-def test_operator_cannot_delete_announcement(app):
+def test_operator_can_delete_announcement(app):
     operator_client, _ = _operator(app)
     announcement_id = _make_announcement(app)
 
     response = operator_client.post(f"/announcements/{announcement_id}/delete")
-    assert response.status_code == 403
+    assert response.status_code == 302
 
     with app.app_context():
-        assert db.session.get(Announcement, announcement_id) is not None
+        assert db.session.get(Announcement, announcement_id) is None
 
 
-def test_operator_cannot_activate_announcement(app):
+def test_operator_can_activate_announcement(app):
     operator_client, _ = _operator(app)
     announcement_id = _make_announcement(app, status=Announcement.STATUS_INACTIVE)
 
     response = operator_client.post(f"/announcements/{announcement_id}/activate")
-    assert response.status_code == 403
+    assert response.status_code == 302
 
     with app.app_context():
-        assert db.session.get(Announcement, announcement_id).status == Announcement.STATUS_INACTIVE
+        assert db.session.get(Announcement, announcement_id).status == Announcement.STATUS_ACTIVE
 
 
-def test_operator_cannot_deactivate_announcement(app):
+def test_operator_can_deactivate_announcement(app):
     operator_client, _ = _operator(app)
     announcement_id = _make_announcement(app, status=Announcement.STATUS_ACTIVE)
 
     response = operator_client.post(f"/announcements/{announcement_id}/deactivate")
-    assert response.status_code == 403
+    assert response.status_code == 302
 
     with app.app_context():
-        assert db.session.get(Announcement, announcement_id).status == Announcement.STATUS_ACTIVE
+        assert db.session.get(Announcement, announcement_id).status == Announcement.STATUS_INACTIVE
 
 
 def test_unauthenticated_management_routes_redirect_to_login(app, client):
@@ -321,10 +323,12 @@ def test_activity_log_records_correct_admin(app):
 
 
 # ---------------------------------------------------------------------------
-# Operator read-only view
+# Operator view parity with Admin
 # ---------------------------------------------------------------------------
 
-def test_operator_view_shows_only_active_announcements(app):
+def test_operator_view_shows_scheduled_and_inactive_announcements(app):
+    """Operators see the same full Announcement Management view as Admin,
+    including Scheduled and Inactive announcements (not just Active)."""
     _make_announcement(app, title="Active One", status=Announcement.STATUS_ACTIVE)
     _make_announcement(
         app,
@@ -344,14 +348,13 @@ def test_operator_view_shows_only_active_announcements(app):
     response = operator_client.get("/announcements")
     assert response.status_code == 200
     assert b"Active One" in response.data
-    assert b"Scheduled One" not in response.data
-    assert b"Inactive One" not in response.data
+    assert b"Scheduled One" in response.data
+    assert b"Inactive One" in response.data
 
 
-def test_operator_view_enforces_active_only_in_backend_query(app):
-    """Even if a scheduled/inactive announcement exists, the backend query
-    used for the Operator view must never fetch it — not just hide it in
-    the template."""
+def test_get_published_announcements_returns_active_only(app):
+    """The Published Announcements section (shown to both roles) is backed
+    by a query that only ever returns Active announcements."""
     _make_announcement(
         app,
         title="Hidden Scheduled",
@@ -365,24 +368,17 @@ def test_operator_view_enforces_active_only_in_backend_query(app):
         assert published == []
 
 
-def test_operator_view_has_no_management_controls(app):
+def test_operator_view_has_management_controls(app):
     _make_announcement(app, title="Active One", status=Announcement.STATUS_ACTIVE)
     operator_client, _ = _operator(app)
     response = operator_client.get("/announcements")
 
-    for control in [b"Edit", b"Deactivate", b"Delete", b"Activate", b"Schedule", b"Publish Now"]:
-        assert control not in response.data
-
-
-def test_operator_view_indicates_readonly(app):
-    operator_client, _ = _operator(app)
-    response = operator_client.get("/announcements")
-    assert b"Read-only" in response.data
+    assert b"Create Announcement" in response.data
 
 
 def test_operator_view_shows_newly_activated_announcement(app):
-    """After an admin publishes an announcement, it should show up on the
-    Operator view (same underlying data, no separate model/service)."""
+    """After publishing an announcement, it should show up on the Operator
+    view (same underlying data, no separate model/service)."""
     admin_client, _ = _admin(app)
     admin_client.post("/announcements/create", data=VALID_PUBLISH_NOW)
 
