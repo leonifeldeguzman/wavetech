@@ -18,7 +18,7 @@ This blueprint reuses the existing Trip, Boat, and PendingRegistration
 models exactly as they are defined elsewhere in the repository. It does
 not add any new tables or columns.
 """
-from flask import request, render_template, redirect, url_for, abort
+from flask import current_app, request, render_template, redirect, url_for, abort
 
 from sqlalchemy.exc import IntegrityError
 
@@ -28,6 +28,8 @@ from app.models.trip import Trip
 from app.models.pending_registration import PendingRegistration, generate_reference_code
 from app.utils.api_responses import success_response, error_response
 from app.models.announcement import Announcement
+from app.services import semaphore_service, unisms_service
+from app.services.activity_log_service import log_action, ACTION_REGISTRATION_SMS_SENT
 
 # ---------------------------------------------------------------------------
 # Business rules (documented here since they are not fully explicit in the
@@ -256,6 +258,49 @@ class RegistrationResult:
         self.registration = registration
 
 
+def _send_registration_confirmation_sms(registration, trip):
+    """Best-effort SMS notification after a successful registration.
+
+    Deliberately isolated from the registration transaction: this runs
+    only after db.session.commit() has already succeeded above, and any
+    failure here (Semaphore down, unexpected exception, logging error)
+    must never change the registration outcome already returned to the
+    caller. Swallows everything by design.
+    """
+    try:
+        departure_str = (
+            trip.departure_time.strftime("%b %d, %Y, %I:%M %p")
+            if trip.departure_time else "TBA"
+        )
+        message = (
+            f"Talim Island Ferry: Registration confirmed. Ref: "
+            f"{registration.reference_code}. Trip: {trip.route_origin} to "
+            f"{trip.route_destination}, departing {departure_str}."
+        )
+        result = unisms_service.send_sms(registration.contact_number, message)
+
+        # Not logging "skipped_no_number" — a passenger simply not
+        # supplying a contact number is routine, not an event worth an
+        # audit entry. Sent / failed / skipped_no_config are logged so
+        # admins can see delivery issues.
+        if result.status != "skipped_no_number":
+            log_action(
+                user_id=None,
+                admin_name="System",
+                action=ACTION_REGISTRATION_SMS_SENT,
+                details=(
+                    f"Reference {registration.reference_code}, "
+                    f"trip #{trip.id}, status={result.status}"
+                    + (f", error={result.error}" if result.error else "")
+                ),
+            )
+    except Exception:
+        current_app.logger.warning(
+            "Registration confirmation SMS/logging failed unexpectedly "
+            "for reference %s", getattr(registration, "reference_code", "?"),
+            exc_info=True,
+        )
+
 def _execute_registration(trip_id, cleaned):
     """Runs the actual registration transaction: lock trip -> check
     status/capacity -> create PendingRegistration -> commit. Used by
@@ -336,6 +381,9 @@ def _execute_registration(trip_id, cleaned):
             "REGISTRATION_FAILED",
             "Registration could not be completed due to a server error.",
         )
+     # Registration is already committed at this point — SMS/logging below
+    # is best-effort and must not affect the result returned to the caller.
+    _send_registration_confirmation_sms(registration, trip)
 
     return RegistrationResult(True, registration=registration)
 

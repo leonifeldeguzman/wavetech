@@ -82,3 +82,15 @@ class Config:
     ANNOUNCEMENT_SCHEDULER_INTERVAL_SECONDS = int(
         os.environ.get("ANNOUNCEMENT_SCHEDULER_INTERVAL_SECONDS", "30")
     )
+
+    SEMAPHORE_API_URL = "https://api.semaphore.co/api/v4/messages"
+    SEMAPHORE_API_KEY = os.environ.get("SEMAPHORE_API_KEY", "")
+    SEMAPHORE_SENDER_NAME = os.environ.get("SEMAPHORE_SENDER_NAME", "")
+    SEMAPHORE_API_TIMEOUT_SECONDS = 10
+
+    UNISMS_API_URL = "https://unismsapi.com/api/sms"
+    UNISMS_API_KEY = os.environ.get("UNISMS_API_KEY", "")
+    UNISMS_API_TIMEOUT_SECONDS = 10
+    UNISMS_SENDER_ID = os.environ.get("UNISMS_SENDER_ID", "Unisoft")
+
+    SMS_DISPATCH_ASYNC = False

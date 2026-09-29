@@ -51,10 +51,15 @@ class Announcement(db.Model):
     # Stamped the moment the announcement actually goes live, whether via
     # "Publish Now" or the scheduled time being reached.
 
+    sms_dispatched_at = db.Column(db.DateTime, nullable=True)
+
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    trip_id = db.Column(db.Integer, db.ForeignKey("trips.id"), nullable=True)
+    trip = db.relationship("Trip")
 
     created_by = db.relationship("User")
 

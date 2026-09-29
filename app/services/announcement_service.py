@@ -25,13 +25,22 @@ This project has no Celery/Redis/cron; the background scheduler is a
 single daemon thread using only the standard library (`threading`), which
 is enough for WaveTech's current single-process deployment.
 """
-from __future__ import annotations
+
+
+
 
 import threading
 from datetime import datetime, timezone
 
+from flask import current_app
+from sqlalchemy import update
+
 from app.extensions import db
 from app.models.announcement import Announcement
+from app.models.pending_registration import PendingRegistration
+from app.models.trip import Trip
+from app.services import unisms_service
+from app.services.activity_log_service import log_action
 from app.utils.timezone import utc_now_naive, PH_TZ
 
 VALID_TYPES = {Announcement.TYPE_ANNOUNCEMENT, Announcement.TYPE_SAFETY_ALERT}
@@ -42,6 +51,8 @@ SCHEDULE_DATETIME_FORMAT = "%Y-%m-%dT%H:%M"  # matches <input type="datetime-loc
 TITLE_MAX_LENGTH = 200
 
 DEFAULT_SCHEDULER_INTERVAL_SECONDS = 30
+
+ACTION_ANNOUNCEMENT_SMS_SENT = "Announcement SMS Sent"
 
 
 class AnnouncementValidationError(ValueError):
@@ -145,7 +156,10 @@ def publish_due_announcements() -> int:
         announcement.published_at = now
 
     if due:
+        due_ids = [a.id for a in due]
         db.session.commit()
+        for announcement_id in due_ids:
+            dispatch_announcement_sms(announcement_id)
 
     return len(due)
 
@@ -231,7 +245,123 @@ def stop_background_scheduler(timeout: float = 2) -> None:
 
     if thread is not None:
         thread.join(timeout=timeout)
+# ---------------------------------------------------------------------------
+# SMS broadcast (Phase 6C)
+#
+# Every publish texts all APPROVED passengers on live trips, regardless of
+# announcement.trip_id (which is now only an optional display tag).
+# ---------------------------------------------------------------------------
 
+BROADCAST_TRIP_STATUSES = ("Open", "Boarding", "Full", "Delayed")
+SMS_MAX_LEN = 300
+
+
+def _get_broadcast_numbers() -> list[str]:
+    rows = (
+        db.session.query(PendingRegistration.contact_number)
+        .join(Trip, PendingRegistration.trip_id == Trip.id)
+        .filter(
+            PendingRegistration.status == "approved",
+            Trip.status.in_(BROADCAST_TRIP_STATUSES),
+            PendingRegistration.contact_number.isnot(None),
+        )
+        .distinct()
+        .all()
+    )
+    seen, numbers = set(), []
+    for (num,) in rows:
+        num = (num or "").strip()
+        if num and num not in seen:
+            seen.add(num)
+            numbers.append(num)
+    return numbers
+
+
+def _build_sms_text(announcement: Announcement) -> str:
+    label = (
+        "Safety Alert"
+        if announcement.type == Announcement.TYPE_SAFETY_ALERT
+        else "Notice"
+    )
+    text = f"Talim Ferry {label}: {announcement.title} - {announcement.content}"
+    text = " ".join(text.split())
+    if len(text) > SMS_MAX_LEN:
+        text = text[: SMS_MAX_LEN - 3] + "..."
+    return text
+
+
+def _claim_sms_dispatch(announcement_id: int) -> bool:
+    """Atomic claim: only one caller (scheduler thread, request, or
+    manual activate) ever sends for a given announcement."""
+    result = db.session.execute(
+        update(Announcement)
+        .where(
+            Announcement.id == announcement_id,
+            Announcement.sms_dispatched_at.is_(None),
+        )
+        .values(sms_dispatched_at=utc_now_naive())
+    )
+    db.session.commit()
+    return result.rowcount == 1
+
+
+def send_announcement_sms(announcement_id: int) -> None:
+    """Synchronous worker. Never raises."""
+    try:
+        if not _claim_sms_dispatch(announcement_id):
+            return
+
+        announcement = db.session.get(Announcement, announcement_id)
+        if announcement is None:
+            return
+
+        numbers = _get_broadcast_numbers()
+        if not numbers:
+            return
+
+        message = _build_sms_text(announcement)
+        sent = failed = skipped = 0
+        for number in numbers:
+            result = unisms_service.send_sms(number, message)
+            if result.status == "sent":
+                sent += 1
+            elif result.status == "skipped_no_config":
+                skipped += 1
+            elif result.status != "skipped_no_number":
+                failed += 1
+
+        log_action(
+            user_id=None,
+            admin_name="System",
+            action=ACTION_ANNOUNCEMENT_SMS_SENT,
+            details=(
+                f"Announcement #{announcement.id} ('{announcement.title}'): "
+                f"sent={sent}, failed={failed}, skipped_no_config={skipped}, "
+                f"recipients={len(numbers)}"
+            ),
+        )
+    except Exception:
+        db.session.rollback()
+        current_app.logger.warning(
+            "Announcement SMS broadcast failed for announcement #%s",
+            announcement_id,
+            exc_info=True,
+        )
+
+
+def dispatch_announcement_sms(announcement_id: int) -> None:
+    """Call AFTER the publish commit. Runs in a background thread so an
+    admin click or passenger page load never waits on N SMS calls."""
+    if current_app.config.get("SMS_DISPATCH_ASYNC", True):
+        app = current_app._get_current_object()
+
+        def _run():
+            with app.app_context():
+                send_announcement_sms(announcement_id)
+
+        threading.Thread(target=_run, name="announcement-sms", daemon=True).start()
+    else:
+        send_announcement_sms(announcement_id)
 
 # ---------------------------------------------------------------------------
 # Create / Publish Now / Schedule
@@ -273,6 +403,10 @@ def create_announcement(
 
     db.session.add(announcement)
     db.session.commit()
+
+    if publish_now:
+        dispatch_announcement_sms(announcement.id)
+
     return announcement
 
 
@@ -324,7 +458,8 @@ def activate_announcement(announcement: Announcement) -> Announcement:
     announcement.status = Announcement.STATUS_ACTIVE
     if announcement.published_at is None:
         announcement.published_at = utc_now_naive()
-    db.session.commit()
+        db.session.commit()
+    dispatch_announcement_sms(announcement.id)
     return announcement
 
 

@@ -30,6 +30,9 @@ ACTION_ANNOUNCEMENT_CANCELLED = "Cancelled Announcement"
 ACTION_ANNOUNCEMENT_DELETED = "Deleted Announcement"
 
 
+ACTION_REGISTRATION_SMS_SENT = "Registration SMS Sent"
+
+
 def _format_threshold_changes(changes: dict) -> str:
     if not changes:
         return "No values were actually changed."
