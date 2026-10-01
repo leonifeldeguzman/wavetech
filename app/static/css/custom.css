@@ -411,3 +411,40 @@ body {
         width: 100%;
     }
 }
+
+/* =========================
+   Analytics (responsive)
+   ========================= */
+
+.records-tools {
+  width: 100%;
+}
+
+.records-tools .input-group {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 576px) {
+  .records-tools {
+    width: auto;
+  }
+
+  .records-tools .input-group {
+    flex: none;
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .compact-table th,
+  .compact-table td {
+    padding: 0.5rem 0.4rem;
+    font-size: 0.85rem;
+    white-space: normal; /* overrides the nowrap in .table td */
+  }
+
+  .compact-table td:last-child {
+    white-space: nowrap;
+  }
+}

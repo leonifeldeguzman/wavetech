@@ -23,8 +23,8 @@
         </a>
     </li>
     <li class="nav-item">
-        <a href="#" class="nav-link text-white d-flex align-items-center gap-2 disabled">
-            <i class="bi bi-graph-up-arrow"></i> Analytics
+        <a href="{{ url_for('analytics.index') }}" class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'analytics' %}active{% endif %}">
+    <i class="bi bi-graph-up-arrow"></i> Analytics
         </a>
     </li>
     <li class="nav-item">

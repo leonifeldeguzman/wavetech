@@ -1,4 +1,6 @@
 from app.extensions import db
+from app.extensions import db
+from app.utils.ph_clock import ph_now
 
 class ManifestEntry(db.Model):
     __tablename__ = "manifest_entries"
@@ -18,6 +20,8 @@ class ManifestEntry(db.Model):
     # walkin or online
 
     trip = db.relationship("Trip", backref="manifest_entries")
+
+    check_in_time = db.Column(db.DateTime, default=ph_now, server_default=db.func.now())
 
     def __repr__(self):
         return f"<ManifestEntry {self.full_name}>"

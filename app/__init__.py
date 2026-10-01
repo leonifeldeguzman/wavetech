@@ -1,7 +1,7 @@
 import os
 from datetime import timedelta
 
-from flask import Flask, session, url_for, redirect
+from flask import Flask, app, session, url_for, redirect
 from app.config import Config
 from app.extensions import db, migrate
 
@@ -51,6 +51,9 @@ def create_app():
     app.register_blueprint(passenger_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(announcements_bp)
+
+    from app.blueprints.analytics.routes import analytics_bp
+    app.register_blueprint(analytics_bp)
 
     from app.models.user import User
     from app.models.boat import Boat
