@@ -1,0 +1,661 @@
+/* =========================================================
+   TIMETABLE HEADER
+   ========================================================= */
+
+.manifest-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.manifest-page-title {
+    margin: 0;
+    color: #111111;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   ADD TIME SLOT BUTTON
+   ========================================================= */
+
+.manifest-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    height: 34px;
+    padding: 0 18px;
+
+    border: 1px solid #0f1b3c;
+    border-radius: 8px;
+
+    background-color: #0f1b3c;
+    color: #ffffff;
+
+    font-size: 0.82rem;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease,
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.manifest-add-btn:hover {
+    background-color: #0b1530;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 27, 60, 0.14);
+}
+
+.manifest-add-btn:focus {
+    color: #ffffff;
+    box-shadow: 0 0 0 0.15rem rgba(15, 27, 60, 0.12);
+}
+
+/* Right-side toolbar */
+
+.manifest-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+
+/* =========================================================
+   DATE NAVIGATION
+   ========================================================= */
+.manifest-date-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #d7e1ef;
+    border-radius: 7px;
+    background-color: #ffffff;
+}
+
+.manifest-date-picker i {
+    color: var(--navy);
+    font-size: 0.9rem;
+}
+
+.manifest-date-picker input {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #374151;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.manifest-date-picker input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+}
+
+.manifest-date-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+
+    margin-top: -8px;
+    margin-bottom: 20px;
+}
+
+.manifest-date-btn,
+.manifest-today-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    border: 1px solid #d7e1ef;
+    border-radius: 7px;
+    background-color: #ffffff;
+    color: #374151;
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease;
+}
+
+.manifest-date-btn {
+    width: 34px;
+}
+
+.manifest-today-btn {
+    padding: 0 12px;
+}
+
+.manifest-date-btn:hover,
+.manifest-today-btn:hover,
+.manifest-date-picker:hover {
+    background-color: #f5f7fa;
+    border-color: #b9c7d8;
+    color: var(--navy);
+    text-decoration: none;
+}
+
+/* Date */
+
+.manifest-date-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    color: #4b5563;
+
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.manifest-date-display i {
+    color: var(--navy);
+}
+
+/* Divider */
+
+.manifest-toolbar-divider {
+    color: #c4c9d0;
+    font-size: 0.85rem;
+}
+
+.manifest-date-form {
+    margin: 0;
+}
+
+
+/* =========================================================
+   TIMETABLE CARD
+   ========================================================= */
+
+.manifest-timetable-card {
+    width: 100%;
+
+    padding: 44px 58px;
+
+    background-color: #ffffff;
+
+    border-radius: 14px;
+
+    box-shadow:
+        0 8px 25px rgba(15, 27, 60, 0.07);
+}
+
+.manifest-slot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+
+/* =========================================================
+   INDIVIDUAL SLOT
+   ========================================================= */
+
+.manifest-slot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: 80px;
+
+    padding: 14px 30px;
+
+    border: 1px solid #b8cfe5;
+    border-radius: 9px;
+
+    background-color: #ffffff;
+
+    color: #111111;
+    text-decoration: none;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.manifest-slot:hover {
+    color: #111111;
+    text-decoration: none;
+
+    border-color: #7897b7;
+
+    background-color: #fcfdff;
+
+    box-shadow: 0 4px 12px rgba(15, 27, 60, 0.06);
+
+    transform: translateY(-1px);
+}
+
+/* Completed slot */
+
+.manifest-slot-completed {
+    border-color: #e0e4e9;
+    background-color: #fafafa;
+
+    color: #a0a4aa;
+}
+
+.manifest-slot-completed:hover {
+    border-color: #d5d9de;
+    background-color: #f8f8f8;
+
+    color: #92979d;
+}
+
+
+/* =========================================================
+   SLOT CONTENT
+   ========================================================= */
+
+.manifest-slot-info {
+    min-width: 0;
+}
+
+.manifest-slot-time {
+    margin-bottom: 7px;
+
+    color: #111111;
+
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.manifest-slot-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    color: #6b7280;
+
+    font-size: 0.82rem;
+    line-height: 1.2;
+}
+
+.manifest-slot-completed .manifest-slot-time,
+.manifest-slot-completed .manifest-slot-meta {
+    color: #a3a5a8;
+}
+
+.manifest-slot-separator {
+    color: #a8adb3;
+}
+
+
+/* =========================================================
+   MANIFEST SLOT STATUS
+   ========================================================= */
+
+.manifest-slot-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 112px;
+    height: 36px;
+
+    padding: 0.25rem 0.75rem;
+
+    border-radius: 999px;
+
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+
+/* Departed */
+
+.manifest-slot-status.status-departed {
+    color: var(--status-blue-text);
+    background-color: var(--status-blue-bg);
+}
+
+
+/* Boarding / Available / Delayed */
+
+.manifest-slot-status.status-boarding,
+.manifest-slot-status.status-available,
+.manifest-slot-status.status-delayed {
+    color: var(--status-orange-text);
+    background-color: var(--status-orange-bg);
+}
+
+
+/* On-time / Open / Completed */
+
+.manifest-slot-status.status-on-time,
+.manifest-slot-status.status-open,
+.manifest-slot-status.status-completed {
+    color: var(--status-green-text);
+    background-color: var(--status-green-bg);
+}
+
+
+/* Cancelled / Full */
+
+.manifest-slot-status.status-cancelled,
+.manifest-slot-status.status-full {
+    color: #ffffff;
+    background-color: var(--status-red);
+}
+
+
+/* Arrow */
+
+.manifest-slot-arrow {
+    color: #9bbbd8;
+    font-size: 1.25rem;
+
+    transition:
+        color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.manifest-slot:hover .manifest-slot-arrow {
+    color: #0f1b3c;
+    transform: translateX(2px);
+}
+
+.manifest-slot-completed .manifest-slot-arrow {
+    color: #cbd6e0;
+}
+
+
+/* =========================================================
+   EMPTY SLOT MESSAGE
+   ========================================================= */
+
+.manifest-no-slots {
+    padding: 55px 20px;
+
+    text-align: center;
+    color: #6b7280;
+}
+
+.manifest-no-slots i {
+    display: block;
+
+    margin-bottom: 12px;
+
+    color: #9db4cb;
+    font-size: 2rem;
+}
+
+.manifest-no-slots h6 {
+    margin-bottom: 6px;
+
+    color: #222222;
+    font-weight: 600;
+}
+
+.manifest-no-slots p {
+    margin: 0;
+
+    font-size: 0.9rem;
+}
+
+
+/* =========================================================
+   EMPTY TRIP SELECTION PANEL
+   ========================================================= */
+
+.manifest-empty-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 398px;
+
+    margin-top: 36px;
+
+    border: 1px dashed #b7cee4;
+    border-radius: 14px;
+
+    background-color: #ffffff;
+
+    text-align: center;
+
+    box-shadow:
+        0 5px 18px rgba(15, 27, 60, 0.025);
+}
+
+.manifest-empty-icon {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 76px;
+    height: 76px;
+
+    margin-bottom: 26px;
+
+    border-radius: 50%;
+
+    background-color: #f1f7fd;
+
+    color: #35658e;
+
+    font-size: 2rem;
+}
+
+.manifest-empty-search {
+    position: absolute;
+
+    right: 13px;
+    bottom: 11px;
+
+    font-size: 1rem;
+
+    background-color: #f1f7fd;
+}
+
+.manifest-empty-panel h5 {
+    margin-bottom: 13px;
+
+    color: #111111;
+
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.manifest-empty-panel p {
+    margin: 0;
+
+    color: #6b7280;
+
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.manifest-modal {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.manifest-modal-header {
+    background-color: #0f1b3c;
+    border-bottom: 0;
+}
+
+.manifest-time-input {
+    height: 42px;
+
+    border-color: #d7e1ef;
+    border-radius: 7px;
+
+    box-shadow: none;
+}
+
+.manifest-time-input:focus {
+    border-color: #0f1b3c;
+
+    box-shadow:
+        0 0 0 0.12rem rgba(15, 27, 60, 0.08);
+}
+
+.manifest-modal-submit {
+    height: 38px;
+
+    padding: 0 16px;
+
+    border: 1px solid #0f1b3c;
+    border-radius: 7px;
+
+    background-color: #0f1b3c;
+    color: #ffffff;
+
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+.manifest-modal-submit:hover {
+    background-color: #0b1530;
+    border-color: #0b1530;
+    color: #ffffff;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 991.98px) {
+
+    .manifest-timetable-card {
+        padding: 30px;
+    }
+
+    .manifest-slot {
+        padding: 14px 22px;
+    }
+
+    .manifest-slot-selected {
+        padding: 13px 21px;
+    }
+
+    .manifest-slot-right {
+        gap: 20px;
+    }
+
+}
+
+
+@media (max-width: 767.98px) {
+
+    .manifest-page-header {
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .manifest-page-title {
+        font-size: 1rem;
+    }
+
+    .manifest-add-btn {
+        height: 38px;
+        padding: 0 13px;
+        font-size: 0.82rem;
+    }
+
+    .manifest-date-toolbar {
+        justify-content: flex-start;
+    }
+
+    .manifest-timetable-card {
+        padding: 20px;
+        border-radius: 12px;
+    }
+
+    .manifest-slot {
+        min-height: 74px;
+        padding: 13px 16px;
+    }
+
+    .manifest-slot-selected {
+        padding: 12px 15px;
+    }
+
+    .manifest-slot-right {
+        gap: 12px;
+    }
+
+    .manifest-slot-status {
+        min-width: 88px;
+        height: 32px;
+        padding: 0 10px;
+        font-size: 0.76rem;
+    }
+
+    .manifest-slot-arrow {
+        font-size: 1.05rem;
+    }
+
+    .manifest-slot-meta {
+        font-size: 0.76rem;
+    }
+
+    .manifest-empty-panel {
+        min-height: 320px;
+        margin-top: 24px;
+    }
+
+}
+
+
+@media (max-width: 575.98px) {
+
+    .manifest-page-header {
+        flex-direction: column;
+    }
+
+    .manifest-add-btn {
+        align-self: flex-end;
+    }
+
+    .manifest-slot {
+        align-items: flex-start;
+    }
+
+    .manifest-slot-right {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+    }
+
+    .manifest-slot-status {
+        min-width: 82px;
+    }
+
+    .manifest-empty-panel {
+        padding: 30px 20px;
+    }
+
+    .manifest-empty-panel p {
+        font-size: 0.88rem;
+    }
+
+}
+

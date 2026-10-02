@@ -1,0 +1,1115 @@
+/* =========================================================
+   MANIFEST DETAIL PAGE
+   ========================================================= */
+
+.manifest-detail-page {
+    width: 100%;
+}
+
+
+/* =========================================================
+   GENERAL CARD
+   ========================================================= */
+
+.manifest-detail-card {
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+
+    box-shadow: 0 8px 28px rgba(15, 27, 60, 0.10);
+    overflow: visible;
+}
+
+.manifest-detail-card + .manifest-detail-card {
+    margin-top: 24px;
+}
+
+.manifest-detail-card-body {
+    padding: 34px 40px;
+}
+
+
+/* =========================================================
+   TOP TRIP BAR
+   ========================================================= */
+
+.manifest-trip-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 76px;
+    padding: 18px 30px;
+}
+
+.manifest-trip-summary {
+    display: flex;
+    align-items: center;
+    gap: 38px;
+    min-width: 0;
+}
+
+.manifest-trip-time {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 98px;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background-color: var(--navy);
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.manifest-trip-crew {
+    color: #111111;
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+.manifest-trip-capacity {
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.manifest-trip-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.manifest-delay-btn,
+.manifest-cancel-btn {
+    height: 36px;
+    padding: 0 15px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.manifest-delay-btn {
+    border: 1px solid #d49a24;
+    color: #b77900;
+}
+
+.manifest-delay-btn:hover {
+    background-color: #fff9eb;
+    border-color: #c58b19;
+    color: #9b6500;
+}
+
+.manifest-cancel-btn {
+    border: 1px solid #ef4444;
+    color: #dc2626;
+}
+
+.manifest-cancel-btn:hover {
+    background-color: #fff5f5;
+    border-color: #dc2626;
+    color: #b91c1c;
+}
+
+
+/* =========================================================
+   SECTION HEADERS
+   ========================================================= */
+
+.manifest-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.manifest-section-title {
+    margin: 0;
+    color: #111111;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   TRIP INFORMATION
+   ========================================================= */
+
+.manifest-checkin-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background-color: #20a52a;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.manifest-trip-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.8fr 1.7fr;
+    gap: 44px;
+    align-items: end;
+}
+
+.manifest-field {
+    min-width: 0;
+}
+
+.manifest-field-label {
+    display: block;
+    margin-bottom: 9px;
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.manifest-field input,
+.manifest-field select {
+    width: 100%;
+    height: 38px;
+    padding: 0 0 8px;
+    border: 0;
+    border-bottom: 1px solid #4b5563;
+    border-radius: 0;
+    background-color: transparent;
+    color: #111111;
+    font-size: 0.92rem;
+    box-shadow: none;
+}
+
+.manifest-field input:focus,
+.manifest-field select:focus {
+    border-color: var(--navy);
+    box-shadow: none;
+}
+
+.manifest-field select {
+    padding-right: 20px;
+}
+
+.manifest-route {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    padding-bottom: 8px;
+    color: #111111;
+    font-size: 0.92rem;
+    white-space: nowrap;
+}
+
+.manifest-route-arrow {
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.manifest-save-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.manifest-save-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    min-width: 112px;
+    height: 36px;
+
+    padding: 0 16px;
+
+    border: 0;
+    border-radius: 7px;
+
+    background: var(--navy);
+    color: #fff;
+
+    font-size: 0.8rem;
+    font-weight: 500;
+
+    transition:
+        background-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+.manifest-save-btn:hover {
+    background-color: #173f62;
+    color: #fff;
+
+    box-shadow: 0 4px 10px rgba(15, 27, 60, 0.12);
+
+    transform: translateY(-1px);
+}
+
+.manifest-save-btn:active {
+    transform: translateY(0);
+}
+
+.manifest-trip-info-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 28px;
+    padding-top: 18px;
+
+    border-top: 1px solid #e8e7e7;
+}
+
+.manifest-trip-info-hint {
+    color: #9ca3af;
+    font-size: 0.76rem;
+}
+
+
+/* =========================================================
+   SEARCH AREA
+   ========================================================= */
+
+.manifest-section-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.manifest-search-form {
+    margin: 0;
+}
+
+.manifest-search-box {
+    display: flex;
+    align-items: center;
+    width: 228px;
+    height: 36px;
+    border: 1px solid #cbdced;
+    border-radius: 8px;
+    background-color: #ffffff;
+    overflow: hidden;
+}
+
+.manifest-search-icon {
+    padding-left: 12px;
+    color: #476b8d;
+    font-size: 0.8rem;
+}
+
+.manifest-search-input {
+    width: 100%;
+    height: 100%;
+    padding: 0 10px;
+    border: 0 !important;
+    outline: none;
+    box-shadow: none !important;
+    color: #374151;
+    font-size: 0.8rem;
+}
+
+.manifest-search-input::placeholder {
+    color: #6b7280;
+}
+
+.manifest-search-btn {
+    height: 36px;
+    padding: 0 15px;
+    border: 0;
+    border-radius: 8px;
+    background-color: var(--navy);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.manifest-search-btn:hover {
+    background-color: var(--navy-dark);
+}
+
+.manifest-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+    background-color: var(--navy);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.manifest-add-btn:hover {
+    background-color: var(--navy-dark);
+}
+
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.manifest-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.manifest-table {
+    width: 100%;
+    min-width: 760px;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: center;
+}
+
+/* -----------------------------------------
+   Table Header
+   ----------------------------------------- */
+
+.manifest-table thead th {
+    height: 44px;
+    padding: 0 18px;
+    border-top: 1px solid #cbdff2;
+    border-bottom: 1px solid #cbdff2;
+    background-color: #f1f8ff;
+    color: #111111;
+    font-size: 0.90rem;
+    font-weight: 500;
+    text-transform: none;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: middle;
+    text-overflow: ellipsis;
+}
+
+/* -----------------------------------------
+   Table Body
+   ----------------------------------------- */
+
+.manifest-table tbody td {
+    height: 52px;
+    padding: 10px 18px;
+    border-bottom: 1px solid #eef2f6;
+    color: #222222;
+    font-size: 0.90rem;
+    text-align: center;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.manifest-table th,
+.manifest-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Center action buttons */
+.manifest-action-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.manifest-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* =========================================================
+   PENDING REGISTRATIONS
+   Reference Code | Name | Time | Actions
+   ========================================================= */
+
+/* Reference Code */
+#pendingRegistrationsTable th:nth-child(1),
+#pendingRegistrationsTable td:nth-child(1) {
+    width: 25%;
+}
+
+/* Name */
+#pendingRegistrationsTable th:nth-child(2),
+#pendingRegistrationsTable td:nth-child(2) {
+    width: 30%;
+}
+
+/* Time */
+#pendingRegistrationsTable th:nth-child(3),
+#pendingRegistrationsTable td:nth-child(3) {
+    width: 18%;
+}
+
+/* Actions */
+#pendingRegistrationsTable th:nth-child(4),
+#pendingRegistrationsTable td:nth-child(4) {
+    width: 27%;
+}
+
+
+/* =========================================================
+   PASSENGER MANIFEST
+   # | Name | Age | Type | Check-In | Actions
+   ========================================================= */
+
+/* # */
+#passengerManifestTable th:nth-child(1),
+#passengerManifestTable td:nth-child(1) {
+    width: 8%;
+}
+
+/* Name */
+#passengerManifestTable th:nth-child(2),
+#passengerManifestTable td:nth-child(2) {
+    width: 27%;
+}
+
+/* Age */
+#passengerManifestTable th:nth-child(3),
+#passengerManifestTable td:nth-child(3) {
+    width: 10%;
+}
+
+/* Type */
+#passengerManifestTable th:nth-child(4),
+#passengerManifestTable td:nth-child(4) {
+    width: 17%;
+}
+
+/* Check-In */
+#passengerManifestTable th:nth-child(5),
+#passengerManifestTable td:nth-child(5) {
+    width: 18%;
+}
+
+/* Actions */
+#passengerManifestTable th:nth-child(6),
+#passengerManifestTable td:nth-child(6) {
+    width: 20%;
+}
+
+
+/* =========================================================
+   CENTER ACTION BUTTONS
+   ========================================================= */
+
+#pendingRegistrationsTable .manifest-action-group,
+#passengerManifestTable .manifest-action-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   TABLE ACTIONS
+   ========================================================= */
+
+.manifest-action-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.manifest-edit-btn,
+.manifest-delete-btn,
+.manifest-approve-btn,
+.manifest-reject-btn {
+    height: 30px;
+    padding: 0 11px;
+    border-radius: 6px;
+    background-color: #ffffff;
+    font-size: 0.76rem;
+    font-weight: 500;
+}
+
+.manifest-edit-btn {
+    border: 1px solid #9db3c9;
+    color: #38566f;
+}
+
+.manifest-edit-btn:hover {
+    background-color: #f3f7fb;
+}
+
+.manifest-delete-btn {
+    border: 1px solid #ef4444;
+    color: #dc2626;
+}
+
+.manifest-delete-btn:hover {
+    background-color: #fff5f5;
+}
+
+.manifest-approve-btn {
+    border: 1px solid #22a447;
+    color: #168436;
+}
+
+.manifest-approve-btn:hover {
+    background-color: #f1fff4;
+}
+
+.manifest-reject-btn {
+    border: 1px solid #ef4444;
+    color: #dc2626;
+}
+
+.manifest-reject-btn:hover {
+    background-color: #fff5f5;
+}
+
+
+/* =========================================================
+   EMPTY STATES
+   ========================================================= */
+
+.manifest-empty-state {
+    min-height: 138px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 20px;
+    text-align: center;
+}
+
+.manifest-empty-title {
+    margin-bottom: 6px;
+    color: #111111;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.manifest-empty-text {
+    max-width: 300px;
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   CONFIRM DEPARTURE
+   ========================================================= */
+
+.manifest-confirm-card {
+    min-height: 170px;
+}
+
+.manifest-confirm-body {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    padding: 34px 40px;
+}
+
+.manifest-audit-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: 650px;
+}
+
+.manifest-audit-check .form-check-input {
+    width: 15px;
+    height: 15px;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.manifest-audit-check .form-check-label {
+    color: #949393;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.manifest-confirm-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.manifest-change-slot-btn {
+    height: 35px;
+    min-width: 120px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 18px;
+
+    border: 1px solid var(--navy);
+    border-radius: 7px;
+
+    background-color: #ffffff;
+    color: #111111;
+
+    font-size: 0.8rem;
+    font-weight: 500;
+
+    line-height: 1;
+    text-decoration: none;
+
+}
+
+.manifest-change-slot-btn:hover {
+    background-color: #f5f7fb;
+    color: #111111;
+    text-decoration: none;
+}
+
+.manifest-confirm-btn {
+    height: 36px;
+    min-width: 190px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 8px;
+    background-color: #adb3c2;
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.manifest-confirm-btn:not(:disabled) {
+    background-color: var(--navy);
+    cursor: pointer;
+}
+
+.manifest-confirm-btn:not(:disabled):hover {
+    background-color: var(--navy-dark);
+}
+
+.manifest-confirm-btn:disabled {
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 992px) {
+
+    .manifest-trip-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .manifest-trip-summary {
+        flex-wrap: wrap;
+        gap: 18px 28px;
+    }
+
+    .manifest-trip-actions {
+        width: 100%;
+    }
+
+    .manifest-trip-actions button {
+        flex: 1;
+    }
+
+    .manifest-trip-info-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+    }
+
+    .manifest-section-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .manifest-section-tools {
+        width: 100%;
+    }
+
+    .manifest-search-form {
+        flex: 1;
+    }
+
+    .manifest-search-box {
+        width: 100%;
+    }
+}
+
+
+@media (max-width: 576px) {
+
+    .manifest-detail-card-body,
+    .manifest-confirm-body {
+        padding: 24px 20px;
+    }
+
+    .manifest-trip-header {
+        padding: 18px 20px;
+    }
+
+    .manifest-trip-summary {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .manifest-trip-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .manifest-section-tools {
+        flex-wrap: wrap;
+    }
+
+    .manifest-search-form {
+        width: 100%;
+    }
+
+    .manifest-search-box {
+        width: 100%;
+    }
+
+    .manifest-confirm-actions {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .manifest-change-slot-btn,
+    .manifest-confirm-btn {
+        width: 100%;
+    }
+}
+/* =========================================================
+   CREW, BOAT & CAPACITY FIELDS
+   ========================================================= */
+
+.manifest-field input[name="crew_name"],
+.manifest-field input[readonly] {
+    border: none;
+    border-bottom: 1px solid #555;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+}
+
+.manifest-field input[name="crew_name"]:focus {
+    border: none;
+    border-bottom: 1px solid #173f62;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+}
+
+/* =========================================================
+   BOAT CUSTOM DROPDOWN
+   ========================================================= */
+
+.manifest-trip-info-grid {
+    position: relative;
+    z-index: 10;
+}
+
+
+/* Make sure the Boat column can display the dropdown */
+
+.manifest-boat-field {
+    position: relative;
+    z-index: 100;
+    overflow: visible;
+}
+
+.manifest-boat-dropdown {
+    position: relative;
+    width: 100%;
+    z-index: 1000;
+}
+
+
+/* Closed dropdown */
+
+.manifest-boat-toggle {
+    width: 100%;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 0 8px;
+
+    border: none;
+    border-bottom: 1px solid #555;
+    border-radius: 0;
+
+    background: transparent;
+    color: #111;
+
+    font-size: 0.92rem;
+    text-align: left;
+
+    cursor: pointer;
+
+    box-shadow: none;
+    outline: none;
+
+    position: relative;
+    z-index: 1001;
+}
+
+.manifest-boat-toggle:hover,
+.manifest-boat-toggle:focus {
+    border-bottom-color: #173f62;
+    outline: none;
+}
+
+
+/* Arrow */
+
+.manifest-boat-chevron {
+    color: #6b7280;
+    font-size: 0.75rem;
+
+    transition: transform 0.18s ease;
+}
+
+.manifest-boat-dropdown.open .manifest-boat-chevron {
+    transform: rotate(180deg);
+}
+
+
+/* =========================================================
+   DROPDOWN MENU
+   ========================================================= */
+
+.manifest-boat-menu {
+    position: absolute;
+
+    top: calc(100% + 7px);
+    left: 0;
+
+    width: 100%;
+
+    padding: 6px;
+
+    background: #fff;
+
+    border: 1px solid #d7e1ef;
+    border-radius: 9px;
+
+    box-shadow: 0 10px 25px rgba(15, 27, 60, 0.18);
+
+    z-index: 99999;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transform: translateY(-5px);
+
+    transition:
+        opacity 0.15s ease,
+        visibility 0.15s ease,
+        transform 0.15s ease;
+}
+
+
+/* Open */
+
+.manifest-boat-dropdown.open .manifest-boat-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   BOAT OPTIONS
+   ========================================================= */
+
+.manifest-boat-option {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: 48px;
+
+    padding: 8px 11px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: transparent;
+
+    color: #374151;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.manifest-boat-option:hover {
+    background-color: #f1f8ff;
+    color: #173f62;
+}
+
+.manifest-boat-option.selected {
+    background-color: #eef6ff;
+    color: #173f62;
+}
+
+
+/* Boat name */
+
+.manifest-boat-option-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.manifest-boat-name {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #111;
+}
+
+
+/* Capacity */
+
+.manifest-boat-capacity {
+    font-size: 0.72rem;
+    color: #6b7280;
+}
+
+.manifest-boat-option:hover .manifest-boat-name,
+.manifest-boat-option.selected .manifest-boat-name {
+    color: #173f62;
+}
+
+.manifest-boat-option:hover .manifest-boat-capacity,
+.manifest-boat-option.selected .manifest-boat-capacity {
+    color: #476b8d;
+}
+
+
+/* Check */
+
+.manifest-boat-check {
+    flex-shrink: 0;
+
+    margin-left: 12px;
+
+    color: #173f62;
+    font-size: 0.9rem;
+}
+
+
+/* Hidden input */
+
+.manifest-boat-dropdown input[type="hidden"] {
+    display: none;
+}
+
+
+/* =========================================================
+   IMPORTANT:
+   ALLOW DROPDOWN TO ESCAPE THE CARD
+   ========================================================= */
+
+.manifest-detail-card,
+.manifest-detail-card-body,
+.manifest-trip-info-grid {
+    overflow: visible;
+}
+
+/* =========================================================
+   PASSENGER TYPE FILTER
+   ========================================================= */
+
+.manifest-passenger-filter {
+    display: flex;
+    align-items: center;
+
+    width: 150px;
+    height: 36px;
+
+    padding: 0 10px;
+
+    border: 1px solid #cbdced;
+    border-radius: 8px;
+
+    background: #fff;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.manifest-passenger-filter:hover {
+    border-color: #b9c7d8;
+}
+
+.manifest-passenger-filter:focus-within {
+    border-color: #173f62;
+    box-shadow: 0 0 0 2px rgba(23, 63, 98, 0.06);
+}
+
+
+.manifest-filter-icon {
+    flex-shrink: 0;
+
+    margin-right: 7px;
+
+    color: #476b8d;
+    font-size: 0.78rem;
+}
+
+
+.manifest-passenger-filter-select {
+    width: 100%;
+    height: 100%;
+
+    padding: 0 20px 0 0;
+
+    border: none;
+    outline: none;
+
+    background-color: transparent;
+
+    color: #374151;
+
+    font-size: 0.8rem;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    box-shadow: none;
+}
+
+
+.manifest-passenger-filter-select:focus {
+    border: none;
+    outline: none;
+    box-shadow: none;
+}

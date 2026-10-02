@@ -1,0 +1,381 @@
+/* =========================================================
+   OUTER DEPARTURE SUCCESS CARD
+   ========================================================= */
+
+.departure-success-card {
+    width: calc(100% - 20px);
+    max-width: 1400px;
+
+    margin: 0 auto 0;
+    padding: 48px 50px 52px;
+
+    border: 0;
+    border-radius: 14px;
+
+    background-color: #ffffff;
+
+    box-shadow: 0 8px 28px rgba(15, 27, 60, 0.14);
+}
+
+
+/* =========================================================
+   SUCCESS BANNER
+   ========================================================= */
+
+.departure-success-banner {
+    width: 740px;
+    max-width: 100%;
+    min-height: 192px;
+
+    margin: 0 auto 36px;
+    padding: 32px 30px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background-color: #0f1b3c;
+    color: #ffffff;
+
+    text-align: center;
+}
+
+
+.departure-success-icon {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 24px;
+
+    border-radius: 50%;
+
+    background-color: #5ed77d;
+    color: #0f1b3c;
+
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+
+.departure-success-icon i {
+    line-height: 1;
+}
+
+
+.departure-success-title {
+    color: #ffffff;
+
+    font-size: 1.08rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+
+/* =========================================================
+   TRIP SUMMARY CARD
+   ========================================================= */
+
+.departure-trip-card {
+    width: 740px;
+    max-width: 100%;
+
+    margin: 0 auto;
+    padding: 52px 52px 48px;
+
+    border: 2px solid #cbdff2;
+    border-radius: 14px;
+
+    background-color: #ffffff;
+
+    box-shadow: 0 8px 28px rgba(15, 27, 60, 0.08);
+}
+
+
+.departure-boat-name {
+    margin: 0 0 26px;
+
+    color: #111111;
+
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+
+/* =========================================================
+   TRIP INFORMATION
+   ========================================================= */
+
+.departure-trip-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+
+.departure-info-row {
+    display: flex;
+    align-items: center;
+
+    min-width: 0;
+
+    font-size: 0.92rem;
+    line-height: 1.4;
+}
+
+
+.departure-info-label {
+    flex: 0 0 70px;
+
+    color: #6b7280;
+    font-weight: 500;
+}
+
+
+.departure-info-value {
+    min-width: 0;
+
+    color: #111111;
+    font-weight: 400;
+}
+
+
+.departure-route {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+
+.departure-route i {
+    color: #0f1b3c;
+    font-size: 0.95rem;
+}
+
+
+/* =========================================================
+   DIVIDER
+   ========================================================= */
+
+.departure-divider {
+    width: 100%;
+
+    margin: 34px 0 36px;
+
+    border-top: 1px solid #dbe7f2;
+}
+
+
+/* =========================================================
+   ARCHIVED CONFIRMATION
+   ========================================================= */
+
+.departure-archive-box {
+    width: 100%;
+    min-height: 124px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    border: 1px solid #9df0ba;
+    border-radius: 9px;
+
+    background-color: #fbfffc;
+
+    text-align: center;
+}
+
+
+.departure-archive-icon {
+    margin-bottom: 10px;
+
+    color: #168436;
+
+    font-size: 1.7rem;
+}
+
+
+.departure-archive-text {
+    color: #08752b;
+
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.departure-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 42px;
+}
+
+
+.departure-back-btn,
+.departure-log-btn {
+    height: 42px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 18px;
+
+    border-radius: 8px;
+
+    font-size: 0.9rem;
+    font-weight: 400;
+
+    text-decoration: none;
+
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+
+/* Back to Dashboard */
+
+.departure-back-btn {
+    min-width: 202px;
+
+    border: 1px solid #0f1b3c;
+
+    background-color: #ffffff;
+    color: #111111;
+}
+
+
+.departure-back-btn:hover {
+    background-color: #f5f7fb;
+    border-color: #0f1b3c;
+    color: #111111;
+
+    transform: translateY(-1px);
+}
+
+
+/* View Trip Log */
+
+.departure-log-btn {
+    min-width: 166px;
+
+    border: 1px solid #0f1b3c;
+
+    background-color: #0f1b3c;
+    color: #ffffff;
+}
+
+
+.departure-log-btn:hover {
+    background-color: #0a1329;
+    border-color: #0a1329;
+    color: #ffffff;
+
+    box-shadow: 0 4px 12px rgba(15, 27, 60, 0.15);
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 992px) {
+
+    .departure-success-page {
+        margin-top: 32px;
+    }
+
+    .departure-success-banner,
+    .departure-trip-card {
+        width: 100%;
+    }
+
+}
+
+
+@media (max-width: 576px) {
+
+    .departure-success-card {
+        margin-top: 20px;
+        padding: 28px 20px 32px;
+    }
+
+    .departure-success-banner {
+        min-height: 160px;
+
+        margin-bottom: 24px;
+        padding: 26px 20px;
+    }
+
+    .departure-success-icon {
+        width: 40px;
+        height: 40px;
+
+        margin-bottom: 18px;
+
+        font-size: 1.45rem;
+    }
+
+    .departure-success-title {
+        font-size: 1rem;
+    }
+
+    .departure-trip-card {
+        padding: 32px 24px;
+    }
+
+    .departure-boat-name {
+        margin-bottom: 22px;
+    }
+
+    .departure-info-row {
+        align-items: flex-start;
+    }
+
+    .departure-info-label {
+        flex-basis: 62px;
+    }
+
+    .departure-route {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+    }
+
+    .departure-divider {
+        margin: 28px 0;
+    }
+
+    .departure-actions {
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 30px;
+    }
+
+    .departure-back-btn,
+    .departure-log-btn {
+        width: 100%;
+    }
+
+}

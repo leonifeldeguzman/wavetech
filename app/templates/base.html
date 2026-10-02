@@ -19,6 +19,7 @@
     <link rel="stylesheet"
       href="{{ url_for('static', filename='css/dashboard.css') }}">
 
+    {% block extra_css %}{% endblock %}
   </head>
   <body>
     <div class="d-flex" style="min-height: 100vh">
@@ -96,14 +97,6 @@
           </div>
         </div>
       </div>
-
-
-      <!-- Notifications -->
-      <div class="app-notification" aria-label="Notifications">
-        <i class="bi bi-bell"></i>
-        <span class="app-notification-dot"></span>
-      </div>
-
 
       <!-- User -->
       <div class="app-user">
