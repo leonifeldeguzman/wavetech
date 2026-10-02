@@ -1,0 +1,891 @@
+/* =========================================================
+   DASHBOARD FRONTEND
+   ========================================================= */
+
+.dashboard-page {
+    color: #1f2937;
+    font-size: 0.95rem;
+}
+
+/* ---------- KPI CARDS ---------- */
+
+.dashboard-kpi {
+    background: #ffffff;
+    border: 1px solid #eef0f4;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    min-height: 108px;
+    padding: 20px 22px;
+}
+
+.dashboard-kpi-label {
+    color: #4b5563;
+    font-size: 0.92rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.dashboard-kpi-value {
+    color: #111827;
+    font-size: 1.65rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.dashboard-kpi-sub {
+    color: #4b5563;
+    font-size: 0.82rem;
+    margin-top: 4px;
+}
+
+.dashboard-kpi-positive {
+    color: #0a9b43;
+}
+
+.dashboard-kpi-warning {
+    color: #c65a00;
+}
+
+.dashboard-kpi-muted {
+    color: #777777;
+}
+
+.dashboard-safety-clear {
+    color: #0a9b43;
+}
+
+.dashboard-safety-caution {
+    color: #c27a00;
+}
+
+.dashboard-safety-unsafe {
+    color: #dc2626;
+}
+
+/* ---------- MAIN DASHBOARD CARDS ---------- */
+
+.dashboard-section-card {
+    background: #ffffff;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-section-card .card-body {
+    padding: 28px 30px;
+}
+
+.dashboard-section-title {
+    color: #111827;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+.dashboard-section-divider {
+    border: 0;
+    border-top: 1px solid #7a7a7a;
+    margin: 20px 0 24px;
+}
+
+/* ---------- DECISION SUPPORT ---------- */
+
+.decision-select {
+    height: 48px;
+    border-color: #d7e1ef;
+    border-radius: 8px;
+    padding-left: 15px;
+    box-shadow: none;
+}
+
+.decision-select:focus {
+    border-color: #0f1b3c;
+    box-shadow: 0 0 0 0.12rem rgba(15, 27, 60, 0.08);
+}
+
+.assess-btn {
+    height: 60px;
+    background: #0f1b3c;
+    border-color: #0f1b3c;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.assess-btn:hover,
+.assess-btn:focus {
+    background: #0b1530;
+    border-color: #0b1530;
+}
+
+/* ---------- DECISION SUMMARY ---------- */
+
+.decision-summary {
+    border: 1px solid #d9e3f0;
+    border-radius: 8px;
+    padding: 28px 30px;
+    background: #ffffff;
+}
+
+.decision-label {
+    color: #4b5563;
+    font-size: 0.92rem;
+    font-weight: 500;
+    margin-bottom: 7px;
+}
+
+.decision-value {
+    color: #111827;
+    font-weight: 400;
+}
+
+.decision-trip {
+    color: #111827;
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+.decision-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 30px;
+}
+
+.decision-divider {
+    border-top: 1px solid #dedede;
+    margin: 22px 0 24px;
+}
+
+.decision-safety-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.decision-safety-safe {
+    background: #d9f6df;
+    color: #16743a;
+    font-size: 0.95rem;
+    padding: 8px 13px;
+}
+
+.decision-safety-caution {
+    background: #ffc74a;
+    color: #171717;
+    font-size: 0.95rem;
+    padding: 8px 13px;
+}
+
+.decision-safety-unsafe {
+    background: #f9d4d4;
+    color: #a71919;
+    font-size: 0.95rem;
+    padding: 8px 13px;
+}
+
+.decision-safety-unavailable {
+    background: #e5e7eb;
+    color: #4b5563;
+    font-size: 0.95rem;
+    padding: 8px 13px;
+}
+
+.decision-recommendation {
+    color: #111827;
+    font-size: 1.05rem;
+    font-weight: 400;
+}
+
+.decision-reason {
+    color: #1f2937;
+    font-size: 0.95rem;
+    font-weight: 400;
+    line-height: 1.6;
+}
+
+.decision-view-btn {
+    border-color: #0f1b3c;
+    color: #111111;
+    border-radius: 7px;
+}
+
+.decision-view-btn:hover {
+    background: #f5f7fb;
+    border-color: #0f1b3c;
+    color: #111111;
+}
+
+/* =========================================================
+   Scheduling Decision Support - Trip Dropdown
+   ========================================================= */
+
+.custom-trip-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+/* Main selection box */
+.custom-trip-toggle {
+    width: 100%;
+    min-height: 54px;
+
+    padding: 8px 42px 8px 14px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+
+    background-color: #ffffff;
+    color: #111827;
+
+    font-family: inherit;
+    font-size: 0.9rem;
+
+    text-align: left;
+    cursor: pointer;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.custom-trip-toggle:hover {
+    border-color: #9ca3af;
+}
+
+.custom-trip-toggle:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(15, 27, 60, 0.10);
+}
+
+
+/* Selected trip information */
+.custom-trip-selected {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.selected-trip-main {
+    color: #111827;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.selected-trip-crew {
+    color: #6b7280;
+    font-size: 0.78rem;
+}
+
+
+/* Arrow */
+.custom-trip-arrow {
+    position: absolute;
+    right: 15px;
+
+    color: #64748b;
+    font-size: 0.8rem;
+
+    pointer-events: none;
+
+    transition: transform 0.2s ease;
+}
+
+.custom-trip-dropdown.open .custom-trip-arrow {
+    transform: rotate(180deg);
+}
+
+
+/* Dropdown menu */
+.custom-trip-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+
+    z-index: 1050;
+
+    display: none;
+
+    padding: 6px;
+
+    background-color: #ffffff;
+
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+
+    box-shadow: 0 8px 20px rgba(15, 27, 60, 0.12);
+
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.custom-trip-dropdown.open .custom-trip-menu {
+    display: block;
+}
+
+
+/* Individual trip */
+.custom-trip-option {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+
+    padding: 11px 12px;
+
+    border-radius: 7px;
+
+    color: #111827;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.custom-trip-option:hover {
+    background-color: #f3f4f6;
+}
+
+
+/* Selected trip */
+.custom-trip-option.selected {
+    background-color: #eef2f7;
+}
+
+.custom-trip-option.selected:hover {
+    background-color: #e5e7eb;
+}
+
+
+/* Trip information */
+.trip-option-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    min-width: 0;
+}
+
+.trip-option-main {
+    color: #111827;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.trip-option-details {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    color: #6b7280;
+    font-size: 0.76rem;
+}
+
+.trip-option-details span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.trip-option-details i {
+    font-size: 0.75rem;
+}
+
+
+/* Checkmark */
+.trip-option-check {
+    flex-shrink: 0;
+
+    margin-left: 12px;
+
+    color: var(--navy);
+    font-size: 1rem;
+}
+
+
+/* Placeholder */
+.placeholder-option {
+    color: #6b7280;
+}
+
+.placeholder-option .trip-option-main {
+    color: #6b7280;
+    font-weight: 400;
+}
+
+
+/* Scrollbar */
+.custom-trip-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-trip-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-trip-menu::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 10px;
+}
+
+.custom-trip-menu::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+
+
+/* Mobile */
+@media (max-width: 576px) {
+
+    .trip-option-details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+    }
+
+}
+
+/* ---------- ACTIVE TRIP MONITORING ---------- */
+
+.active-trip-header-route {
+    color: #1f2937;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.active-trip-table {
+    margin-bottom: 0;
+}
+
+.active-trip-table thead th {
+    background: #f1f7ff;
+    border-bottom: 1px solid #dce7f2;
+    color: #111111;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 12px 14px;
+    text-align: center;
+}
+
+.active-trip-table tbody td.capacity-cell {
+    text-align: center;
+}
+
+.capacity-cell .capacity-progress {
+    margin: 0 auto;
+}
+
+.active-trip-table tbody td {
+    border-bottom: 1px solid #e8e8e8;
+    color: #1f2937;
+    font-size: 0.92rem;
+    padding: 14px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.active-trip-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.active-trip-table tbody tr.active-trip-current {
+    background: #ffffff;
+    box-shadow: 0 5px 18px rgba(15, 27, 60, 0.08);
+    position: relative;
+}
+
+/* ---------- CAPACITY BAR ---------- */
+
+.capacity-progress {
+    width: 90px;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.capacity-progress-fill {
+    height: 100%;
+    width: var(--capacity-width);
+    background: #0f1b3c;
+    border-radius: 999px;
+}
+
+.capacity-progress-fill.high {
+    background: #d97706;
+}
+
+.capacity-progress-fill.full {
+    background: #dc2626;
+}
+
+/* ---------- STATUS PILLS ---------- */
+
+.dashboard-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 82px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+}
+
+.dashboard-status-pill.full {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+.dashboard-status-pill.departed {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #2563eb;
+}
+
+.dashboard-status-pill.open {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #16a34a;
+}
+
+.dashboard-status-pill.delayed,
+.dashboard-status-pill.caution {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    color: #b45309;
+}
+
+.dashboard-status-pill.cancelled {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+/* ---------- MODAL ---------- */
+
+.dashboard-modal-table td {
+    padding: 13px 8px;
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 991.98px) {
+    .dashboard-section-card .card-body {
+        padding: 24px;
+    }
+
+    .decision-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .dashboard-section-card .card-body {
+        padding: 20px;
+    }
+
+    .dashboard-kpi {
+        min-height: auto;
+    }
+
+    .decision-summary {
+        padding: 22px;
+    }
+
+    .active-trip-header-route {
+        margin-top: 8px;
+    }
+
+    .active-trip-table {
+        min-width: 700px;
+    }
+}
+
+/* =========================================================
+   SCHEDULING DECISION-SUPPORT MODAL
+   ========================================================= */
+
+.scheduling-details-dialog {
+    max-width: 650px;
+}
+
+.scheduling-details-modal {
+    border: 0;
+    border-radius: 7px;
+    overflow: hidden;
+    box-shadow: 0 10px 35px rgba(15, 27, 60, 0.18);
+}
+
+
+/* ---------- HEADER ---------- */
+
+.scheduling-modal-header {
+    padding: 21px 26px 18px;
+    border-bottom: 1px solid #eeeeee;
+}
+
+.scheduling-modal-title {
+    color: #111111;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 5px;
+}
+
+.scheduling-modal-subtitle {
+    color: #666666;
+    font-size: 0.86rem;
+}
+
+.scheduling-modal-header .btn-close {
+    font-size: 0.78rem;
+    opacity: 0.7;
+}
+
+
+/* ---------- BODY ---------- */
+
+.scheduling-modal-body {
+    padding: 22px 26px 0;
+    color: #171717;
+}
+
+
+/* ---------- TRIP INFORMATION ---------- */
+
+.scheduling-trip-info {
+    margin-bottom: 26px;
+}
+
+.scheduling-label {
+    color: #666666;
+    font-size: 0.82rem;
+    margin-bottom: 5px;
+}
+
+.scheduling-trip-number {
+    color: #111111;
+    font-size: 0.98rem;
+    font-weight: 700;
+    margin-bottom: 7px;
+}
+
+.scheduling-trip-detail {
+    color: #171717;
+    font-size: 0.84rem;
+    line-height: 1.55;
+}
+
+
+/* ---------- ENVIRONMENTAL CONDITIONS ---------- */
+
+.scheduling-environment-title {
+    color: #171717;
+    font-size: 0.94rem;
+    font-weight: 700;
+    margin-bottom: 11px;
+}
+
+.scheduling-environment-table {
+    margin: 0;
+    border-top: 0;
+}
+
+.scheduling-environment-table tbody tr {
+    border-bottom: 1px solid #dce7f2;
+}
+
+.scheduling-environment-table tbody tr:last-child {
+    border-bottom: 1px solid #dce7f2;
+}
+
+.scheduling-environment-table td {
+    padding: 11px 12px;
+    vertical-align: middle;
+    font-size: 0.84rem;
+}
+
+.scheduling-condition-label {
+    width: 42%;
+    color: #333333;
+}
+
+.scheduling-condition-value {
+    color: #171717;
+    font-weight: 700;
+}
+
+.scheduling-condition-status {
+    width: 28%;
+    text-align: right;
+}
+
+
+/* ---------- CONDITION STATUS BADGES ---------- */
+
+.scheduling-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 7px;
+    border-radius: 3px;
+    font-size: 0.77rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.scheduling-status-safe {
+    background: #39ad63;
+    color: #ffffff;
+}
+
+.scheduling-status-caution {
+    background: #ffc94f;
+    color: #111111;
+    font-size: 0.85rem;
+    padding: 5px 8px;
+}
+
+.scheduling-status-unsafe {
+    background: #dc3545;
+    color: #ffffff;
+}
+
+.scheduling-status-unavailable {
+    background: #6c757d;
+    color: #ffffff;
+}
+
+
+/* ---------- RESULT SECTION ---------- */
+
+.scheduling-result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 34px;
+    padding: 30px 12px 0;
+    border-top: 1px solid #dce7f2;
+    margin-top: 0;
+}
+
+.scheduling-overall-badge {
+    font-size: 0.85rem;
+    padding: 5px 8px;
+}
+
+.scheduling-recommendation {
+    color: #171717;
+    font-size: 0.88rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+
+/* ---------- REASON ---------- */
+
+.scheduling-reason-section {
+    margin-top: 28px;
+    padding: 0 12px 27px;
+}
+
+.scheduling-reason {
+    color: #171717;
+    font-size: 0.84rem;
+    line-height: 1.6;
+}
+
+
+/* ---------- DATA RETRIEVED ---------- */
+
+.scheduling-retrieved {
+    border-top: 1px solid #eeeeee;
+    padding: 27px 12px 24px;
+    color: #555555;
+    font-size: 0.81rem;
+}
+
+.scheduling-retrieved strong {
+    color: #444444;
+    font-weight: 500;
+}
+
+
+/* ---------- FOOTER ---------- */
+
+.scheduling-modal-footer {
+    justify-content: flex-end;
+    padding: 0 26px 21px;
+    border-top: 0;
+}
+
+.scheduling-close-btn {
+    background: #eaf1f8;
+    border: 0;
+    color: #6b7280;
+    font-size: 0.8rem;
+    padding: 6px 15px;
+    border-radius: 4px;
+}
+
+.scheduling-close-btn:hover {
+    background: #dfe8f1;
+    color: #4b5563;
+}
+
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 575.98px) {
+
+    .scheduling-details-dialog {
+        max-width: calc(100% - 24px);
+        margin: 12px auto;
+    }
+
+    .scheduling-modal-header {
+        padding: 19px 19px 16px;
+    }
+
+    .scheduling-modal-body {
+        padding: 20px 19px 0;
+    }
+
+    .scheduling-result-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .scheduling-environment-table td {
+        padding: 10px 8px;
+    }
+
+    .scheduling-condition-label {
+        width: 38%;
+    }
+
+    .scheduling-condition-status {
+        width: 30%;
+    }
+
+    .scheduling-modal-footer {
+        padding-left: 19px;
+        padding-right: 19px;
+    }
+}

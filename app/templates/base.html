@@ -16,6 +16,9 @@
       href="{{ url_for('static', filename='css/custom.css') }}"
       rel="stylesheet"
     />
+    <link rel="stylesheet"
+      href="{{ url_for('static', filename='css/dashboard.css') }}">
+
   </head>
   <body>
     <div class="d-flex" style="min-height: 100vh">
@@ -53,42 +56,83 @@
       <!-- Main content -->
       <div class="flex-grow-1 d-flex flex-column" style="min-width: 0">
         <!-- Top header bar -->
-        <header
-          class="d-flex justify-content-between align-items-center bg-white px-3 px-lg-4 py-3 border-bottom"
-        >
-          <div class="d-flex align-items-center gap-2">
-            <!-- Hamburger button, only visible on mobile -->
-            <button
-              class="btn d-lg-none p-0 me-2"
-              type="button"
-              data-bs-toggle="offcanvas"
-              data-bs-target="#mobileSidebar"
-            >
-              <i class="bi bi-list fs-3"></i>
-            </button>
-            <h5 class="mb-0 text-uppercase fw-bold d-none d-sm-block">
-              {% block page_title %}Dashboard{% endblock %}
-            </h5>
+<header class="app-top-header">
+
+  <div class="app-top-header-row">
+
+    <div class="app-top-header-left">
+
+      <!-- Hamburger button, only visible on mobile -->
+      <button
+        class="btn d-lg-none app-menu-btn"
+        type="button"
+        data-bs-toggle="offcanvas"
+        data-bs-target="#mobileSidebar"
+        aria-label="Open navigation"
+      >
+        <i class="bi bi-list"></i>
+      </button>
+
+      <h5 class="app-page-title">
+        {% block page_title %}Dashboard{% endblock %}
+      </h5>
+
+    </div>
+
+
+    <div class="app-top-header-right">
+
+      <!-- Clock -->
+      <div class="app-clock">
+        <i class="bi bi-clock app-clock-icon"></i>
+
+        <div class="app-clock-info">
+          <div id="live-clock-time" class="app-clock-time">
+            --:-- --
           </div>
 
-          <div class="d-flex align-items-center gap-3 gap-lg-4">
-            <div
-              class="d-none d-md-flex align-items-center gap-2"
-              style="color: #21252a"
-            >
-              <i class="bi bi-clock"></i>
-              <span id="live-clock"></span>
-            </div>
-            <i class="bi bi-bell"></i>
-            <div class="d-flex align-items-center gap-2">
-              <i class="bi bi-person-circle fs-4"></i>
-              <div class="lh-sm d-none d-sm-block">
-                <div class="fw-semibold">{{ session.get('full_name') }}</div>
-                <div class="text-muted small">{{ session.get('role') }}</div>
-              </div>
-            </div>
+          <div id="live-clock-date" class="app-clock-date">
+            ---
           </div>
-        </header>
+        </div>
+      </div>
+
+
+      <!-- Notifications -->
+      <div class="app-notification" aria-label="Notifications">
+        <i class="bi bi-bell"></i>
+        <span class="app-notification-dot"></span>
+      </div>
+
+
+      <!-- User -->
+      <div class="app-user">
+
+        <div class="app-user-avatar">
+          <i class="bi bi-person-fill"></i>
+        </div>
+
+        <div class="app-user-info">
+          <div class="app-user-name">
+            {{ session.get('full_name') }}
+          </div>
+
+          <div class="app-user-role">
+            {{ session.get('role') }}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- Header divider -->
+  <div class="app-header-divider"></div>
+
+</header>
 
         <!-- Flash messages -->
         <div class="px-3 px-lg-4 pt-3">
@@ -107,21 +151,31 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      function updateClock() {
-        const now = new Date();
-        const options = { hour: "2-digit", minute: "2-digit", hour12: true };
-        document.getElementById("live-clock").textContent =
-          now.toLocaleTimeString("en-US", options) +
-          " | " +
-          now.toLocaleDateString("en-US", {
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          });
-      }
-      updateClock();
-      setInterval(updateClock, 1000);
-    </script>
+  function updateClock() {
+    const now = new Date();
+
+    document.getElementById("live-clock-time").textContent =
+      now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+
+    document.getElementById("live-clock-date").textContent =
+      now.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      }) +
+      " | " +
+      now.toLocaleDateString("en-US", {
+        weekday: "long"
+      });
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

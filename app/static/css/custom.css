@@ -6,7 +6,7 @@
   --navy: #0f1b3c;
   --navy-dark: #0a1329;
 
-  --bg-light: #f5f7fa;
+  --bg-light: #ffffff;
   --card-white: #ffffff;
 
   --text-muted: #6b7280;
@@ -78,29 +78,6 @@ body {
   color: #fff;
   background-color: var(--status-red);
 }
-
-
-/* =========================
-   Dashboard Stat Cards
-   ========================= */
-
-.stat-card {
-  background-color: var(--card-white);
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-.stat-card .stat-label {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.stat-card .stat-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
 
 /* =========================
    Tables
@@ -240,6 +217,9 @@ body {
     width: 240px;
     height: 100vh;
 
+    /* More inner spacing */
+    padding: 28px 20px !important;
+
     overflow-y: auto;
 
     background-color: var(--sidebar-bg) !important;
@@ -271,6 +251,7 @@ body {
   nav.d-lg-flex a.active,
   nav.d-lg-flex a.active i {
     color: #ffffff !important;
+    border-radius: 10px;
   }
 
   nav.d-lg-flex a.active {
@@ -447,4 +428,325 @@ body {
   .compact-table td:last-child {
     white-space: nowrap;
   }
+}
+
+/* =========================================================
+   GLOBAL PAGE HEADER
+   Applies to all pages using base.html
+   ========================================================= */
+
+.app-top-header {
+    background-color: #ffffff;
+
+    padding: 22px 28px 0;
+
+    border-bottom: none;
+}
+
+/* ---------- Header top row ---------- */
+
+.app-top-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: 48px;
+}
+
+/* ---------- Left side ---------- */
+
+.app-top-header-left {
+    display: flex;
+    align-items: center;
+}
+
+.app-page-title {
+    margin: 0;
+
+    color: #111111;
+
+    font-size: 1.05rem;
+    font-weight: 700;
+
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+
+/* ---------- Mobile menu button ---------- */
+
+.app-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #111111;
+
+    border: 0;
+    padding: 0;
+    margin-right: 12px;
+}
+
+.app-menu-btn:hover,
+.app-menu-btn:focus {
+    color: var(--navy);
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.app-menu-btn i {
+    font-size: 1.6rem;
+}
+
+
+/* ---------- Right side ---------- */
+
+.app-top-header-right {
+    display: flex;
+    align-items: center;
+
+    gap: 28px;
+}
+
+
+/* =========================================================
+   CLOCK
+   ========================================================= */
+
+.app-clock {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+}
+
+.app-clock-icon {
+    color: var(--navy);
+    font-size: 1.3rem;
+}
+
+.app-clock-info {
+    display: flex;
+    flex-direction: column;
+
+    line-height: 1.2;
+}
+
+.app-clock-time {
+    color: #111111;
+
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.app-clock-date {
+    margin-top: 3px;
+
+    color: #555555;
+
+    font-size: 0.74rem;
+    font-weight: 400;
+}
+
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+
+.app-notification {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: var(--navy);
+
+    font-size: 1.35rem;
+
+    cursor: pointer;
+}
+
+.app-notification-dot {
+    position: absolute;
+
+    top: 1px;
+    right: -1px;
+
+    width: 6px;
+    height: 6px;
+
+    background-color: #f4c542;
+
+    border-radius: 50%;
+}
+
+
+/* =========================================================
+   USER PROFILE
+   ========================================================= */
+
+.app-user {
+    display: flex;
+    align-items: center;
+
+    gap: 11px;
+}
+
+.app-user-avatar {
+    width: 34px;
+    height: 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: var(--navy);
+    color: #ffffff;
+
+    border-radius: 50%;
+
+    font-size: 0.95rem;
+}
+
+.app-user-info {
+    display: flex;
+    flex-direction: column;
+
+    line-height: 1.2;
+}
+
+.app-user-name {
+    color: #111111;
+
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.app-user-role {
+    margin-top: 3px;
+
+    color: #555555;
+
+    font-size: 0.74rem;
+}
+
+/* =========================================================
+   HEADER DIVIDER
+   ========================================================= */
+
+.app-header-divider {
+    width: 100%;
+
+    border: 0;
+    border-top: 1px solid #dedede;
+
+    margin-top: 10px;
+}
+
+/* =========================================================
+   USER PROFILE
+   ========================================================= */
+
+.app-user {
+    display: flex;
+    align-items: center;
+
+    gap: 11px;
+}
+
+.app-user-avatar {
+    width: 34px;
+    height: 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: var(--navy);
+    color: #ffffff;
+
+    border-radius: 50%;
+
+    font-size: 0.95rem;
+}
+
+.app-user-info {
+    display: flex;
+    flex-direction: column;
+
+    line-height: 1.2;
+}
+
+.app-user-name {
+    color: #111111;
+
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.app-user-role {
+    margin-top: 3px;
+
+    color: #555555;
+
+    font-size: 0.74rem;
+}
+
+
+/* =========================================================
+   RESPONSIVE HEADER
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+
+    .app-top-header {
+        padding: 16px 20px 0;
+    }
+
+    .app-top-header-row {
+        min-height: 44px;
+    }
+
+    .app-top-header-right {
+        gap: 16px;
+    }
+
+    .app-clock {
+        display: none;
+    }
+
+    .app-user-info {
+        display: none;
+    }
+
+    .app-page-title {
+        font-size: 1rem;
+    }
+
+    .app-notification {
+        font-size: 1.25rem;
+    }
+
+    .app-user-avatar {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+
+@media (max-width: 400px) {
+
+    .app-top-header {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .app-top-header-right {
+        gap: 12px;
+    }
+
+    .app-page-title {
+        font-size: 0.9rem;
+    }
 }
