@@ -1,613 +1,753 @@
-{% extends "base.html" %} {% block title %}Announcement Management{% endblock %}
-{% block page_title %}Announcement Management{% endblock %} {% block content %}
+{% extends "base.html" %}
 
-<!-- =========================
-     Create Announcement
-     ========================= -->
+{% block title %}Announcement Management{% endblock %}
+{% block page_title %}Announcement Management{% endblock %}
 
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body p-4">
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/announcements.css') }}"
+>
+{% endblock %}
 
-    <h5 class="fw-bold mb-3">Create Announcement</h5>
-    <hr />
+{% block content %}
 
-    <form
-      id="announcement-form"
-      method="POST"
-      action="{{ url_for('announcements.create') }}"
-    >
+<div class="announcement-page">
 
-      <div class="row g-3">
+    <!-- =====================================================
+         CREATE ANNOUNCEMENT
+         ===================================================== -->
 
-        <!-- Title -->
-        <div class="col-md-6">
-          <label for="announcement-title" class="form-label">
-            Title
-          </label>
+    <section class="announcement-panel announcement-create-panel">
 
-          <input
-            type="text"
-            id="announcement-title"
-            name="title"
-            class="form-control"
-            maxlength="200"
-            placeholder="Enter announcement title"
-            value="{{ prefill.title }}"
-            required
-          />
+        <div class="announcement-panel-header">
+            <h2>Create Announcement</h2>
         </div>
 
-        <!-- Type -->
-        <div class="col-md-6">
-          <label for="announcement-type" class="form-label">
-            Type
-          </label>
+        <div class="announcement-divider"></div>
 
-          <select
-            id="announcement-type"
-            name="type"
-            class="form-select"
-            required
-          >
-            {% for announcement_type in types %}
-            <option
-              value="{{ announcement_type }}"
-              {% if prefill.type == announcement_type %}selected{% endif %}
+        <form
+            id="announcement-form"
+            method="POST"
+            action="{{ url_for('announcements.create') }}"
+        >
+
+            <div class="announcement-form-grid">
+
+                <!-- Title -->
+                <div class="announcement-field">
+                    <label for="announcement-title">
+                        Title
+                    </label>
+
+                    <input
+                        type="text"
+                        id="announcement-title"
+                        name="title"
+                        maxlength="200"
+                        placeholder="Enter announcement title"
+                        value="{{ prefill.title }}"
+                        required
+                    >
+                </div>
+
+                <!-- Type / Priority -->
+                <div class="announcement-field">
+                    <label for="announcement-type">
+                        Priority
+                    </label>
+
+                    <select
+                        id="announcement-type"
+                        name="type"
+                        required
+                    >
+                        {% for announcement_type in types %}
+                        <option
+                            value="{{ announcement_type }}"
+                            {% if prefill.type == announcement_type %}selected{% endif %}
+                        >
+                            {{ announcement_type }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Message -->
+                <div class="announcement-field announcement-field-full">
+                    <label for="announcement-content">
+                        Message
+                    </label>
+
+                    <textarea
+                        id="announcement-content"
+                        name="content"
+                        rows="5"
+                        placeholder="Type your message here..."
+                        required
+                    >{{ prefill.content }}</textarea>
+                </div>
+
+            </div>
+
+            <!-- Buttons -->
+            <div class="announcement-form-actions">
+
+                <button
+                    type="submit"
+                    name="action"
+                    value="publish_now"
+                    class="announcement-btn announcement-btn-primary"
+                >
+                    Publish Now
+                </button>
+
+                <button
+                    type="button"
+                    id="schedule-btn"
+                    class="announcement-btn announcement-btn-outline"
+                    data-bs-toggle="modal"
+                    data-bs-target="#scheduleModal"
+                >
+                    <i class="bi bi-clock"></i>
+                    Schedule
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+    <!-- =====================================================
+         SCHEDULE MODAL
+         ===================================================== -->
+
+    <div
+        class="modal fade"
+        id="scheduleModal"
+        tabindex="-1"
+        aria-labelledby="scheduleModalLabel"
+        aria-hidden="true"
+    >
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content announcement-modal">
+
+                <div class="modal-header announcement-modal-header">
+
+                    <h5
+                        class="modal-title"
+                        id="scheduleModalLabel"
+                    >
+                        <i class="bi bi-clock"></i>
+                        Schedule Announcement
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+
+                </div>
+
+                <div class="modal-body announcement-modal-body">
+
+                    <p>
+                        Select when this announcement should be published.
+                    </p>
+
+                    <label
+                        for="announcement-schedule"
+                    >
+                        Schedule Date & Time
+                    </label>
+
+                    <input
+                        type="datetime-local"
+                        id="announcement-schedule"
+                        name="scheduled_at"
+                        class="announcement-modal-input"
+                        form="announcement-form"
+                    >
+
+                </div>
+
+                <div class="modal-footer announcement-modal-footer">
+
+                    <button
+                        type="button"
+                        class="announcement-modal-cancel"
+                        data-bs-dismiss="modal"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        name="action"
+                        value="schedule"
+                        form="announcement-form"
+                        class="announcement-modal-confirm"
+                    >
+                        <i class="bi bi-clock"></i>
+                        Confirm Schedule
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         PUBLISHED ANNOUNCEMENTS
+         ===================================================== -->
+
+    <section class="announcement-panel">
+
+        <div class="announcement-panel-header">
+            <h2>Published Announcement</h2>
+        </div>
+
+        <div class="announcement-divider"></div>
+
+        <div class="announcement-list">
+
+            {% for announcement in published %}
+
+            <article
+                class="
+                    announcement-item
+                    {% if announcement.type == 'Safety Alert' %}
+                        announcement-safety
+                    {% else %}
+                        announcement-normal
+                    {% endif %}
+                "
             >
-              {{ announcement_type }}
-            </option>
+
+                <div class="announcement-item-icon">
+
+                    {% if announcement.type == 'Safety Alert' %}
+                        <i class="bi bi-exclamation-triangle"></i>
+                    {% else %}
+                        <i class="bi bi-info-circle"></i>
+                    {% endif %}
+
+                </div>
+
+                <div class="announcement-item-body">
+
+                    <div class="announcement-item-title">
+                        {{ announcement.title }}
+                    </div>
+
+                    <div class="announcement-item-message">
+                        {{ announcement.content }}
+                    </div>
+
+                    <div class="announcement-item-date">
+                        Published:
+                        {% if announcement.published_at %}
+                            {{ announcement.published_at | ph_time }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </div>
+
+                    <!-- Existing actions preserved -->
+                    <div class="announcement-item-actions">
+
+                        <button
+                            type="button"
+                            class="announcement-action-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editModal{{ announcement.id }}"
+                        >
+                            <i class="bi bi-pencil"></i>
+                            Edit
+                        </button>
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('announcements.deactivate', announcement_id=announcement.id) }}"
+                        >
+                            <button
+                                type="submit"
+                                class="announcement-action-btn announcement-action-warning"
+                            >
+                                Deactivate
+                            </button>
+                        </form>
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('announcements.delete', announcement_id=announcement.id) }}"
+                            onsubmit="return confirm('Delete this announcement?');"
+                        >
+                            <button
+                                type="submit"
+                                class="announcement-action-btn announcement-action-danger"
+                            >
+                                Delete
+                            </button>
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+            <!-- =================================================
+                 EDIT PUBLISHED MODAL
+                 ================================================= -->
+
+            <div
+                class="modal fade"
+                id="editModal{{ announcement.id }}"
+                tabindex="-1"
+                aria-hidden="true"
+            >
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+
+                    <div class="modal-content announcement-modal">
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('announcements.edit', announcement_id=announcement.id) }}"
+                        >
+
+                            <div class="modal-header announcement-modal-header">
+
+                                <h5 class="modal-title">
+                                    Edit Announcement
+                                </h5>
+
+                                <button
+                                    type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                ></button>
+
+                            </div>
+
+                            <div class="modal-body announcement-modal-body">
+
+                                <div class="announcement-modal-field">
+
+                                    <label>
+                                        Title
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        maxlength="200"
+                                        value="{{ announcement.title }}"
+                                        required
+                                    >
+
+                                </div>
+
+                                <div class="announcement-modal-field">
+
+                                    <label>
+                                        Type
+                                    </label>
+
+                                    <select
+                                        name="type"
+                                        required
+                                    >
+                                        {% for announcement_type in types %}
+                                        <option
+                                            value="{{ announcement_type }}"
+                                            {% if announcement.type == announcement_type %}selected{% endif %}
+                                        >
+                                            {{ announcement_type }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+
+                                </div>
+
+                                <div class="announcement-modal-field">
+
+                                    <label>
+                                        Message
+                                    </label>
+
+                                    <textarea
+                                        name="content"
+                                        rows="5"
+                                        required
+                                    >{{ announcement.content }}</textarea>
+
+                                </div>
+
+                            </div>
+
+                            <div class="modal-footer announcement-modal-footer">
+
+                                <button
+                                    type="button"
+                                    class="announcement-modal-cancel"
+                                    data-bs-dismiss="modal"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    class="announcement-modal-confirm"
+                                >
+                                    Save Changes
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+
+            <div class="announcement-empty">
+                No published announcements.
+            </div>
+
             {% endfor %}
-          </select>
+
         </div>
 
-        <!-- Message -->
-        <div class="col-12">
-          <label for="announcement-content" class="form-label">
-            Message
-          </label>
+    </section>
 
-          <textarea
-            id="announcement-content"
-            name="content"
-            class="form-control"
-            rows="4"
-            placeholder="Type your message here..."
-            required
-          >{{ prefill.content }}</textarea>
+
+    <!-- =====================================================
+         SCHEDULED ANNOUNCEMENTS
+         ===================================================== -->
+
+    <section class="announcement-panel">
+
+        <div class="announcement-panel-header">
+            <h2>Scheduled</h2>
         </div>
 
-      </div>
+        <div class="announcement-divider"></div>
 
-      <!-- Buttons -->
-      <div class="d-flex justify-content-center gap-2 mt-4">
+        <div class="announcement-list">
 
-        <button
-    type="submit"
-    name="action"
-    value="publish_now"
-    class="btn text-white"
-    style="background-color: var(--navy);"
->
-    <i class="bi bi-megaphone me-1"></i>
-    Publish Now
-</button>
+            {% for announcement in scheduled %}
 
-        <button
-          type="button"
-          id="schedule-btn"
-          class="btn btn-outline-secondary px-4"
-          data-bs-toggle="modal"
-          data-bs-target="#scheduleModal"
-        >
-          <i class="bi bi-clock me-1"></i>
-          Schedule
-        </button>
+            <article class="announcement-item announcement-scheduled">
 
-      </div>
+                <div class="announcement-item-icon">
+                    <i class="bi bi-clock"></i>
+                </div>
 
-    </form>
+                <div class="announcement-item-body">
 
-  </div>
+                    <div class="announcement-item-title">
+                        {{ announcement.title }}
+                    </div>
+
+                    <div class="announcement-item-message">
+                        {{ announcement.content }}
+                    </div>
+
+                    <div class="announcement-item-date">
+                        Scheduled:
+                        {% if announcement.scheduled_at %}
+                            {{ announcement.scheduled_at | ph_time }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </div>
+
+                    <!-- Existing actions preserved -->
+                    <div class="announcement-item-actions">
+
+                        <button
+                            type="button"
+                            class="announcement-action-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#scheduledEditModal{{ announcement.id }}"
+                        >
+                            <i class="bi bi-pencil"></i>
+                            Edit
+                        </button>
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('announcements.deactivate', announcement_id=announcement.id) }}"
+                        >
+                            <button
+                                type="submit"
+                                class="announcement-action-btn announcement-action-warning"
+                            >
+                                Cancel
+                            </button>
+                        </form>
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('announcements.delete', announcement_id=announcement.id) }}"
+                            onsubmit="return confirm('Delete this scheduled announcement?');"
+                        >
+                            <button
+                                type="submit"
+                                class="announcement-action-btn announcement-action-danger"
+                            >
+                                Delete
+                            </button>
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+            <!-- =================================================
+                 EDIT SCHEDULED MODAL
+                 ================================================= -->
+
+            <div
+                class="modal fade"
+                id="scheduledEditModal{{ announcement.id }}"
+                tabindex="-1"
+                aria-hidden="true"
+            >
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+
+                    <div class="modal-content announcement-modal">
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('announcements.edit', announcement_id=announcement.id) }}"
+                        >
+
+                            <div class="modal-header announcement-modal-header">
+
+                                <h5 class="modal-title">
+                                    Edit Scheduled Announcement
+                                </h5>
+
+                                <button
+                                    type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                ></button>
+
+                            </div>
+
+                            <div class="modal-body announcement-modal-body">
+
+                                <div class="announcement-modal-field">
+
+                                    <label>
+                                        Title
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        maxlength="200"
+                                        value="{{ announcement.title }}"
+                                        required
+                                    >
+
+                                </div>
+
+                                <div class="announcement-modal-field">
+
+                                    <label>
+                                        Type
+                                    </label>
+
+                                    <select
+                                        name="type"
+                                        required
+                                    >
+                                        {% for announcement_type in types %}
+                                        <option
+                                            value="{{ announcement_type }}"
+                                            {% if announcement.type == announcement_type %}selected{% endif %}
+                                        >
+                                            {{ announcement_type }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+
+                                </div>
+
+                                <div class="announcement-modal-field">
+
+                                    <label>
+                                        Message
+                                    </label>
+
+                                    <textarea
+                                        name="content"
+                                        rows="5"
+                                        required
+                                    >{{ announcement.content }}</textarea>
+
+                                </div>
+
+                                <div class="announcement-modal-field">
+
+                                    <label>
+                                        Schedule Date & Time
+                                    </label>
+
+                                    <input
+                                        type="datetime-local"
+                                        name="scheduled_at"
+                                        value="{{ announcement.scheduled_at.strftime('%Y-%m-%dT%H:%M') if announcement.scheduled_at else '' }}"
+                                        required
+                                    >
+
+                                </div>
+
+                            </div>
+
+                            <div class="modal-footer announcement-modal-footer">
+
+                                <button
+                                    type="button"
+                                    class="announcement-modal-cancel"
+                                    data-bs-dismiss="modal"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    class="announcement-modal-confirm"
+                                >
+                                    Save Changes
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+
+            <div class="announcement-empty">
+                No scheduled announcements.
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         INACTIVE ANNOUNCEMENTS
+         ===================================================== -->
+
+    {% if inactive %}
+
+    <section class="announcement-panel announcement-inactive-panel">
+
+        <div class="announcement-panel-header">
+            <h2>Inactive</h2>
+        </div>
+
+        <div class="announcement-divider"></div>
+
+        <div class="announcement-list">
+
+            {% for announcement in inactive %}
+
+            <article class="announcement-item announcement-inactive">
+
+                <div class="announcement-item-icon">
+                    <i class="bi bi-eye-slash"></i>
+                </div>
+
+                <div class="announcement-item-body">
+
+                    <div class="announcement-item-title">
+                        {{ announcement.title }}
+                    </div>
+
+                    <div class="announcement-item-message">
+                        {{ announcement.content }}
+                    </div>
+
+                    <div class="announcement-item-date">
+                        Type: {{ announcement.type }}
+                    </div>
+
+                    {% if announcement.published_at %}
+
+                    <div class="announcement-item-date">
+                        Previously published:
+                        {{ announcement.published_at | ph_time }}
+                    </div>
+
+                    {% endif %}
+
+                    <div class="announcement-item-actions">
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('announcements.activate', announcement_id=announcement.id) }}"
+                        >
+                            <button
+                                type="submit"
+                                class="announcement-action-btn announcement-action-success"
+                            >
+                                Activate
+                            </button>
+                        </form>
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('announcements.delete', announcement_id=announcement.id) }}"
+                            onsubmit="return confirm('Delete this announcement?');"
+                        >
+                            <button
+                                type="submit"
+                                class="announcement-action-btn announcement-action-danger"
+                            >
+                                Delete
+                            </button>
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+            {% endfor %}
+
+        </div>
+
+    </section>
+
+    {% endif %}
+
 </div>
-<!-- =========================
-     Schedule Announcement Modal
-     ========================= -->
-
-<div
-  class="modal fade"
-  id="scheduleModal"
-  tabindex="-1"
-  aria-labelledby="scheduleModalLabel"
-  aria-hidden="true"
->
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow">
-
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold" id="scheduleModalLabel">
-          <i class="bi bi-clock me-2"></i>
-          Schedule Announcement
-        </h5>
-
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
-      </div>
-
-      <div class="modal-body p-4">
-
-        <p class="text-muted small mb-3">
-          Select when this announcement should be published.
-        </p>
-
-        <label
-          for="announcement-schedule"
-          class="form-label fw-semibold"
-        >
-          Schedule Date & Time
-        </label>
-
-        <input
-          type="datetime-local"
-          id="announcement-schedule"
-          name="scheduled_at"
-          class="form-control"
-          form="announcement-form"
-        />
-
-      </div>
-
-      <div class="modal-footer">
-
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-bs-dismiss="modal"
-        >
-          Cancel
-        </button>
-
-        <button
-          type="submit"
-          name="action"
-          value="schedule"
-          form="announcement-form"
-          class="btn text-white"
-          style="background-color: var(--navy)"
-        >
-          <i class="bi bi-clock me-1"></i>
-          Confirm Schedule
-        </button>
-
-      </div>
-
-    </div>
-  </div>
-</div>
-<!-- =========================
-     Published Announcements
-     ========================= -->
-
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body p-4">
-    <h5 class="fw-bold mb-3">Published Announcements</h5>
-    <hr />
-
-    {% for announcement in published %}
-
-    <div
-      class="announcement-item {% if announcement.type == 'Safety Alert' %} announcement-safety {% else %} announcement-normal {% endif %}"
-    >
-      <div class="announcement-icon">
-        {% if announcement.type == 'Safety Alert' %}
-        <i class="bi bi-exclamation-triangle"></i>
-        {% else %}
-        <i class="bi bi-info-circle"></i>
-        {% endif %}
-      </div>
-
-      <div class="announcement-content">
-        <div class="d-flex justify-content-between align-items-start gap-3">
-          <div>
-            <div class="fw-bold">{{ announcement.title }}</div>
-
-            <div class="small text-muted mt-1">{{ announcement.content }}</div>
-
-            <div class="small text-muted mt-2">
-              Published: {% if announcement.published_at %} {{
-              announcement.published_at | ph_time }} {% else %} — {% endif %}
-            </div>
-          </div>
-
-          <span class="announcement-type"> {{ announcement.type }} </span>
-        </div>
-
-        <div class="d-flex gap-2 mt-3">
-          <!-- Edit -->
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-secondary"
-            data-bs-toggle="modal"
-            data-bs-target="#editModal{{ announcement.id }}"
-          >
-            <i class="bi bi-pencil me-1"></i>
-            Edit
-          </button>
-
-          <!-- Deactivate -->
-          <form
-            method="POST"
-            action="{{ url_for('announcements.deactivate', announcement_id=announcement.id) }}"
-            class="d-inline"
-          >
-            <button type="submit" class="btn btn-sm btn-outline-warning">
-              Deactivate
-            </button>
-          </form>
-
-          <!-- Delete -->
-          <form
-            method="POST"
-            action="{{ url_for('announcements.delete', announcement_id=announcement.id) }}"
-            class="d-inline"
-            onsubmit="return confirm('Delete this announcement?');"
-          >
-            <button type="submit" class="btn btn-sm btn-outline-danger">
-              Delete
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit Published Announcement Modal -->
-
-    <div
-      class="modal fade"
-      id="editModal{{ announcement.id }}"
-      tabindex="-1"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-          <form
-            method="POST"
-            action="{{ url_for('announcements.edit', announcement_id=announcement.id) }}"
-          >
-            <div class="modal-header">
-              <h5 class="modal-title fw-bold">Edit Announcement</h5>
-
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-              ></button>
-            </div>
-
-            <div class="modal-body">
-              <div class="mb-3">
-                <label class="form-label"> Title </label>
-
-                <input
-                  type="text"
-                  name="title"
-                  class="form-control"
-                  maxlength="200"
-                  value="{{ announcement.title }}"
-                  required
-                />
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label"> Type </label>
-
-                <select name="type" class="form-select" required>
-                  {% for announcement_type in types %}
-                  <option
-                    value="{{ announcement_type }}"
-                    {%
-                    if
-                    announcement.type==announcement_type
-                    %}
-                    selected
-                    {%
-                    endif
-                    %}
-                  >
-                    {{ announcement_type }}
-                  </option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <div>
-                <label class="form-label"> Message </label>
-
-                <textarea name="content" class="form-control" rows="5" required>
-{{ announcement.content }}</textarea
-                >
-              </div>
-            </div>
-
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                class="btn text-white"
-                style="background-color: var(--navy)"
-              >
-                Save Changes
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    {% else %}
-
-    <div class="text-center text-muted py-4">No published announcements.</div>
-
-    {% endfor %}
-  </div>
-</div>
-
-<!-- =========================
-     Scheduled Announcements
-     ========================= -->
-
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body p-4">
-    <h5 class="fw-bold mb-3">Scheduled</h5>
-    <hr />
-
-    {% for announcement in scheduled %}
-
-    <div class="announcement-item announcement-scheduled">
-      <div class="announcement-icon">
-        <i class="bi bi-clock"></i>
-      </div>
-
-      <div class="announcement-content">
-        <div class="d-flex justify-content-between align-items-start gap-3">
-          <div>
-            <div class="fw-bold">{{ announcement.title }}</div>
-
-            <div class="small text-muted mt-1">{{ announcement.content }}</div>
-
-            <div class="small text-muted mt-2">
-              Scheduled: {% if announcement.scheduled_at %} {{
-              announcement.scheduled_at | ph_time }} {% else %} — {% endif %}
-            </div>
-          </div>
-
-          <span class="announcement-type"> {{ announcement.type }} </span>
-        </div>
-
-        <div class="d-flex gap-2 mt-3">
-          <!-- Edit Scheduled -->
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-secondary"
-            data-bs-toggle="modal"
-            data-bs-target="#scheduledEditModal{{ announcement.id }}"
-          >
-            <i class="bi bi-pencil me-1"></i>
-            Edit
-          </button>
-
-          <!-- Cancel Scheduled -->
-          <form
-            method="POST"
-            action="{{ url_for('announcements.deactivate', announcement_id=announcement.id) }}"
-            class="d-inline"
-          >
-            <button type="submit" class="btn btn-sm btn-outline-warning">
-              Cancel
-            </button>
-          </form>
-
-          <!-- Delete -->
-          <form
-            method="POST"
-            action="{{ url_for('announcements.delete', announcement_id=announcement.id) }}"
-            class="d-inline"
-            onsubmit="return confirm('Delete this scheduled announcement?');"
-          >
-            <button type="submit" class="btn btn-sm btn-outline-danger">
-              Delete
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit Scheduled Modal -->
-
-    <div
-      class="modal fade"
-      id="scheduledEditModal{{ announcement.id }}"
-      tabindex="-1"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-          <form
-            method="POST"
-            action="{{ url_for('announcements.edit', announcement_id=announcement.id) }}"
-          >
-            <div class="modal-header">
-              <h5 class="modal-title fw-bold">Edit Scheduled Announcement</h5>
-
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-              ></button>
-            </div>
-
-            <div class="modal-body">
-              <div class="mb-3">
-                <label class="form-label"> Title </label>
-
-                <input
-                  type="text"
-                  name="title"
-                  class="form-control"
-                  maxlength="200"
-                  value="{{ announcement.title }}"
-                  required
-                />
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label"> Type </label>
-
-                <select name="type" class="form-select" required>
-                  {% for announcement_type in types %}
-                  <option
-                    value="{{ announcement_type }}"
-                    {%
-                    if
-                    announcement.type==announcement_type
-                    %}
-                    selected
-                    {%
-                    endif
-                    %}
-                  >
-                    {{ announcement_type }}
-                  </option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label"> Message </label>
-
-                <textarea name="content" class="form-control" rows="5" required>
-{{ announcement.content }}</textarea
-                >
-              </div>
-
-              <div>
-                <label class="form-label"> Schedule Date & Time </label>
-
-                <input
-                  type="datetime-local"
-                  name="scheduled_at"
-                  class="form-control"
-                  value="{{ announcement.scheduled_at.strftime('%Y-%m-%dT%H:%M') if announcement.scheduled_at else '' }}"
-                  required
-                />
-              </div>
-            </div>
-
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                class="btn text-white"
-                style="background-color: var(--navy)"
-              >
-                Save Changes
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    {% else %}
-
-    <div class="text-center text-muted py-4">No scheduled announcements.</div>
-
-    {% endfor %}
-  </div>
-</div>
-
-<!-- =========================
-     Inactive Announcements
-     ========================= -->
-
-{% if inactive %}
-
-<div class="card border-0 shadow-sm">
-  <div class="card-body p-4">
-    <h5 class="fw-bold mb-3">Inactive</h5>
-    <hr />
-
-    {% for announcement in inactive %}
-
-    <div class="announcement-item announcement-inactive">
-      <div class="announcement-icon">
-        <i class="bi bi-eye-slash"></i>
-      </div>
-
-      <div class="announcement-content">
-        <div class="d-flex justify-content-between align-items-start gap-3">
-          <div>
-            <div class="fw-bold">{{ announcement.title }}</div>
-
-            <div class="small text-muted mt-1">{{ announcement.content }}</div>
-
-            <div class="small text-muted mt-2">
-              Type: {{ announcement.type }}
-            </div>
-
-            {% if announcement.published_at %}
-            <div class="small text-muted">
-              Previously published: {{ announcement.published_at | ph_time }}
-            </div>
-            {% endif %}
-          </div>
-
-          <span class="announcement-type"> Inactive </span>
-        </div>
-
-        <div class="d-flex gap-2 mt-3">
-          <form
-            method="POST"
-            action="{{ url_for('announcements.activate', announcement_id=announcement.id) }}"
-          >
-            <button type="submit" class="btn btn-sm btn-outline-success">
-              Activate
-            </button>
-          </form>
-
-          <form
-            method="POST"
-            action="{{ url_for('announcements.delete', announcement_id=announcement.id) }}"
-            onsubmit="return confirm('Delete this announcement?');"
-          >
-            <button type="submit" class="btn btn-sm btn-outline-danger">
-              Delete
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
 
 {% endblock %}
