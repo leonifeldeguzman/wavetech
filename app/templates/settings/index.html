@@ -1,496 +1,964 @@
 {% extends "base.html" %} {% block title %}Admin Settings{% endblock %} {% block
-page_title %}Settings{% endblock %} {% block content %}
+page_title %}Settings{% endblock %} {% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/settings.css') }}"
+/>
+{% endblock %} {% block content %}
+{% set full_name = user.full_name if user else session.get('full_name', '') %}
+{% set name_parts = full_name.split() %} 
+{%set first_name = name_parts[0] if name_parts else '—' %} 
+{% set last_name =name_parts[1:] | join(' ') if name_parts|length > 1 else '—' %}
 
-<div class="mb-4">
-  <div class="text-muted small">
-    Manage your account, safety thresholds, refresh interval, and security.
-  </div>
-</div>
-
-<div class="row g-4">
-  <!-- Left Column -->
-  <div class="col-12 col-xl-6">
-    <!-- Account -->
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header navy-header text-white">
-        <i class="bi bi-person-fill me-2"></i>Account
-      </div>
-      <div class="card-body">
-        <h6 class="fw-bold">Profile</h6>
-        <table class="table table-sm mb-4">
-          <tbody>
-            <tr>
-              <th scope="row" class="text-muted fw-normal" style="width: 40%">
-                Admin Name
-              </th>
-              <td>
-                {{ user.full_name if user else session.get('full_name') }}
-              </td>
-            </tr>
-            <tr>
-              <th scope="row" class="text-muted fw-normal">Admin ID</th>
-              <td>{{ user.admin_id if user else '—' }}</td>
-            </tr>
-            <tr>
-              <th scope="row" class="text-muted fw-normal">Role</th>
-              <td>{{ user.role if user else session.get('role') }}</td>
-            </tr>
-            {% if user and user.created_at %}
-            <tr>
-              <th scope="row" class="text-muted fw-normal">Account Created</th>
-              <td>{{ user.created_at | ph_time }}</td>
-            </tr>
-            {% endif %}
-          </tbody>
-        </table>
-
-        <h6 class="fw-bold">Change Password</h6>
-        <form
-          method="POST"
-          action="{{ url_for('settings.change_password') }}"
-          class="row g-3"
-        >
-          <div class="col-12">
-            <label class="form-label small text-muted">Current Password</label>
-            <div class="col-12">
-  <div class="position-relative">
-    <input
-      type="password"
-      name="current_password"
-      id="current-password"
-      class="form-control pe-5"
-      required
-      autocomplete="current-password"
-    />
-
-    <button
-      type="button"
-      class="btn position-absolute top-50 end-0 translate-middle-y border-0 p-0 me-3"
-      style="color: #6b7280;"
-      onclick="togglePassword('current-password', this)"
-      aria-label="Show password"
-    >
-      <i class="bi bi-eye"></i>
-    </button>
-  </div>
-</div>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label small text-muted">New Password</label>
-            <div class="col-12">
-  <div class="position-relative">
-    <input
-      type="password"
-      name="new_password"
-      id="new-password"
-      class="form-control pe-5"
-      required
-      minlength="8"
-      autocomplete="new-password"
-    />
-
-    <button
-      type="button"
-      class="btn position-absolute top-50 end-0 translate-middle-y border-0 p-0 me-3"
-      style="color: #6b7280;"
-      onclick="togglePassword('new-password', this)"
-      aria-label="Show password"
-    >
-      <i class="bi bi-eye"></i>
-    </button>
-  </div>
-</div>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label small text-muted">
-              Confirm New Password
-            </label>
-            <div class="col-12">
-  <div class="position-relative">
-    <input
-      type="password"
-      name="confirm_password"
-      id="confirm-password"
-      class="form-control pe-5"
-      required
-      minlength="8"
-      autocomplete="new-password"
-    />
-
-    <button
-      type="button"
-      class="btn position-absolute top-50 end-0 translate-middle-y border-0 p-0 me-3"
-      style="color: #6b7280;"
-      onclick="togglePassword('confirm-password', this)"
-      aria-label="Show password"
-    >
-      <i class="bi bi-eye"></i>
-    </button>
-  </div>
-</div>
-          </div>
-
-          <div class="col-12">
-            <button
-              type="submit"
-              class="btn btn-sm"
-              style="background-color: var(--navy); color: #fff"
-            >
-              Update Password
-            </button>
-          </div>
-        </form>
-
-        <hr />
-
-        <h6 class="fw-bold">Logout</h6>
-        <a
-          href="{{ url_for('auth.logout') }}"
-          class="btn btn-sm btn-outline-danger"
-        >
-          <i class="bi bi-box-arrow-left me-1"></i>Logout
-        </a>
-      </div>
-    </div>
-
-    <!-- Refresh Interval -->
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header navy-header text-white">
-        <i class="bi bi-arrow-repeat me-2"></i>Refresh Interval
-      </div>
-      <div class="card-body">
-        <p class="text-muted small">
-          Controls how often the Lake Condition Monitoring dashboard
-          automatically re-checks LLDA/Windy for new environmental data.
-        </p>
-
-        <form
-          method="POST"
-          action="{{ url_for('settings.update_refresh_interval') }}"
-          class="row g-3 align-items-end"
-        >
-          <div class="col-8">
-            <label class="form-label small text-muted">Refresh every</label>
-            <select name="refresh_interval_seconds" class="form-select">
-              {% for option in refresh_interval_options %}
-              <option
-                value="{{ option }}"
-                {%
-                if
-                option==refresh_interval
-                %}selected{%
-                endif
-                %}
-              >
-                {{ option }} seconds
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="col-4">
-            <button
-              type="submit"
-              class="btn btn-sm w-100"
-              style="background-color: var(--navy); color: #fff"
-            >
-              Save
-            </button>
-          </div>
-        </form>
-
-        <div class="text-muted small mt-2">
-          Current interval: {{ refresh_interval }} seconds
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Right Column -->
-  <div class="col-12 col-xl-6">
-    <!-- Safety Thresholds -->
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header navy-header text-white">
-        <i class="bi bi-shield-fill me-2"></i>Safety Thresholds
-      </div>
-      <div class="card-body">
-        <div class="alert alert-warning small mb-3">
-          <strong>Temporary/System-Defined Thresholds.</strong>
-          These values are for system development and evaluation and have not
-          been validated as official maritime safety limits.
-        </div>
-
-        {% if not is_admin %}
-        <div class="text-muted">
-          <i class="bi bi-lock-fill me-1"></i>
-          Only Admin accounts can view and modify Safety Thresholds.
-        </div>
-        {% else %}
-
-        <form
-          method="POST"
-          action="{{ url_for('settings.update_safety_thresholds') }}"
-        >
-          <h6 class="fw-bold mt-2">Wind Speed (km/h)</h6>
-          <div class="row g-3 mb-3">
-            <div class="col-6">
-              <label class="form-label small text-muted"
-                >Safe limit (max)</label
-              >
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                name="wind_safe_max_kmh"
-                class="form-control"
-                value="{{ thresholds.wind_safe_max_kmh }}"
-                required
-              />
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-muted"
-                >Caution limit (max)</label
-              >
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                name="wind_caution_max_kmh"
-                class="form-control"
-                value="{{ thresholds.wind_caution_max_kmh }}"
-                required
-              />
-            </div>
-            <div class="col-12 text-muted small">
-              Above the caution limit is classified Unsafe.
-            </div>
-          </div>
-
-          <h6 class="fw-bold">Water Level (m)</h6>
-          <div class="row g-3 mb-3">
-            <div class="col-6">
-              <label class="form-label small text-muted"
-                >Safe range (min)</label
-              >
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                name="water_safe_min_m"
-                class="form-control"
-                value="{{ thresholds.water_safe_min_m }}"
-                required
-              />
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-muted"
-                >Safe range (max)</label
-              >
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                name="water_safe_max_m"
-                class="form-control"
-                value="{{ thresholds.water_safe_max_m }}"
-                required
-              />
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-muted"
-                >Caution range (min)</label
-              >
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                name="water_caution_min_m"
-                class="form-control"
-                value="{{ thresholds.water_caution_min_m }}"
-                required
-              />
-            </div>
-            <div class="col-6">
-              <label class="form-label small text-muted"
-                >Caution range (max)</label
-              >
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                name="water_caution_max_m"
-                class="form-control"
-                value="{{ thresholds.water_caution_max_m }}"
-                required
-              />
-            </div>
-            <div class="col-12 text-muted small">
-              The caution range must fully surround the safe range. Outside the
-              caution range is classified Unsafe.
-            </div>
-          </div>
-
-          <h6 class="fw-bold">Weather Conditions</h6>
-          <div class="row g-3 mb-3">
-            <div class="col-12">
-              <label class="form-label small text-muted"
-                >Safe conditions (comma-separated)</label
-              >
-              <input
-                type="text"
-                name="weather_safe"
-                class="form-control"
-                value="{{ thresholds.weather_safe }}"
-                required
-              />
-            </div>
-            <div class="col-12">
-              <label class="form-label small text-muted"
-                >Caution conditions (comma-separated)</label
-              >
-              <input
-                type="text"
-                name="weather_caution"
-                class="form-control"
-                value="{{ thresholds.weather_caution }}"
-                required
-              />
-            </div>
-            <div class="col-12">
-              <label class="form-label small text-muted"
-                >Unsafe conditions (comma-separated)</label
-              >
-              <input
-                type="text"
-                name="weather_unsafe"
-                class="form-control"
-                value="{{ thresholds.weather_unsafe }}"
-                required
-              />
-            </div>
-            <div class="col-12 text-muted small">
-              A condition (e.g. "Sunny") can only belong to one category.
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            class="btn btn-sm"
-            style="background-color: var(--navy); color: #fff"
+<div id="settings-page" class="settings-page">
+  <div class="settings-layout">
+    <!-- ===================================================== SETTINGS NAVIGATION ===================================================== -->
+    <aside class="settings-navigation">
+      <a
+        href="#account-section"
+        class="settings-nav-item active"
+        data-section="account-section"
+      >
+        <i class="bi bi-person-circle"></i> <span>Account</span>
+      </a>
+      <a
+        href="#safety-section"
+        class="settings-nav-item"
+        data-section="safety-section"
+      >
+        <i class="bi bi-shield-check"></i> <span>Safety Thresholds</span>
+      </a>
+      <a
+        href="#refresh-section"
+        class="settings-nav-item"
+        data-section="refresh-section"
+      >
+        <i class="bi bi-arrow-repeat"></i> <span>Refresh Settings</span>
+      </a>
+      <a
+        href="#security-section"
+        class="settings-nav-item"
+        data-section="security-section"
+      >
+        <i class="bi bi-lock"></i> <span>Security &amp; Activity</span>
+      </a>
+    </aside>
+    <!-- ===================================================== SETTINGS CONTENT ===================================================== -->
+    <div class="settings-content">
+      <!-- ================================================= ACCOUNT ================================================= -->
+      <section id="account-section" class="settings-section active">
+        <div class="settings-section-title">My Profile</div>
+        <div class="settings-divider"></div>
+        <!-- PROFILE -->
+        <div class="settings-card profile-card">
+          <form
+            method="POST"
+            action="{{ url_for('settings.update_display_name') }}"
+            class="profile-edit-form"
           >
-            Save Safety Thresholds
-          </button>
-        </form>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
+            <div class="profile-main">
+              <div class="profile-avatar"><i class="bi bi-person"></i></div>
+              <div class="profile-identity">
+                <div class="profile-name">{{ full_name }}</div>
+                <input
+                  type="text"
+                  name="display_name"
+                  class="profile-name-input"
+                  value="{{ full_name }}"
+                  maxlength="100"
+                  aria-label="Display name"
+                  style="display: none"
+                />
+                <div class="profile-role">
+                  {{ user.role if user else session.get('role') }}
+                </div>
+              </div>
+            </div>
+            <div class="profile-edit-actions">
+              <button
+                type="button"
+                class="settings-edit-btn"
+                onclick="startDisplayNameEdit(this)"
+              >
+                Edit <i class="bi bi-pencil"></i>
+              </button>
+              <button
+                type="submit"
+                class="settings-save-name-btn"
+                style="display: none"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                class="settings-cancel-name-btn"
+                onclick="cancelDisplayNameEdit(this)"
+                style="display: none"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+        <!-- PERSONAL INFORMATION -->
+        <div class="settings-card personal-card">
+          <div class="settings-card-heading">
+            <h3>Personal Information</h3>
 
-<!-- Security & Activity - Full Width -->
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-header navy-header text-white">
-    <i class="bi bi-shield-lock-fill me-2"></i>Security &amp; Activity
+            <div class="personal-edit-actions">
+              <button
+                type="button"
+                class="settings-edit-btn personal-edit-btn"
+                onclick="startPersonalInfoEdit(this)"
+              >
+                Edit <i class="bi bi-pencil"></i>
+              </button>
+
+              <button
+                type="button"
+                class="settings-save-name-btn personal-save-btn"
+                onclick="savePersonalInfo(this)"
+                style="display: none"
+              >
+                Save
+              </button>
+
+              <button
+                type="button"
+                class="settings-cancel-name-btn personal-cancel-btn"
+                onclick="cancelPersonalInfoEdit(this)"
+                style="display: none"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          <form
+            method="POST"
+            action="{{ url_for('settings.update_personal_info') }}"
+            class="personal-info-form"
+          >
+            <div class="personal-grid">
+
+              <!-- First Name -->
+              <div class="personal-field">
+                <span class="personal-label">First Name</span>
+
+                <span class="personal-value personal-display-value">
+                  {{ first_name }}
+                </span>
+
+                <input
+                  type="text"
+                  name="first_name"
+                  class="personal-edit-input"
+                  value="{{ first_name if first_name != '—' else '' }}"
+                  maxlength="50"
+                  style="display: none"
+                  aria-label="First Name"
+                />
+              </div>
+
+              <!-- Last Name -->
+              <div class="personal-field">
+                <span class="personal-label">Last Name</span>
+
+                <span class="personal-value personal-display-value">
+                  {{ last_name }}
+                </span>
+
+                <input
+                  type="text"
+                  name="last_name"
+                  class="personal-edit-input"
+                  value="{{ last_name if last_name != '—' else '' }}"
+                  maxlength="50"
+                  style="display: none"
+                  aria-label="Last Name"
+                />
+              </div>
+
+              <!-- Admin ID - Read Only -->
+              <div class="personal-field">
+                <span class="personal-label">Admin ID</span>
+
+                <span class="personal-value">
+                  {{ user.admin_id if user else '—' }}
+                </span>
+              </div>
+
+              <!-- Role - Read Only -->
+              <div class="personal-field">
+                <span class="personal-label">Role</span>
+
+                <span class="personal-value">
+                  {{ user.role if user else session.get('role') }}
+                </span>
+              </div>
+
+              <!-- Phone -->
+              <div class="personal-field">
+                <span class="personal-label">Phone</span>
+
+                <span class="personal-value personal-display-value">
+                  {{ user.phone if user and user.phone else '—' }}
+                </span>
+
+                <input
+                  type="tel"
+                  name="phone"
+                  class="personal-edit-input"
+                  value="{{ user.phone if user and user.phone else '' }}"
+                  maxlength="30"
+                  style="display: none"
+                  aria-label="Phone"
+                />
+              </div>
+
+              <!-- Account Created - Read Only -->
+              <div class="personal-field">
+                <span class="personal-label">Account Created</span>
+
+                <span class="personal-value">
+                  {% if user and user.created_at %}
+                    {{ user.created_at | ph_time }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </span>
+              </div>
+
+            </div>
+          </form>
+        </div>
+
+        <!-- CHANGE PASSWORD -->
+        <div class="settings-card password-card">
+          <div class="settings-card-heading"><h3>Change Password</h3></div>
+          <form
+            method="POST"
+            action="{{ url_for('settings.change_password') }}"
+            class="password-form"
+          >
+            <div class="password-field">
+              <label for="current-password"> Current Password </label>
+              <div class="password-input-wrapper">
+                <input
+                  type="password"
+                  name="current_password"
+                  id="current-password"
+                  required
+                  autocomplete="current-password"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  onclick="togglePassword('current-password', this)"
+                  aria-label="Show password"
+                >
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="password-field">
+              <label for="new-password"> New Password </label>
+              <div class="password-input-wrapper">
+                <input
+                  type="password"
+                  name="new_password"
+                  id="new-password"
+                  required
+                  minlength="8"
+                  autocomplete="new-password"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  onclick="togglePassword('new-password', this)"
+                  aria-label="Show password"
+                >
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="password-field">
+              <label for="confirm-password"> Confirm New Password </label>
+              <div class="password-input-wrapper">
+                <input
+                  type="password"
+                  name="confirm_password"
+                  id="confirm-password"
+                  required
+                  minlength="8"
+                  autocomplete="new-password"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  onclick="togglePassword('confirm-password', this)"
+                  aria-label="Show password"
+                >
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="password-actions">
+              <button type="reset" class="settings-cancel-btn">Cancel</button>
+              <button type="submit" class="settings-primary-btn">Update</button>
+            </div>
+          </form>
+        </div>
+      </section>
+<!-- ================================================= SAFETY THRESHOLDS ================================================= -->
+<section id="safety-section" class="settings-section">
+  <div class="settings-section-title">Safety Thresholds</div>
+  <div class="settings-divider"></div>
+
+  <div class="settings-warning">
+    <strong>Temporary/System-Defined Thresholds.</strong>
+    These values are for system development and evaluation and have not
+    been validated as official maritime safety limits.
   </div>
-  <div class="card-body">
-    {% if not is_admin %}
-    <div class="text-muted">
-      <i class="bi bi-lock-fill me-1"></i>
-      Only Admin accounts can view Session Settings and the Activity Log.
+
+  <div class="settings-card">
+
+  <div class="settings-threshold-header">
+    <h4>Wind Speed (km/h)</h4>
+
+    <div class="settings-threshold-actions">
+      <button
+        type="button"
+        class="settings-edit-btn"
+        onclick="startSafetyEdit(this)"
+      >
+        <i class="bi bi-pencil"></i>
+        Edit
+      </button>
+
+      <button
+        type="button"
+        class="settings-cancel-btn safety-cancel-btn"
+        onclick="cancelSafetyEdit(this)"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        class="settings-primary-btn safety-save-btn"
+        onclick="saveSafetyEdit(this)"
+      >
+        Save
+      </button>
     </div>
+  </div>
+
+  <div class="settings-card-body">
+
+    {% if not is_admin %}
+
+    <div class="settings-locked">
+      <i class="bi bi-lock-fill"></i>
+      <span>
+        Only Admin accounts can view and modify Safety Thresholds.
+      </span>
+    </div>
+
     {% else %}
 
-    <h6 class="fw-bold">Session Settings</h6>
     <form
       method="POST"
-      action="{{ url_for('settings.update_session_timeout') }}"
-      class="row g-3 align-items-end mb-4"
+      action="{{ url_for('settings.update_safety_thresholds') }}"
+      id="safety-threshold-form"
     >
-      <div class="col-8">
-        <label class="form-label small text-muted"
-          >Session timeout (minutes)</label
-        >
+
+      <div class="settings-form-grid two-column">
+        <div class="settings-field">
+          <label>Safe limit (max)</label>
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            name="wind_safe_max_kmh"
+            value="{{ thresholds.wind_safe_max_kmh }}"
+            readonly
+            required
+          />
+        </div>
+
+        <div class="settings-field">
+          <label>Caution limit (max)</label>
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            name="wind_caution_max_kmh"
+            value="{{ thresholds.wind_caution_max_kmh }}"
+            readonly
+            required
+          />
+        </div>
+      </div>
+
+      <p class="settings-help">
+        Above the caution limit is classified Unsafe.
+      </p>
+
+      <div class="settings-threshold-divider"></div>
+
+      <h4>Water Level (m)</h4>
+
+      <div class="settings-form-grid two-column">
+        <div class="settings-field">
+          <label>Safe range (min)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="water_safe_min_m"
+            value="{{ thresholds.water_safe_min_m }}"
+            readonly
+            required
+          />
+        </div>
+
+        <div class="settings-field">
+          <label>Safe range (max)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="water_safe_max_m"
+            value="{{ thresholds.water_safe_max_m }}"
+            readonly
+            required
+          />
+        </div>
+
+        <div class="settings-field">
+          <label>Caution range (min)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="water_caution_min_m"
+            value="{{ thresholds.water_caution_min_m }}"
+            readonly
+            required
+          />
+        </div>
+
+        <div class="settings-field">
+          <label>Caution range (max)</label>
+          <input
+            type="number"
+            step="0.01"
+            name="water_caution_max_m"
+            value="{{ thresholds.water_caution_max_m }}"
+            readonly
+            required
+          />
+        </div>
+      </div>
+
+      <p class="settings-help">
+        The caution range must fully surround the safe range.
+        Outside the caution range is classified Unsafe.
+      </p>
+
+      <div class="settings-threshold-divider"></div>
+
+      <h4>Weather Conditions</h4>
+
+      <div class="settings-field">
+        <label>Safe conditions (comma-separated)</label>
         <input
-          type="number"
-          min="1"
-          max="1440"
-          name="session_timeout_minutes"
-          class="form-control"
-          value="{{ session_timeout }}"
+          type="text"
+          name="weather_safe"
+          value="{{ thresholds.weather_safe }}"
+          readonly
           required
         />
       </div>
-      <div class="col-4">
-        <button
-          type="submit"
-          class="btn btn-sm w-100"
-          style="background-color: var(--navy); color: #fff"
-        >
-          Save
-        </button>
+
+      <div class="settings-field">
+        <label>Caution conditions (comma-separated)</label>
+        <input
+          type="text"
+          name="weather_caution"
+          value="{{ thresholds.weather_caution }}"
+          readonly
+          required
+        />
       </div>
+
+      <div class="settings-field">
+        <label>Unsafe conditions (comma-separated)</label>
+        <input
+          type="text"
+          name="weather_unsafe"
+          value="{{ thresholds.weather_unsafe }}"
+          readonly
+          required
+        />
+      </div>
+
+      <p class="settings-help">
+        A condition can only belong to one category.
+      </p>
+
     </form>
 
-    <div class="d-flex justify-content-between align-items-center">
-      <h6 class="fw-bold mb-0">Activity Log</h6>
-      <a href="{{ url_for('settings.activity_log') }}" class="small"
-        >View full log</a
-      >
-    </div>
-
-    <div
-      class="table-responsive mt-2"
-      style="max-height: 320px; overflow-y: auto"
-    >
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Admin</th>
-            <th>Action</th>
-            <th>Date/Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for log in activity_logs %}
-          <tr>
-            <td>{{ log.admin_name }}</td>
-            <td>
-              {{ log.action }} {% if log.details %}
-              <div class="text-muted small">{{ log.details }}</div>
-              {% endif %}
-            </td>
-            <td class="text-nowrap">{{ log.created_at | ph_time }}</td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="3" class="text-muted text-center">
-              No activity recorded yet.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
     {% endif %}
+
+  </div>
+</div>
+</section>
+      <!-- ================================================= REFRESH SETTINGS ================================================= -->
+      <section id="refresh-section" class="settings-section">
+        <div class="settings-section-title">Refresh Settings</div>
+        <div class="settings-divider"></div>
+
+        <div class="settings-card refresh-settings-card">
+          <div class="settings-card-heading">
+            <h3>Refresh Interval</h3>
+
+            <!-- UI-only toggle -->
+            <label class="refresh-toggle" aria-label="Toggle auto-refresh">
+              <input
+                type="checkbox"
+                id="refresh-toggle"
+                {% if refresh_interval and refresh_interval > 0 %}checked{% endif %}
+              />
+              <span class="refresh-toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-card-body">
+            <div class="refresh-status-row">
+              <span class="refresh-status-label">Auto-refresh</span>
+              <span id="refresh-status" class="refresh-status off">
+                Auto-refresh is currently off
+              </span>
+            </div>
+
+            <form
+              method="POST"
+              action="{{ url_for('settings.update_refresh_interval') }}"
+              class="refresh-form"
+              id="refresh-form"
+            >
+              <div class="settings-field">
+                <label for="refresh-interval">Refresh every</label>
+
+                <select
+                  name="refresh_interval_seconds"
+                  id="refresh-interval"
+                >
+                  {% for option in refresh_interval_options %}
+                  <option
+                    value="{{ option }}"
+                    {% if option == refresh_interval %}selected{% endif %}
+                  >
+                    {{ option }} seconds
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                class="settings-primary-btn"
+                id="refresh-save-btn"
+              >
+                Save
+              </button>
+            </form>
+
+            <div class="settings-help">
+              Current interval: {{ refresh_interval }} seconds
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- ================================================= SECURITY & ACTIVITY ================================================= -->
+      <section id="security-section" class="settings-section">
+        <div class="settings-section-title">Security &amp; Activity</div>
+        <div class="settings-divider"></div>
+        <div class="settings-card">
+        
+          <div class="settings-card-body">
+            {% if not is_admin %}
+            <div class="settings-locked">
+              <i class="bi bi-lock-fill"></i>
+              <span>
+                Only Admin accounts can view Session Settings and the Activity
+                Log.
+              </span>
+            </div>
+            {% else %}
+            <h4>Session Settings</h4>
+            <form
+              method="POST"
+              action="{{ url_for('settings.update_session_timeout') }}"
+              class="refresh-form"
+            >
+              <div class="settings-field">
+                <label> Session timeout (minutes) </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="1440"
+                  name="session_timeout_minutes"
+                  value="{{ session_timeout }}"
+                  required
+                />
+              </div>
+              <button type="submit" class="settings-primary-btn">Save</button>
+            </form>
+            <div class="activity-heading">
+              <h4>Activity Log</h4>
+              <a href="{{ url_for('settings.activity_log') }}">
+                View full log
+              </a>
+            </div>
+            <div class="activity-table-wrapper">
+              <table class="activity-table">
+                <thead>
+                  <tr>
+                    <th>Admin</th>
+                    <th>Action</th>
+                    <th>Date/Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for log in activity_logs %}
+                  <tr>
+                    <td>{{ log.admin_name }}</td>
+                    <td>
+                      {{ log.action }} {% if log.details %}
+                      <div class="activity-details">{{ log.details }}</div>
+                      {% endif %}
+                    </td>
+                    <td class="activity-nowrap">
+                      {{ log.created_at | ph_time }}
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="3" class="activity-empty">
+                      No activity recorded yet.
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </div>
 <script>
   function togglePassword(inputId, button) {
     const input = document.getElementById(inputId);
     const icon = button.querySelector("i");
-
     if (input.type === "password") {
       input.type = "text";
       icon.classList.remove("bi-eye");
       icon.classList.add("bi-eye-slash");
+      button.setAttribute("aria-label", "Hide password");
     } else {
       input.type = "password";
       icon.classList.remove("bi-eye-slash");
       icon.classList.add("bi-eye");
+      button.setAttribute("aria-label", "Show password");
     }
   }
+  function startDisplayNameEdit(button) {
+    const form = button.closest(".profile-edit-form");
+    const name = form.querySelector(".profile-name");
+    const input = form.querySelector(".profile-name-input");
+    const editButton = form.querySelector(".settings-edit-btn");
+    const saveButton = form.querySelector(".settings-save-name-btn");
+    const cancelButton = form.querySelector(".settings-cancel-name-btn");
+    name.style.display = "none";
+    input.style.display = "block";
+    editButton.style.display = "none";
+    saveButton.style.display = "inline-flex";
+    cancelButton.style.display = "inline-flex";
+    input.focus();
+    input.select();
+  }
+  function cancelDisplayNameEdit(button) {
+    const form = button.closest(".profile-edit-form");
+    const name = form.querySelector(".profile-name");
+    const input = form.querySelector(".profile-name-input");
+    const editButton = form.querySelector(".settings-edit-btn");
+    const saveButton = form.querySelector(".settings-save-name-btn");
+    const cancelButton = form.querySelector(".settings-cancel-name-btn");
+    input.value = name.textContent.trim();
+    name.style.display = "block";
+    input.style.display = "none";
+    editButton.style.display = "inline-flex";
+    saveButton.style.display = "none";
+    cancelButton.style.display = "none";
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    const navItems = document.querySelectorAll(
+      "#settings-page .settings-nav-item",
+    );
+    const sections = document.querySelectorAll(
+      "#settings-page .settings-section",
+    );
+    navItems.forEach(function (navItem) {
+      navItem.addEventListener("click", function (event) {
+        event.preventDefault();
+        const targetId = this.dataset.section;
+        navItems.forEach(function (item) {
+          item.classList.remove("active");
+        });
+        sections.forEach(function (section) {
+          section.classList.remove("active");
+        });
+        this.classList.add("active");
+        const targetSection = document.getElementById(targetId);
+        if (targetSection) {
+          targetSection.classList.add("active");
+        }
+        history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      });
+    });
+  });
+
+  function startPersonalInfoEdit(button) {
+  const card = button.closest(".personal-card");
+
+  const displayValues = card.querySelectorAll(
+    ".personal-display-value"
+  );
+
+  const inputs = card.querySelectorAll(
+    ".personal-edit-input"
+  );
+
+  const editButton = card.querySelector(".personal-edit-btn");
+  const saveButton = card.querySelector(".personal-save-btn");
+  const cancelButton = card.querySelector(".personal-cancel-btn");
+
+  displayValues.forEach(function (value) {
+    value.style.display = "none";
+  });
+
+  inputs.forEach(function (input) {
+    input.style.display = "block";
+  });
+
+  editButton.style.display = "none";
+  saveButton.style.display = "inline-flex";
+  cancelButton.style.display = "inline-flex";
+
+  const firstInput = inputs[0];
+
+  if (firstInput) {
+    firstInput.focus();
+    firstInput.select();
+  }
+}
+
+
+function cancelPersonalInfoEdit(button) {
+  const card = button.closest(".personal-card");
+
+  const displayValues = card.querySelectorAll(
+    ".personal-display-value"
+  );
+
+  const inputs = card.querySelectorAll(
+    ".personal-edit-input"
+  );
+
+  const editButton = card.querySelector(".personal-edit-btn");
+  const saveButton = card.querySelector(".personal-save-btn");
+  const cancelButton = card.querySelector(".personal-cancel-btn");
+
+  inputs.forEach(function (input, index) {
+    const displayValue = displayValues[index];
+
+    if (displayValue) {
+      input.value =
+        displayValue.textContent.trim() === "—"
+          ? ""
+          : displayValue.textContent.trim();
+    }
+
+    input.style.display = "none";
+  });
+
+  displayValues.forEach(function (value) {
+    value.style.display = "block";
+  });
+
+  editButton.style.display = "inline-flex";
+  saveButton.style.display = "none";
+  cancelButton.style.display = "none";
+}
+
+
+function savePersonalInfo(button) {
+  const card = button.closest(".personal-card");
+  const form = card.querySelector(".personal-info-form");
+
+  if (!form) {
+    return;
+  }
+
+  const firstName = form.querySelector(
+    'input[name="first_name"]'
+  );
+
+  const lastName = form.querySelector(
+    'input[name="last_name"]'
+  );
+
+  if (!firstName || !lastName) {
+    return;
+  }
+
+  if (!firstName.value.trim()) {
+    alert("First name cannot be empty.");
+    firstName.focus();
+    return;
+  }
+
+  if (!lastName.value.trim()) {
+    alert("Last name cannot be empty.");
+    lastName.focus();
+    return;
+  }
+
+  form.submit();
+}
+
+function startSafetyEdit(button) {
+    const card = button.closest(".settings-card");
+    const form = card.querySelector("#safety-threshold-form");
+
+    if (!form) return;
+
+    const inputs = form.querySelectorAll("input");
+    const actionRow = button.parentElement;
+    const buttons = actionRow.querySelectorAll("button");
+
+    inputs.forEach(function (input) {
+        input.dataset.originalValue = input.value;
+        input.removeAttribute("readonly");
+    });
+
+    buttons[0].style.display = "none";
+    buttons[1].style.display = "inline-flex";
+    buttons[2].style.display = "inline-flex";
+
+    if (inputs[0]) {
+        inputs[0].focus();
+        inputs[0].select();
+    }
+}
+
+function cancelSafetyEdit(button) {
+    const card = button.closest(".settings-card");
+    const form = card.querySelector("#safety-threshold-form");
+
+    if (!form) return;
+
+    const actionRow = button.parentElement;
+    const buttons = actionRow.querySelectorAll("button");
+    const inputs = form.querySelectorAll("input");
+
+    inputs.forEach(function (input) {
+        if (input.dataset.originalValue !== undefined) {
+            input.value = input.dataset.originalValue;
+        }
+
+        input.setAttribute("readonly", "");
+        delete input.dataset.originalValue;
+    });
+
+    buttons[0].style.display = "inline-flex";
+    buttons[1].style.display = "none";
+    buttons[2].style.display = "none";
+}
+
+function saveSafetyEdit(button) {
+    const card = button.closest(".settings-card");
+    const form = card.querySelector("#safety-threshold-form");
+
+    if (!form) return;
+
+    form.requestSubmit();
+}
+
+      /* =====================================================
+       REFRESH INTERVAL UI TOGGLE
+       UI ONLY — does not change backend flow
+    ===================================================== */
+
+    const refreshToggle = document.getElementById("refresh-toggle");
+    const refreshForm = document.getElementById("refresh-form");
+    const refreshInterval = document.getElementById("refresh-interval");
+    const refreshSaveButton = document.getElementById("refresh-save-btn");
+    const refreshStatus = document.getElementById("refresh-status");
+
+    function updateRefreshToggleUI() {
+      if (
+        !refreshToggle ||
+        !refreshForm ||
+        !refreshInterval ||
+        !refreshSaveButton ||
+        !refreshStatus
+      ) {
+        return;
+      }
+
+      const enabled = refreshToggle.checked;
+
+      if (enabled) {
+        refreshForm.classList.remove("is-disabled");
+
+        refreshInterval.disabled = false;
+
+        refreshSaveButton.disabled = false;
+        refreshSaveButton.classList.remove("is-disabled");
+
+        refreshStatus.textContent = "Auto-refresh is currently on";
+        refreshStatus.classList.remove("off");
+        refreshStatus.classList.add("on");
+      } else {
+        refreshForm.classList.add("is-disabled");
+
+        refreshInterval.disabled = true;
+
+        refreshSaveButton.disabled = true;
+        refreshSaveButton.classList.add("is-disabled");
+
+        refreshStatus.textContent = "Auto-refresh is currently off";
+        refreshStatus.classList.remove("on");
+        refreshStatus.classList.add("off");
+      }
+    }
+
+    if (refreshToggle) {
+      refreshToggle.addEventListener("change", updateRefreshToggleUI);
+
+      updateRefreshToggleUI();
+    }
+
 </script>
-{% endblock %} ```
+{% endblock %}

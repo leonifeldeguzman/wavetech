@@ -1,0 +1,1422 @@
+/* =========================================================
+WAVETECH
+SETTINGS PAGE
+Page-specific styling
+========================================================= */
+
+#settings-page {
+--settings-navy: #0f1b3c;
+--settings-navy-dark: #09132f;
+
+--settings-text: #111111;
+--settings-muted: #666666;
+--settings-light-muted: #777777;
+
+--settings-border: #d7e4f1;
+--settings-divider: #e7e7e7;
+
+width: 100%;
+min-width: 0;
+
+color: var(--settings-text);
+
+}
+
+/* =========================================================
+MAIN LAYOUT
+========================================================= */
+
+#settings-page .settings-layout {
+    position: relative;
+
+    display: grid;
+    grid-template-columns: 275px minmax(0, 1fr);
+    gap: 0;
+
+    width: 100%;
+
+    /*
+     * This is now the ONE main Settings card.
+     */
+    background: #ffffff;
+
+    border-radius: 14px;
+
+    border: 0;
+
+    box-shadow:
+        0 8px 30px rgba(15, 27, 60, 0.10);
+
+    padding: 30px 10px 40px;
+
+    align-items: stretch;
+
+    box-sizing: border-box;
+}
+
+/* Vertical divider */
+#settings-page .settings-layout::before {
+    content: "";
+
+    position: absolute;
+
+    /*
+     * Start at the same vertical position as
+     * the content inside the main card.
+     */
+    top: 30px;
+
+    /*
+     * End at the bottom of the content area.
+     */
+    bottom: 40px;
+
+    /*
+     * Navigation column width + left card padding.
+     */
+    left: calc(10px + 265px);
+
+    width: 1px;
+
+    background: #e7e7e7;
+
+    pointer-events: none;
+}
+
+/* =========================================================
+   SETTINGS NAVIGATION
+   FIXED - stays visible while settings content scrolls
+   ========================================================= */
+
+#settings-page .settings-navigation {
+    position: sticky;
+
+    /*
+     * Keep the navigation aligned with the top
+     * portion of the main Settings card.
+     */
+    top: 160px;
+    left: 290px;
+
+    width: 275px;
+
+    /*
+     * Navigation itself has NO card styling.
+     */
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+
+    padding: 8px 24px 8px 0;
+
+    /*
+     * Keeps navigation visible above content.
+     */
+    z-index: 100;
+
+    /*
+     * Don't create another scrolling area.
+     */
+    overflow: visible;
+
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   NAVIGATION ITEMS
+   ========================================================= */
+
+#settings-page .settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    width: calc(100% - 18px);
+    min-height: 44px;
+
+    padding: 0 12px;
+
+    margin-bottom: 6px;
+
+    border-radius: 10px;
+
+    color: #111111;
+    background: transparent;
+
+    text-decoration: none;
+
+    font-size: 0.9rem;
+    font-weight: 400;
+
+    box-sizing: border-box;
+
+    transition:
+        background-color 0.18s ease,
+        color 0.18s ease;
+}
+
+
+/* Remove extra space after the last item */
+#settings-page .settings-nav-item:last-child {
+    margin-bottom: 0;
+}
+
+#settings-page .settings-nav-item:hover {
+    background: #f5f7fb;
+}
+
+#settings-page .settings-nav-item.active {
+    background: #0f1b3c;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+#settings-page .settings-nav-item.active i {
+    color: #ffffff;
+}
+
+/* =========================================================
+CONTENT
+========================================================= */
+
+#settings-page .settings-content {
+    grid-column: 2;
+
+    min-width: 0;
+
+    padding: 2px 24px 40px 30px;
+
+    box-sizing: border-box;
+}
+
+/* =========================================================
+SECTIONS
+========================================================= */
+
+/*
+Only the selected Settings section is displayed.
+*/
+
+#settings-page .settings-section {
+    display: none;
+}
+
+#settings-page .settings-section.active {
+    display: block;
+}
+
+#settings-page .settings-section-title {
+    color: #111111;
+    font-size: 1.18rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+#settings-page .settings-divider {
+    width: 100%;
+    height: 1px;
+    margin: 18px 0 28px;
+    background-color: #e7e7e7;
+}
+
+/* =========================================================
+CARDS
+========================================================= */
+
+#settings-page .settings-card {
+width: 100%;
+
+margin-bottom: 24px;
+
+padding: 30px 34px;
+
+background: #ffffff;
+
+border: 0 !important;
+
+border-radius: 13px;
+
+box-shadow:
+    0 8px 30px rgba(15, 27, 60, 0.10) !important;
+
+}
+
+#settings-page .settings-card {
+margin-bottom: 0;
+}
+
+/* =========================================================
+CARD HEADINGS
+========================================================= */
+
+#settings-page .settings-card-heading {
+display: flex;
+
+align-items: center;
+justify-content: space-between;
+
+margin-bottom: 24px;
+
+}
+
+#settings-page .settings-card-heading h3 {
+margin: 0;
+
+color: #111111;
+
+font-size: 1rem;
+font-weight: 700;
+
+line-height: 1.3;
+
+}
+
+/* =========================================================
+PROFILE
+========================================================= */
+
+#settings-page .profile-card {
+min-height: 94px;
+
+padding: 22px 28px;
+
+}
+
+#settings-page .profile-edit-form {
+display: flex;
+
+align-items: center;
+justify-content: space-between;
+
+width: 100%;
+
+}
+
+#settings-page .profile-main {
+display: flex;
+
+align-items: center;
+
+gap: 22px;
+
+min-width: 0;
+
+}
+
+#settings-page .profile-avatar {
+display: flex;
+
+flex: 0 0 55px;
+
+align-items: center;
+justify-content: center;
+
+width: 55px;
+height: 55px;
+
+border: 3px solid #111111;
+
+border-radius: 50%;
+
+background: #ffffff;
+
+color: #111111;
+
+font-size: 2rem;
+
+overflow: hidden;
+
+}
+
+#settings-page .profile-identity {
+min-width: 0;
+}
+
+#settings-page .profile-name {
+color: #111111;
+
+font-size: 1.05rem;
+font-weight: 700;
+
+line-height: 1.3;
+
+}
+
+#settings-page .profile-name-input {
+width: min(330px, 100%);
+
+height: 38px;
+
+padding: 0 11px;
+
+border: 1px solid #cbdff2 !important;
+border-radius: 7px !important;
+
+background: #ffffff !important;
+
+color: #111111;
+
+font-family: inherit;
+font-size: 1rem;
+
+outline: none;
+
+box-shadow: none !important;
+
+}
+
+#settings-page .profile-name-input {
+border-color: #9bbde0 !important;
+
+box-shadow:
+    0 0 0 3px rgba(155, 189, 224, 0.12) !important;
+
+}
+
+#settings-page .profile-role {
+margin-top: 5px;
+
+color: #777777;
+
+font-size: 0.9rem;
+
+}
+
+/* =========================================================
+PROFILE EDIT BUTTONS
+========================================================= */
+
+#settings-page .profile-edit-actions {
+display: flex;
+
+align-items: center;
+
+gap: 8px;
+
+}
+
+#settings-page .settings-edit-btn,
+#settings-page .settings-save-name-btn,
+#settings-page .settings-cancel-name-btn {
+display: inline-flex;
+
+align-items: center;
+justify-content: center;
+
+gap: 5px;
+
+min-width: 76px;
+height: 34px;
+
+padding: 0 13px;
+
+border-radius: 18px !important;
+
+font-family: inherit;
+font-size: 0.82rem;
+font-weight: 500;
+
+cursor: pointer;
+
+transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+}
+
+#settings-page .settings-edit-btn {
+border: 1px solid #cbdff2 !important;
+
+background: #ffffff !important;
+
+color: #555555 !important;
+
+}
+
+#settings-page .settings-edit-btn {
+background: #f7f9fc !important;
+
+border-color: #a9c6e2 !important;
+
+color: #111111 !important;
+
+}
+
+#settings-page .settings-save-name-btn {
+border: 1px solid var(--settings-navy) !important;
+
+background: var(--settings-navy) !important;
+
+color: #ffffff !important;
+
+}
+
+#settings-page .settings-save-name-btn {
+background: var(--settings-navy-dark) !important;
+
+border-color: var(--settings-navy-dark) !important;
+
+}
+
+#settings-page .settings-cancel-name-btn {
+border: 1px solid #cbdff2 !important;
+
+background: #ffffff !important;
+
+color: #555555 !important;
+
+}
+
+#settings-page .settings-cancel-name-btn {
+background: #f5f7fb !important;
+
+color: #111111 !important;
+
+}
+
+/* =========================================================
+PERSONAL INFORMATION
+========================================================= */
+
+#settings-page .personal-card {
+padding: 28px 34px 32px;
+}
+
+#settings-page .personal-grid {
+display: grid;
+
+grid-template-columns: 1fr 1fr;
+
+column-gap: 70px;
+row-gap: 32px;
+
+}
+
+#settings-page .personal-field {
+min-width: 0;
+}
+
+#settings-page .personal-label {
+display: block;
+
+margin-bottom: 10px;
+
+color: #666666;
+
+font-size: 0.84rem;
+font-weight: 400;
+
+}
+
+#settings-page .personal-value {
+display: block;
+
+color: #111111;
+
+font-size: 0.94rem;
+font-weight: 500;
+
+word-break: break-word;
+
+}
+
+/* =========================================================
+PASSWORD
+========================================================= */
+
+#settings-page .password-card {
+padding: 30px 34px 34px;
+}
+
+#settings-page .password-form {
+width: 100%;
+}
+
+#settings-page .password-field {
+margin-bottom: 22px;
+}
+
+#settings-page .password-field label {
+display: block;
+
+margin-bottom: 8px;
+
+color: #666666;
+
+font-size: 0.86rem;
+font-weight: 400;
+
+}
+
+#settings-page .password-input-wrapper {
+position: relative;
+}
+
+#settings-page .password-input-wrapper input {
+display: block;
+
+width: 100%;
+
+height: 42px;
+
+padding: 0 46px 0 13px;
+
+border: 1px solid #cbdff2 !important;
+border-radius: 8px !important;
+
+background: #ffffff !important;
+
+color: #111111;
+
+font-family: inherit;
+font-size: 0.9rem;
+
+outline: none;
+
+box-shadow: none !important;
+
+}
+
+#settings-page .password-input-wrapper input {
+border-color: #9bbde0 !important;
+
+box-shadow:
+    0 0 0 3px rgba(155, 189, 224, 0.12) !important;
+
+}
+
+#settings-page .password-toggle {
+position: absolute;
+
+top: 50%;
+right: 12px;
+
+display: flex;
+
+align-items: center;
+justify-content: center;
+
+width: 25px;
+height: 25px;
+
+padding: 0;
+
+transform: translateY(-50%);
+
+border: 0;
+
+background: transparent;
+
+color: #9bb8d5;
+
+font-size: 0.95rem;
+
+cursor: pointer;
+
+}
+
+#settings-page .password-toggle {
+color: var(--settings-navy);
+}
+
+/* =========================================================
+PASSWORD BUTTONS
+========================================================= */
+
+#settings-page .password-actions {
+display: flex;
+
+align-items: center;
+justify-content: space-between;
+
+gap: 12px;
+
+margin-top: 32px;
+
+}
+
+#settings-page .settings-cancel-btn,
+#settings-page .settings-primary-btn {
+display: inline-flex;
+
+align-items: center;
+justify-content: center;
+
+min-height: 36px;
+
+padding: 0 18px;
+
+border-radius: 7px !important;
+
+font-family: inherit;
+font-size: 0.84rem;
+font-weight: 500;
+
+cursor: pointer;
+
+transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+
+}
+
+#settings-page .settings-cancel-btn {
+border: 1px solid var(--settings-navy) !important;
+
+background: #ffffff !important;
+
+color: #111111 !important;
+
+}
+
+#settings-page .settings-cancel-btn {
+background: #f5f7fb !important;
+}
+
+#settings-page .settings-primary-btn {
+border: 1px solid var(--settings-navy) !important;
+
+background: var(--settings-navy) !important;
+
+color: #ffffff !important;
+
+}
+
+#settings-page .settings-primary-btn {
+border-color: var(--settings-navy-dark) !important;
+
+background: var(--settings-navy-dark) !important;
+
+}
+
+/* =========================================================
+SECONDARY SETTINGS
+========================================================= */
+
+#settings-page .settings-card-body {
+color: #222222;
+}
+
+#settings-page .settings-card-body h4 {
+margin: 24px 0 16px;
+
+color: #111111;
+
+font-size: 0.94rem;
+font-weight: 700;
+
+}
+
+#settings-page .settings-card-body h4 {
+margin-top: 0;
+}
+
+#settings-page .settings-description {
+margin: 0 0 22px;
+
+color: #666666;
+
+font-size: 0.84rem;
+
+line-height: 1.6;
+
+}
+
+#settings-page .settings-warning {
+margin-bottom: 24px;
+
+padding: 13px 15px;
+
+border-radius: 8px;
+
+background: #fff8e8;
+
+color: #725b20;
+
+border: 1px solid #f5e0b7;
+
+font-size: 0.8rem;
+
+line-height: 1.5;
+
+}
+
+#settings-page .settings-locked {
+display: flex;
+
+align-items: center;
+
+gap: 8px;
+
+padding: 14px 0;
+
+color: #777777;
+
+font-size: 0.84rem;
+
+}
+
+/* =========================================================
+SECONDARY FORM GRID
+========================================================= */
+
+#settings-page .settings-form-grid {
+display: grid;
+
+gap: 18px;
+
+}
+
+#settings-page .settings-form-grid.two-column {
+grid-template-columns: 1fr 1fr;
+}
+
+#settings-page .settings-field {
+min-width: 0;
+
+margin-bottom: 18px;
+
+}
+
+#settings-page .settings-field label {
+display: block;
+
+margin-bottom: 8px;
+
+color: #666666;
+
+font-size: 0.82rem;
+
+font-weight: 400;
+
+}
+
+#settings-page .settings-field input,
+#settings-page .settings-field select {
+display: block;
+
+width: 100%;
+
+height: 40px;
+
+padding: 0 12px;
+
+border: 1px solid #cbdff2 !important;
+border-radius: 7px !important;
+
+background: #ffffff !important;
+
+color: #222222;
+
+font-family: inherit;
+font-size: 0.88rem;
+
+outline: none;
+
+box-shadow: none !important;
+
+}
+
+#settings-page .settings-field input,
+#settings-page .settings-field select {
+border-color: #9bbde0 !important;
+
+box-shadow:
+    0 0 0 3px rgba(155, 189, 224, 0.12) !important;
+
+}
+
+#settings-page .settings-help {
+margin: 7px 0 20px;
+
+color: #777777;
+
+font-size: 0.78rem;
+
+line-height: 1.5;
+
+}
+
+/* =========================================================
+PERSONAL INFORMATION EDITING
+========================================================= */
+
+#settings-page .personal-card .settings-card-heading {
+    margin-bottom: 24px;
+}
+
+#settings-page .personal-edit-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+#settings-page .personal-edit-input {
+    display: block;
+
+    width: 100%;
+    max-width: 330px;
+
+    height: 38px;
+
+    padding: 0 11px;
+
+    border: 1px solid #cbdff2 !important;
+    border-radius: 7px !important;
+
+    background: #ffffff !important;
+
+    color: #111111;
+
+    font-family: inherit;
+    font-size: 0.94rem;
+
+    outline: none;
+
+    box-shadow: none !important;
+}
+
+#settings-page .personal-edit-input:focus {
+    border-color: #9bbde0 !important;
+
+    box-shadow:
+        0 0 0 3px rgba(155, 189, 224, 0.12) !important;
+}
+
+#settings-page .personal-field.is-editing .personal-label {
+    color: #555555;
+}
+
+#settings-page .personal-field.is-readonly {
+    opacity: 0.75;
+}
+
+/* =========================================================
+REFRESH / SESSION FORM
+========================================================= */
+#settings-page .refresh-form .settings-field select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+
+    padding-right: 40px !important;
+
+    background-color: #ffffff !important;
+
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' fill='none' stroke='%23666666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+
+    background-repeat: no-repeat !important;
+
+    background-position: right 14px center !important;
+
+    background-size: 12px 12px !important;
+
+    cursor: pointer;
+}
+#settings-page .refresh-form {
+    display: grid;
+
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    align-items: end;
+
+    gap: 12px;
+}
+
+
+#settings-page .refresh-form .settings-field {
+    margin-bottom: 0;
+}
+
+/* Keep the button aligned with the bottom of the input */
+#settings-page .refresh-form .settings-primary-btn {
+    min-width: 86px;
+
+    height: 40px;
+
+    margin: 0;
+
+    align-self: end;
+}
+/* =========================================================
+REFRESH SETTINGS TOGGLE
+========================================================= */
+
+#settings-page .refresh-settings-card {
+    padding: 30px 34px;
+}
+
+#settings-page .refresh-settings-card .settings-card-heading {
+    margin-bottom: 24px;
+}
+
+/* Toggle */
+
+#settings-page .refresh-toggle {
+    position: relative;
+
+    display: inline-flex;
+    flex: 0 0 auto;
+
+    width: 44px;
+    height: 24px;
+
+    margin: 0;
+
+    cursor: pointer;
+}
+
+#settings-page .refresh-toggle input {
+    position: absolute;
+
+    width: 1px;
+    height: 1px;
+
+    opacity: 0;
+    pointer-events: none;
+}
+
+#settings-page .refresh-toggle-slider {
+    position: absolute;
+
+    inset: 0;
+
+    border-radius: 999px;
+
+    background: #b9b9b9;
+
+    transition:
+        background-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+#settings-page .refresh-toggle-slider::before {
+    content: "";
+
+    position: absolute;
+
+    width: 18px;
+    height: 18px;
+
+    top: 3px;
+    left: 3px;
+
+    border-radius: 50%;
+
+    background: #ffffff;
+
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+
+    transition: transform 0.18s ease;
+}
+
+/* ON */
+
+#settings-page .refresh-toggle input:checked + .refresh-toggle-slider {
+    background: var(--settings-navy);
+}
+
+#settings-page
+.refresh-toggle
+input:checked
++ .refresh-toggle-slider::before {
+    transform: translateX(20px);
+}
+
+/* Keyboard focus */
+
+#settings-page
+.refresh-toggle
+input:focus-visible
++ .refresh-toggle-slider {
+    box-shadow:
+        0 0 0 3px rgba(15, 27, 60, 0.16);
+}
+
+/* =========================================================
+REFRESH STATUS
+========================================================= */
+
+#settings-page .refresh-status-row {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 16px;
+
+    margin-bottom: 22px;
+}
+
+#settings-page .refresh-status-label {
+    color: #555555;
+
+    font-size: 0.84rem;
+    font-weight: 500;
+}
+
+#settings-page .refresh-status {
+    color: #777777;
+
+    font-size: 0.8rem;
+    font-weight: 400;
+
+    transition: color 0.18s ease;
+}
+
+#settings-page .refresh-status.on {
+    color: var(--settings-navy);
+
+    font-weight: 500;
+}
+
+#settings-page .refresh-status.off {
+    color: #777777;
+}
+
+/* =========================================================
+DISABLED REFRESH CONTROLS
+========================================================= */
+
+#settings-page .refresh-form.is-disabled .settings-field {
+    opacity: 0.65;
+}
+
+#settings-page
+.refresh-form.is-disabled
+.settings-field
+select {
+    background-color: #f5f5f5 !important;
+
+    color: #999999;
+
+    cursor: not-allowed;
+}
+
+#settings-page .refresh-form .settings-primary-btn.is-disabled {
+    background: #bcbcbc !important;
+
+    border-color: #bcbcbc !important;
+
+    color: #ffffff !important;
+
+    cursor: not-allowed;
+
+    opacity: 1;
+}
+
+/* =========================================================
+ACTIVITY
+========================================================= */
+
+#settings-page .activity-heading {
+display: flex;
+
+align-items: center;
+justify-content: space-between;
+
+margin: 30px 0 14px;
+
+}
+
+#settings-page .activity-heading h4 {
+margin: 0;
+}
+
+#settings-page .activity-heading a {
+color: var(--settings-navy) !important;
+
+font-size: 0.82rem;
+
+text-decoration: none;
+
+}
+
+#settings-page .activity-heading a {
+text-decoration: underline;
+}
+
+#settings-page .activity-table-wrapper {
+width: 100%;
+
+max-height: 320px;
+
+overflow-y: auto;
+
+border: 1px solid #e1e7ef;
+
+border-radius: 8px;
+
+}
+
+#settings-page .activity-table {
+width: 100%;
+
+margin: 0;
+
+border-collapse: collapse;
+
+}
+
+#settings-page .activity-table th,
+#settings-page .activity-table td {
+padding: 11px 13px;
+
+border-bottom: 1px solid #edf0f4;
+
+font-size: 0.8rem;
+
+text-align: left;
+
+vertical-align: top;
+
+}
+
+#settings-page .activity-table th {
+background: #f8fafc;
+
+color: #555555;
+
+font-weight: 600;
+
+}
+
+#settings-page .activity-table tr td {
+border-bottom: 0;
+}
+
+#settings-page .activity-details {
+margin-top: 3px;
+
+color: #777777;
+
+font-size: 0.75rem;
+
+}
+
+#settings-page .activity-nowrap {
+white-space: nowrap;
+}
+
+#settings-page .activity-empty {
+padding: 24px !important;
+
+color: #777777;
+
+text-align: center !important;
+
+}
+
+/* =========================================================
+RESPONSIVE
+========================================================= */
+
+@media (max-width: 1199.98px) {
+
+#settings-page .settings-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+
+    gap: 22px;
+}
+
+#settings-page .settings-nav-item {
+    padding: 0 17px;
+
+    gap: 13px;
+
+    font-size: 0.9rem;
+}
+
+}
+
+@media (max-width: 991.98px) {
+
+    #settings-page .settings-layout {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding-top: 10px;
+    }
+
+    #settings-page .settings-navigation {
+        position: static;
+
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+
+        width: 100%;
+        height: auto;
+
+        padding: 0 0 18px;
+
+        z-index: auto;
+    }
+
+    #settings-page .settings-content {
+        grid-column: 1;
+    }
+
+    #settings-page .settings-nav-item {
+        min-height: 46px;
+    }
+}
+
+@media (max-width: 767.98px) {
+
+#settings-page .settings-layout {
+    padding: 8px 0 30px;
+}
+
+#settings-page .settings-navigation {
+    grid-template-columns: 1fr;
+}
+
+#settings-page .settings-card {
+    padding: 24px 20px;
+}
+
+#settings-page .profile-card {
+    align-items: flex-start;
+
+    padding: 20px;
+}
+
+#settings-page .profile-edit-form {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 16px;
+}
+
+#settings-page .profile-main {
+    gap: 14px;
+
+    width: 100%;
+}
+
+#settings-page .profile-avatar {
+    flex-basis: 48px;
+
+    width: 48px;
+    height: 48px;
+
+    font-size: 1.7rem;
+}
+
+#settings-page .profile-name {
+    font-size: 0.95rem;
+}
+
+#settings-page .profile-role {
+    font-size: 0.82rem;
+}
+
+#settings-page .profile-edit-actions {
+    width: 100%;
+}
+
+#settings-page .settings-edit-btn,
+#settings-page .settings-save-name-btn,
+#settings-page .settings-cancel-name-btn {
+    min-width: 64px;
+}
+
+#settings-page .personal-grid {
+    grid-template-columns: 1fr;
+
+    gap: 22px;
+}
+
+#settings-page .settings-form-grid.two-column {
+    grid-template-columns: 1fr;
+}
+
+#settings-page .refresh-form {
+    grid-template-columns: 1fr;
+}
+
+#settings-page .refresh-form .settings-primary-btn {
+    width: 100%;
+
+    margin-bottom: 0;
+}
+
+#settings-page .password-actions {
+    margin-top: 24px;
+}
+
+#settings-page .activity-table {
+    min-width: 600px;
+}
+
+}
+
+/* =========================================================
+ACCOUNT CARD SPACING
+========================================================= */
+
+#settings-page #account-section .settings-card + .settings-card {
+    margin-top: 24px;
+}
+/* =========================================================
+   SAFETY THRESHOLD EDIT ACTIONS
+   ========================================================= */
+
+#settings-page #safety-section .settings-card-heading {
+    margin-bottom: 24px;
+}
+
+#settings-page #safety-section .settings-card-heading > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#settings-page #safety-section .settings-field input[readonly] {
+    cursor: default;
+}
+
+#settings-page #safety-section .settings-threshold-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+#settings-page #safety-section .settings-threshold-header h4,
+#settings-page #safety-section .settings-card-body h4 {
+    margin: 0 0 18px;
+    color: #111111;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+#settings-page #safety-section .settings-threshold-header h4 {
+    margin-bottom: 0;
+}
+
+#settings-page #safety-section .settings-threshold-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#settings-page #safety-section .safety-cancel-btn,
+#settings-page #safety-section .safety-save-btn {
+    display: none;
+}
+
+#settings-page #safety-section .settings-threshold-divider {
+    width: 100%;
+    height: 1px;
+    margin: 28px 0;
+    background-color: #e7e7e7;
+}

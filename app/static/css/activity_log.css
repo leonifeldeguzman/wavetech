@@ -1,0 +1,238 @@
+/* =========================================================
+WAVETECH
+ACTIVITY LOG PAGE
+========================================================= */
+
+#activity-log-page {
+    width: 100%;
+    min-width: 0;
+    color: #111111;
+}
+
+/* =========================================================
+MAIN CARD
+========================================================= */
+
+#activity-log-page .activity-log-card {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 13px;
+
+    box-shadow:
+        0 8px 30px rgba(15, 27, 60, 0.10);
+
+    overflow: hidden;
+}
+
+/* =========================================================
+CARD HEADER
+========================================================= */
+
+#activity-log-page .activity-log-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 24px;
+
+    padding: 26px 30px;
+
+    border-bottom: 1px solid #e7e7e7;
+}
+
+#activity-log-page .activity-log-card-header h3 {
+    margin: 0 0 6px;
+
+    color: #111111;
+
+    font-size: 1.15rem;
+    font-weight: 700;
+
+    line-height: 1.3;
+}
+
+#activity-log-page .activity-log-card-header p {
+    margin: 0;
+
+    color: #666666;
+
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+/* =========================================================
+CARD BODY
+========================================================= */
+
+#activity-log-page .activity-log-card-body {
+    padding: 26px 30px 30px;
+}
+
+/* =========================================================
+LOG HEADING
+========================================================= */
+
+#activity-log-page .activity-log-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-bottom: 18px;
+}
+
+#activity-log-page .activity-log-heading h4 {
+    margin: 0;
+
+    color: #111111;
+
+    font-size: 0.96rem;
+    font-weight: 700;
+}
+
+#activity-log-page .activity-log-heading span {
+    color: #777777;
+
+    font-size: 0.78rem;
+}
+
+/* =========================================================
+TABLE
+========================================================= */
+
+#activity-log-page .activity-log-table-wrapper {
+    width: 100%;
+
+    border: 1px solid #e1e7ef;
+    border-radius: 9px;
+
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+#activity-log-page .activity-log-table {
+    width: 100%;
+    min-width: 760px;
+
+    margin: 0;
+
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+/* =========================================================
+TABLE CELLS
+========================================================= */
+
+#activity-log-page .activity-log-table th,
+#activity-log-page .activity-log-table td {
+    padding: 14px 16px;
+
+    border-bottom: 1px solid #edf0f4;
+
+    font-size: 0.81rem;
+
+    text-align: left;
+    vertical-align: top;
+
+    white-space: normal;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    line-height: 1.5;
+}
+
+#activity-log-page .activity-log-table th {
+    background: #f8fafc;
+
+    color: #555555;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+#activity-log-page .activity-log-table td {
+    color: #222222;
+}
+
+#activity-log-page .activity-log-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* =========================================================
+COLUMN WIDTHS
+========================================================= */
+
+#activity-log-page .activity-log-table th:nth-child(1),
+#activity-log-page .activity-log-table td:nth-child(1) {
+    width: 17%;
+}
+
+#activity-log-page .activity-log-table th:nth-child(2),
+#activity-log-page .activity-log-table td:nth-child(2) {
+    width: 23%;
+}
+
+#activity-log-page .activity-log-table th:nth-child(3),
+#activity-log-page .activity-log-table td:nth-child(3) {
+    width: 40%;
+}
+
+#activity-log-page .activity-log-table th:nth-child(4),
+#activity-log-page .activity-log-table td:nth-child(4) {
+    width: 20%;
+}
+
+/* =========================================================
+DATE / TIME
+========================================================= */
+
+#activity-log-page .activity-log-date {
+    white-space: nowrap !important;
+
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+}
+
+/* =========================================================
+EMPTY STATE
+========================================================= */
+
+#activity-log-page .activity-log-empty {
+    padding: 30px 20px !important;
+
+    color: #777777 !important;
+
+    text-align: center !important;
+}
+
+/* =========================================================
+RESPONSIVE
+========================================================= */
+
+@media (max-width: 767.98px) {
+
+    #activity-log-page .activity-log-card-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        padding: 22px 20px;
+    }
+
+    #activity-log-page .activity-log-card-body {
+        padding: 22px 20px 24px;
+    }
+
+    #activity-log-page .activity-log-heading {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 6px;
+    }
+
+}

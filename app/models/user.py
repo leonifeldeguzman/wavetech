@@ -7,6 +7,7 @@ class User(db.Model):
     admin_id = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(30), nullable=True)
     role = db.Column(db.String(20), nullable=False, default="Operator")
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 

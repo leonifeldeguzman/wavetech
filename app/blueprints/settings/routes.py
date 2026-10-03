@@ -77,7 +77,73 @@ def change_password():
     flash("Password updated successfully.")
     return redirect(url_for("settings.index"))
 
+@settings_bp.route("/settings/update-display-name", methods=["POST"])
+@login_required
+def update_display_name():
+    user = db.session.get(User, session["user_id"])
 
+    if user is None:
+        flash("User account could not be found.")
+        return redirect(url_for("settings.index"))
+
+    display_name = request.form.get("display_name", "").strip()
+
+    if not display_name:
+        flash("Display name cannot be empty.")
+        return redirect(url_for("settings.index"))
+
+    if len(display_name) > 100:
+        flash("Display name must be 100 characters or less.")
+        return redirect(url_for("settings.index"))
+
+    user.full_name = display_name
+
+    # Update the session so the header immediately shows the new name
+    session["full_name"] = display_name
+
+    db.session.commit()
+
+    flash("Display name updated successfully.")
+    return redirect(url_for("settings.index"))
+
+@settings_bp.route("/settings/update-personal-info", methods=["POST"])
+@login_required
+def update_personal_info():
+    user = db.session.get(User, session["user_id"])
+
+    if user is None:
+        flash("User account could not be found.")
+        return redirect(url_for("settings.index"))
+
+    first_name = request.form.get("first_name", "").strip()
+    last_name = request.form.get("last_name", "").strip()
+
+    if not first_name:
+        flash("First name cannot be empty.")
+        return redirect(url_for("settings.index"))
+
+    if not last_name:
+        flash("Last name cannot be empty.")
+        return redirect(url_for("settings.index"))
+
+    if len(first_name) > 50:
+        flash("First name must be 50 characters or less.")
+        return redirect(url_for("settings.index"))
+
+    if len(last_name) > 50:
+        flash("Last name must be 50 characters or less.")
+        return redirect(url_for("settings.index"))
+
+    full_name = f"{first_name} {last_name}"
+
+    user.full_name = full_name
+    session["full_name"] = full_name
+
+    db.session.commit()
+
+    flash("Personal information updated successfully.")
+    return redirect(url_for("settings.index"))
+    
 # ---------------------------------------------------------------------------
 # Safety Thresholds (shared Admin/Operator access)
 # ---------------------------------------------------------------------------

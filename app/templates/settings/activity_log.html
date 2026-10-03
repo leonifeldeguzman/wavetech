@@ -1,45 +1,92 @@
 {% extends "base.html" %}
+
 {% block title %}Activity Log{% endblock %}
-{% block page_title %}Activity Log{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/activity_log.css') }}">
+{% endblock %}
 
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <div class="text-muted small">Admin-only record of important administrative actions.</div>
-    </div>
-    <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Back to Settings
-    </a>
-</div>
+<div id="activity-log-page">
 
-<div class="card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-sm mb-0">
-            <thead>
-                <tr>
-                    <th>Admin</th>
-                    <th>Action</th>
-                    <th>Details</th>
-                    <th>Date/Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in activity_logs %}
-                <tr>
-                    <td>{{ log.admin_name }}</td>
-                    <td>{{ log.action }}</td>
-                    <td class="text-muted small">{{ log.details or '—' }}</td>
-                    <td class="text-nowrap">{{ log.created_at | ph_time }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-muted text-center py-4">No activity recorded yet.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="activity-log-card">
+
+        <div class="activity-log-card-header">
+            <div>
+                <h3>Activity Log</h3>
+                <p>Admin-only record of important administrative actions.</p>
+            </div>
+
+            <a href="{{ url_for('settings.index') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Settings
+            </a>
+        </div>
+
+        <div class="activity-log-card-body">
+
+            <div class="activity-log-heading">
+                <h4>Full Activity Logs</h4>
+
+                <span>
+                    {{ activity_logs|length }}
+                    record{% if activity_logs|length != 1 %}s{% endif %}
+                </span>
+            </div>
+
+            <div class="activity-log-table-wrapper">
+
+                <table class="activity-log-table">
+
+                    <thead>
+                        <tr>
+                            <th>Admin</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                            <th>Date/Time</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for log in activity_logs %}
+
+                        <tr>
+                            <td>{{ log.admin_name }}</td>
+
+                            <td>{{ log.action }}</td>
+
+                            <td>
+                                {{ log.details or '—' }}
+                            </td>
+
+                            <td class="activity-log-date">
+                                {{ log.created_at | ph_time }}
+                            </td>
+                        </tr>
+
+                        {% else %}
+
+                        <tr>
+                            <td colspan="4" class="activity-log-empty">
+                                No activity recorded yet.
+                            </td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
     </div>
+
 </div>
 
 {% endblock %}
