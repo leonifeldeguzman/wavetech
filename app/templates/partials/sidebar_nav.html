@@ -1,68 +1,80 @@
-<div class="d-flex align-items-center gap-2 mb-4 px-1 d-none d-lg-flex">
-  <i class="bi bi-sign-turn-right-fill fs-4"></i>
-  <span class="fs-5 fw-bold">WaveTech</span>
+<div class="sidebar-brand d-none d-lg-flex">
+  <i class="bi bi-laptop"></i>
+  <span>WaveTech</span>
 </div>
 
-<ul class="nav nav-pills flex-column gap-1 mb-auto">
+<ul class="nav nav-pills flex-column sidebar-nav">
   <li class="nav-item">
     <a
       href="{{ url_for('dashboard.index') }}"
-      class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'dashboard' %}active{% endif %}"
+      class="nav-link text-white {% if active_page == 'dashboard' %}active{% endif %}"
     >
-      <i class="bi bi-grid-fill"></i> Dashboard
+  <i class="bi bi-grid-fill"></i>
+      <span>Dashboard</span>
     </a>
   </li>
+
   <li class="nav-item">
     <a
       href="{{ url_for('manifests.list_slots') }}"
-      class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'manifests' %}active{% endif %}"
+      class="nav-link text-white {% if active_page == 'manifests' %}active{% endif %}"
     >
-      <i class="bi bi-person-fill"></i> Manifests
+      <i class="bi bi-person"></i>
+      <span>Manifests</span>
     </a>
   </li>
+
   <li class="nav-item">
     <a
       href="{{ url_for('monitoring.index') }}"
-      class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'monitoring' %}active{% endif %}"
+      class="nav-link text-white {% if active_page == 'monitoring' %}active{% endif %}"
     >
-      <i class="bi bi-check-circle-fill"></i> Monitoring
+      <i class="bi bi-check-circle"></i>
+      <span>Monitoring</span>
     </a>
   </li>
+
   <li class="nav-item">
     <a
       href="{{ url_for('analytics.index') }}"
-      class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'analytics' %}active{% endif %}"
+      class="nav-link text-white {% if active_page == 'analytics' %}active{% endif %}"
     >
-      <i class="bi bi-graph-up-arrow"></i> Analytics
+      <i class="bi bi-graph-up"></i>
+      <span>Analytics</span>
     </a>
   </li>
+
   <li class="nav-item">
     <a
       href="{{ url_for('announcements.index') }}"
-      class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'announcements' %}active{% endif %}"
+      class="nav-link text-white {% if active_page == 'announcements' %}active{% endif %}"
     >
-      <i class="bi bi-megaphone-fill"></i> Notices
+      <i class="bi bi-megaphone"></i>
+      <span>Notices</span>
     </a>
   </li>
 </ul>
 
-<hr class="text-white-50" />
+<div class="sidebar-divider"></div>
 
-<ul class="nav nav-pills flex-column gap-1">
+<ul class="nav nav-pills flex-column sidebar-nav sidebar-nav-bottom">
   <li class="nav-item">
     <a
       href="{{ url_for('settings.index') }}"
-      class="nav-link text-white d-flex align-items-center gap-2 {% if active_page == 'settings' %}active{% endif %}"
+      class="nav-link text-white {% if active_page == 'settings' %}active{% endif %}"
     >
-      <i class="bi bi-gear-fill"></i> Settings
+      <i class="bi bi-gear"></i>
+      <span>Settings</span>
     </a>
   </li>
+
   <li class="nav-item">
     <a
       href="{{ url_for('auth.logout') }}"
-      class="nav-link text-white d-flex align-items-center gap-2"
+      class="nav-link text-white"
     >
-      <i class="bi bi-box-arrow-left"></i> Logout
+      <i class="bi bi-box-arrow-left"></i>
+      <span>Logout</span>
     </a>
   </li>
 </ul>

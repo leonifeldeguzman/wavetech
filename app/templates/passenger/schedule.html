@@ -1,18 +1,26 @@
-{% extends "passenger/base.html" %} {% block title %}Schedule{% endblock %} {%
-block content %}
+{% extends "passenger/base.html" %}
+
+{% block title %}Schedule{% endblock %}
+
+{% block content %}
 <div class="container py-5">
+
   <h4 class="fw-bold mb-4">Available Trips</h4>
 
   <div class="card border-0 shadow-sm mb-5 overflow-hidden">
+
     <!-- Table Header -->
     <div class="schedule-header">
       <div>Boat Name</div>
       <div>Departure Time</div>
+      <div>Travel Date</div>
       <div>Capacity</div>
       <div>Status</div>
     </div>
 
+    <!-- Trip List -->
     <div class="list-group list-group-flush">
+
       {% for trip in trips %}
 
       <a
@@ -20,53 +28,89 @@ block content %}
         class="list-group-item list-group-item-action py-3"
       >
         <div class="row align-items-center g-3">
+
           <!-- Boat Name -->
-          <div class="col-12 col-md-3">
-            <div>
-              {% if trip.boat %} {{ trip.boat.name }} {% else %} Boat pending {%
-              endif %}
+          <div class="col-12 col-md">
+            <div class="fw-semibold">
+              {% if trip.boat %}
+                {{ trip.boat.name }}
+              {% else %}
+                Boat pending
+              {% endif %}
             </div>
           </div>
 
           <!-- Departure Time -->
-          <div class="col-6 col-md-3">{{ trip.departure_time }}</div>
+          <div class="col-6 col-md">
+            <div>{{ trip.departure_time }}</div>
+          </div>
+
+          <!-- Travel Date -->
+          <div class="col-6 col-md">
+            <div>{{ trip.departure_date }}</div>
+          </div>
 
           <!-- Capacity -->
-          <div class="col-6 col-md-3">
-            {% if trip.capacity is not none and trip.capacity > 0 and
-            trip.remaining_capacity is not none %} {% set capacity =
-            trip.capacity %} {% set remaining = trip.remaining_capacity %} {%
-            set occupied = capacity - remaining %} {% set occupancy_percent =
-            (occupied * 100 / capacity) if capacity > 0 else 0 %}
+          <div class="col-12 col-md">
 
-            <div class="capacity-wrapper" title="{{ remaining }} seats left">
-              <div class="capacity-bar">
-                <div
-                  class="capacity-fill"
-                  style="--capacity-width: {{ occupancy_percent }}%;"
-                ></div>
+            {% if trip.capacity is not none
+                  and trip.capacity > 0
+                  and trip.remaining_capacity is not none %}
+
+              {% set capacity = trip.capacity %}
+              {% set remaining = trip.remaining_capacity %}
+              {% set occupied = capacity - remaining %}
+              {% set occupancy_percent =
+                    (occupied * 100 / capacity)
+                    if capacity > 0 else 0 %}
+
+              <div
+                class="capacity-wrapper"
+                title="{{ remaining }} seats left"
+              >
+
+                <div class="capacity-bar">
+                  <div
+                    class="capacity-fill"
+                    style="--capacity-width: {{ occupancy_percent }}%;"
+                  ></div>
+                </div>
+
+                {% if remaining <= 0 %}
+
+                  <span class="capacity-text">
+                    Full
+                  </span>
+
+                {% else %}
+
+                  <span class="capacity-text">
+                    {{ remaining }} seats left
+                  </span>
+
+                {% endif %}
+
               </div>
-
-              {% if remaining <= 0 %}
-              <span class="capacity-text"> Full </span>
-              {% else %}
-              <span class="capacity-text"> {{ remaining }} seats left </span>
-              {% endif %}
-            </div>
 
             {% else %}
 
-            <span class="text-muted small"> Not available </span>
+              <span class="text-muted small">
+                Not available
+              </span>
 
             {% endif %}
+
           </div>
 
           <!-- Status -->
-          <div class="col-12 col-md-3">
-            <span class="status-pill {{ trip.status|lower|replace(' ', '-') }}">
+          <div class="col-12 col-md">
+            <span
+              class="status-pill {{ trip.status|lower|replace(' ', '-') }}"
+            >
               {{ trip.status }}
             </span>
           </div>
+
         </div>
       </a>
 
@@ -77,18 +121,26 @@ block content %}
       </div>
 
       {% endfor %}
+
     </div>
   </div>
 
+
+  <!-- Registration Status -->
   <div class="card border-0 shadow-sm">
+
     <div class="card-body">
-      <h6 class="fw-bold mb-3">Check Registration Status</h6>
+
+      <h6 class="fw-bold mb-3">
+        Check Registration Status
+      </h6>
 
       <form
         method="get"
         action="{{ url_for('passenger.registration_status_lookup') }}"
         class="d-flex gap-2"
       >
+
         <input
           type="text"
           name="reference_code"
@@ -104,9 +156,12 @@ block content %}
         >
           Check Status
         </button>
-      </form>
-    </div>
-  </div>
-</div>
 
-{% endblock %} ```
+      </form>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

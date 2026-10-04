@@ -18,7 +18,7 @@ This blueprint reuses the existing Trip, Boat, and PendingRegistration
 models exactly as they are defined elsewhere in the repository. It does
 not add any new tables or columns.
 """
-from flask import current_app, request, render_template, redirect, url_for, abort
+from flask import current_app, request, render_template, redirect, url_for, abort, jsonify
 
 from sqlalchemy.exc import IntegrityError
 
@@ -119,11 +119,24 @@ def _serialize_trip_summary(trip):
 
     return {
         "trip_id": trip.id,
-        "departure_time": trip.departure_time.strftime("%b %d, %Y, %I:%M %p") if trip.departure_time else None,
+        "departure_time": (
+            trip.departure_time.strftime("%I:%M %p")
+            if trip.departure_time else None
+        ),
+        "departure_date": (
+            trip.departure_time.strftime("%B %d, %Y")
+            if trip.departure_time else None
+        ),
         "route_origin": trip.route_origin,
         "route_destination": trip.route_destination,
         "status": trip.status,
-        "boat": {"id": trip.boat.id, "name": trip.boat.name} if trip.boat else None,
+        "boat": (
+            {
+                "id": trip.boat.id,
+                "name": trip.boat.name
+            }
+            if trip.boat else None
+        ),
         "capacity": capacity,
         "current_passenger_count": reserved,
         "remaining_capacity": remaining,
@@ -444,7 +457,8 @@ def home():
 
     return render_template(
         "passenger/home.html",
-        announcements=announcements
+        announcements=announcements,
+        active_page="home",
     )
 
 @passenger_bp.route("/passenger/schedule", methods=["GET"])
@@ -470,6 +484,71 @@ def trip_detail_page(trip_id):
         abort(404)
     return render_template("passenger/trip_detail.html", trip=_serialize_trip_detail(trip))
 
+@passenger_bp.route("/passenger/register", methods=["GET"])
+def register_page():
+    trips = (
+        Trip.query
+        .filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
+        .order_by(Trip.departure_time)
+        .all()
+    )
+
+    trip_rows = [_serialize_trip_summary(t) for t in trips]
+
+    return render_template(
+        "passenger/register.html",
+        trips=trip_rows,
+        passenger_types=sorted(VALID_PASSENGER_TYPES),
+        active_page="register",
+    )
+
+@passenger_bp.route("/passenger/register/submit-inline", methods=["POST"])
+def submit_registration_inline():
+
+    payload = request.form.to_dict()
+
+    field_errors, cleaned = _validate_payload(payload)
+
+    if field_errors:
+        return jsonify({
+            "success": False,
+            "message": "One or more fields are invalid.",
+            "fields": field_errors,
+        }), 400
+
+    result = _execute_registration(
+        cleaned["trip_id"],
+        cleaned
+    )
+
+    if not result.success:
+
+        status = (
+            404
+            if result.error_code == "TRIP_NOT_FOUND"
+            else 409
+            if result.error_code in (
+                "TRIP_FULL",
+                "TRIP_NOT_AVAILABLE",
+            )
+            else 500
+        )
+
+        return jsonify({
+            "success": False,
+            "error_code": result.error_code,
+            "message": result.message,
+        }), status
+
+    return jsonify({
+        "success": True,
+        "message": "Registration submitted successfully.",
+        "data": {
+            "reference_code": result.registration.reference_code,
+            "trip_id": result.registration.trip_id,
+            "status": result.registration.status,
+        },
+    }), 201
 
 @passenger_bp.route("/passenger/trips/<int:trip_id>/register", methods=["GET"])
 def registration_form_page(trip_id):
@@ -576,4 +655,11 @@ def registration_status_page(reference_code):
         "passenger/registration_success.html",
         registration=registration,
         trip=_serialize_trip_detail(trip) if trip else None,
+    )
+
+@passenger_bp.route("/passenger/guide", methods=["GET"])
+def guide():
+    return render_template(
+        "passenger/guide.html",
+        active_page="guide",
     )

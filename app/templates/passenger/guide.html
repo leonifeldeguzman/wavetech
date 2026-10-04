@@ -1,0 +1,456 @@
+{% extends "passenger/base.html" %}
+
+{% block title %}Guide{% endblock %}
+
+{% block content %}
+
+<div class="passenger-guide-page">
+
+    <div class="guide-container">
+
+        <!-- PAGE TITLE -->
+        <h1 class="guide-page-title">
+            Passenger Guide
+        </h1>
+
+
+        <!-- =========================
+             BOARDING PROCEDURE
+        ========================== -->
+        <section class="guide-card">
+
+            <div class="guide-section-title">
+                <i class="bi bi-clipboard2-check"></i>
+                <h2>Boarding Procedure</h2>
+            </div>
+
+            <div class="boarding-procedure">
+
+                <div class="boarding-column">
+
+                    <div class="boarding-step">
+                        <span class="boarding-number">1</span>
+                        <span>Register Online or Walk-In</span>
+                    </div>
+
+                    <div class="boarding-step">
+                        <span class="boarding-number">2</span>
+                        <span>Wait in the Queue</span>
+                    </div>
+
+                    <div class="boarding-step">
+                        <span class="boarding-number">3</span>
+                        <span>Verify Your Registration</span>
+                    </div>
+
+                </div>
+
+                <div class="boarding-column">
+
+                    <div class="boarding-step">
+                        <span class="boarding-number">4</span>
+                        <span>Listen for Boarding Calls</span>
+                    </div>
+
+                    <div class="boarding-step">
+                        <span class="boarding-number">5</span>
+                        <span>Board the Boat</span>
+                    </div>
+
+                    <div class="boarding-step">
+                        <span class="boarding-number">6</span>
+                        <span>Travel to Your Destination</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- FIRST TIME PASSENGER -->
+            <div class="first-time-guide">
+
+                <button type="button"
+                        class="first-time-header"
+                        id="firstTimeGuideToggle"
+                        aria-expanded="false">
+
+                    <span class="first-time-title">
+                        <i class="bi bi-compass"></i>
+                        First-Time Passenger Guide
+                    </span>
+
+                    <i class="bi bi-chevron-down first-time-chevron"></i>
+
+                </button>
+
+                <div class="first-time-content collapsed" id="firstTimeGuideContent">
+
+                    <div class="first-time-column">
+                        <h3>Where to go</h3>
+                        <p>
+                            Proceed to the terminal
+                            registration area upon
+                            arrival.
+                        </p>
+                    </div>
+
+                    <div class="first-time-column">
+                        <h3>What to prepare</h3>
+                        <p>
+                            Bring a valid ID and show
+                            your Reference
+                            Code to verify.
+                        </p>
+                    </div>
+
+                    <div class="first-time-column">
+                        <h3>Check-in process</h3>
+                        <p>
+                            Arrive 30 minutes early,
+                            and wait for the boarding
+                            announcement.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             LUGGAGE
+        ========================== -->
+        <section class="guide-card">
+
+            <div class="guide-section-title">
+                <i class="bi bi-suitcase-lg"></i>
+                <h2>Luggage &amp; Baggage Rules</h2>
+            </div>
+
+            <div class="baggage-grid">
+
+                <!-- ALLOWED -->
+                <div class="baggage-box">
+
+                    <div class="baggage-title allowed">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span>Allowed</span>
+                    </div>
+
+                    <ul>
+                        <li>
+                            Hand-carry bags up to 7kg are allowed onboard
+                        </li>
+                        <li>
+                            Checked baggage up to 20kg per passenger
+                        </li>
+                    </ul>
+
+                </div>
+
+
+                <!-- NOT ALLOWED -->
+                <div class="baggage-box">
+
+                    <div class="baggage-title not-allowed">
+                        <i class="bi bi-x-circle-fill"></i>
+                        <span>Not Allowed / Restrictions</span>
+                    </div>
+
+                    <ul>
+                        <li>
+                            Flammable materials, sharp objects,
+                            and hazardous items are prohibited
+                        </li>
+                        <li>
+                            Oversized cargo requires prior arrangement
+                        </li>
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             FAQ
+        ========================== -->
+        <section class="guide-card">
+
+            <div class="guide-section-title">
+                <i class="bi bi-question-circle"></i>
+                <h2>Frequently Asked Questions</h2>
+            </div>
+
+            <div class="faq-list">
+
+                <div class="faq-item">
+
+                    <button type="button" class="faq-question">
+
+                        <span>
+                            Is there a limit to passengers per trip?
+                        </span>
+
+                        <i class="bi bi-chevron-down"></i>
+
+                    </button>
+
+                    <div class="faq-answer">
+                        <p>
+                            Each trip has a designated passenger
+                            capacity. Registration will be unavailable
+                            once the trip reaches its maximum capacity.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div class="faq-item">
+
+                    <button type="button" class="faq-question">
+
+                        <span>
+                            What happens if the weather suddenly changes?
+                        </span>
+
+                        <i class="bi bi-chevron-down"></i>
+
+                    </button>
+
+                    <div class="faq-answer">
+                        <p>
+                            Weather and lake conditions are monitored
+                            for passenger safety. Boarding decisions
+                            are subject to the authorized terminal
+                            and Coast Guard personnel.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div class="faq-item">
+
+                    <button type="button" class="faq-question">
+
+                        <span>
+                            How will I know when to board?
+                        </span>
+
+                        <i class="bi bi-chevron-down"></i>
+
+                    </button>
+
+                    <div class="faq-answer">
+                        <p>
+                            Listen for the boarding announcement from
+                            the terminal operator and remain within the
+                            designated waiting area.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================
+             ABOUT TERMINAL
+        ========================== -->
+        <section class="guide-card">
+
+            <div class="guide-section-title">
+                <i class="bi bi-info-circle"></i>
+                <h2>About the Terminal</h2>
+            </div>
+
+            <p class="terminal-description">
+                A modern passenger terminal offering safe and efficient
+                island routes through a digital manifest system. With
+                real-time environmental monitoring and safety-certified
+                vessels, we ensure smooth operations, and secure travel.
+            </p>
+
+
+            <div class="contact-grid">
+
+                <!-- HELP -->
+                <div class="contact-box">
+
+                    <div class="contact-title">
+                        <i class="bi bi-telephone"></i>
+                        <h3>Help &amp; Contacts</h3>
+                    </div>
+
+                    <div class="contact-details">
+
+                        <p>
+                            Terminal Support:
+                            <strong>(032)123-4567</strong>
+                        </p>
+
+                        <p>
+                            Email:
+                            <strong>support@wavetech.ph</strong>
+                        </p>
+
+                        <p>
+                            Hours:
+                            <strong>8 AM - 5 PM daily</strong>
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- EMERGENCY -->
+                <div class="contact-box emergency-box">
+
+                    <div class="contact-title">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <h3>Emergency Hotlines</h3>
+                    </div>
+
+                    <div class="contact-details">
+
+                        <p>
+                            Coast Guard:
+                            <strong>09XX-XXX-XXXX</strong>
+                        </p>
+
+                        <p>
+                            Emergency:
+                            <strong>911</strong>
+                        </p>
+
+                        <p>
+                            Terminal Security:
+                            <strong>(032)765-4321</strong>
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    /* FIRST-TIME PASSENGER GUIDE */
+
+    const firstTimeToggle =
+        document.getElementById("firstTimeGuideToggle");
+
+    const firstTimeContent =
+        document.getElementById("firstTimeGuideContent");
+
+    const firstTimeChevron =
+        firstTimeToggle.querySelector(".first-time-chevron");
+
+    firstTimeToggle.addEventListener("click", function () {
+
+        const isOpen =
+            firstTimeToggle.getAttribute("aria-expanded") === "true";
+
+        firstTimeToggle.setAttribute(
+            "aria-expanded",
+            isOpen ? "false" : "true"
+        );
+
+        firstTimeContent.classList.toggle(
+            "collapsed",
+            isOpen
+        );
+
+        firstTimeChevron.classList.toggle(
+            "bi-chevron-up",
+            !isOpen
+        );
+
+        firstTimeChevron.classList.toggle(
+            "bi-chevron-down",
+            isOpen
+        );
+
+    });
+
+
+    /* FAQ ACCORDION */
+
+    document.querySelectorAll(".faq-question").forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            const faqItem =
+                this.closest(".faq-item");
+
+            const answer =
+                faqItem.querySelector(".faq-answer");
+
+            const icon =
+                this.querySelector("i");
+
+            const isOpen =
+                faqItem.classList.contains("open");
+
+
+            document.querySelectorAll(".faq-item").forEach(function (item) {
+
+                item.classList.remove("open");
+
+                const itemAnswer =
+                    item.querySelector(".faq-answer");
+
+                const itemIcon =
+                    item.querySelector(".faq-question i");
+
+                itemAnswer.style.maxHeight = null;
+
+                itemIcon.classList.remove("bi-chevron-up");
+                itemIcon.classList.add("bi-chevron-down");
+
+            });
+
+
+            if (!isOpen) {
+
+                faqItem.classList.add("open");
+
+                answer.style.maxHeight =
+                    answer.scrollHeight + "px";
+
+                icon.classList.remove("bi-chevron-down");
+                icon.classList.add("bi-chevron-up");
+
+            }
+
+        });
+
+    });
+
+});
+</script>
+
+{% endblock %}

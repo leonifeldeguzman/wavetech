@@ -31,7 +31,14 @@
   /* Capacity */
   --capacity-bg: #e9ecef;
 }
-
+html,
+body,
+button,
+input,
+select,
+textarea {
+    font-family: "Inter", sans-serif;
+}
 
 /* =========================
    Base
@@ -206,82 +213,149 @@ body {
    ========================= */
 
 @media (min-width: 992px) {
-
-  /* Sidebar */
-  nav.d-lg-flex {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1030;
-
-    width: 240px;
-    height: 100vh;
-
-    /* More inner spacing */
-    padding: 28px 20px !important;
-
-    overflow-y: auto;
-
-    background-color: var(--sidebar-bg) !important;
-    color: var(--sidebar-text);
-  }
+    nav.d-lg-flex {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1030;
+        width: 240px;
+        height: 100vh;
+        padding: 30px 18px 24px !important;
+        overflow-y: auto;
+        display: flex !important;
+        flex-direction: column;
+        background-color: var(--sidebar-bg) !important;
+        color: var(--sidebar-text);
+    }
 
   /* Brand */
-  nav.d-lg-flex .fs-5.fw-bold {
-    color: var(--sidebar-text) !important;
+
+nav.d-lg-flex .sidebar-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 12px;
+    margin-bottom: 34px;
+    color: var(--sidebar-text);
+}
+
+  nav.d-lg-flex .sidebar-brand i {
+    color: var(--sidebar-text);
+
+    font-size: 1.35rem;
+    font-weight: 400;
   }
 
-  /* Navigation links and icons */
-  nav.d-lg-flex a,
-  nav.d-lg-flex a i {
-    color: var(--sidebar-text) !important;
+  nav.d-lg-flex .sidebar-brand span {
+    color: var(--sidebar-text);
+
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
 
-  /* Navigation hover */
-  nav.d-lg-flex a:hover,
-  nav.d-lg-flex a:hover i {
-    color: var(--navy) !important;
+  /* Navigation */
+
+  nav.d-lg-flex .sidebar-nav {
+      gap: 4px !important;
+      margin-left: 8px;
+      margin-right: 8px;
   }
 
-  nav.d-lg-flex a:hover {
-    background-color: var(--sidebar-hover);
+  nav.d-lg-flex .sidebar-nav .nav-item {
+      width: 100%;
+      margin-bottom: 1px;
   }
 
-  /* Active navigation */
-  nav.d-lg-flex a.active,
-  nav.d-lg-flex a.active i {
-    color: #ffffff !important;
-    border-radius: 10px;
+  nav.d-lg-flex .sidebar-nav .nav-link {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: 40px;
+        margin: 1px 0;
+        padding: 0 13px;
+        border-radius: 10px;
+        color: var(--sidebar-text) !important;
+        font-size: 0.88rem;
+        font-weight: 400;
+        gap: 13px;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+  nav.d-lg-flex .sidebar-nav .nav-link i {
+        width: 18px;
+        color: var(--sidebar-text) !important;
+        font-size: 1rem;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+  /* Hover */
+
+  nav.d-lg-flex .sidebar-nav .nav-link:hover {
+        background-color: var(--sidebar-hover);
+        color: var(--navy) !important;
+    }
+
+  nav.d-lg-flex .sidebar-nav .nav-link:hover i {
+        color: var(--navy) !important;
+    }
+
+  /* Active */
+
+  nav.d-lg-flex .sidebar-nav .nav-link.active {
+        background-color: var(--navy) !important;
+        color: #ffffff !important;
+        font-weight: 500;
+    }
+
+  nav.d-lg-flex .sidebar-nav .nav-link.active i {
+      color: #ffffff !important;
   }
 
-  nav.d-lg-flex a.active {
-    background-color: var(--navy) !important;
-  }
+  /* Divider */
 
-  /* Sidebar muted text */
-  nav.d-lg-flex .text-muted {
-    color: var(--sidebar-text) !important;
-  }
+    nav.d-lg-flex .sidebar-divider {
+        width: calc(100% - 24px);
+        height: 1px;
+        margin: auto 12px 20px;
+        background-color: #d6d9de;
+    }
 
-  /* Navigation spacing */
-  nav.d-lg-flex .nav-link {
-    margin-bottom: 0.25rem;
-  }
+  /* Bottom navigation */
 
-  nav.d-lg-flex .nav {
-    gap: 0.15rem;
-  }
+  nav.d-lg-flex .sidebar-nav-bottom {
+      gap: 4px !important;
+      margin-left: 8px;
+      margin-right: 8px;
+    }
+
+    nav.d-lg-flex .sidebar-nav-bottom .nav-item {
+        margin-bottom: 1px;
+    }
+
+    body > .d-flex {
+        min-height: 100vh;
+    }
+
+    body > .d-flex > .flex-grow-1 {
+        min-width: 0;
+        margin-left: 240px;
+    }
+}
 
   /* Main content */
+
   body > .d-flex {
     min-height: 100vh;
   }
 
   body > .d-flex > .flex-grow-1 {
     min-width: 0;
+
     margin-left: 240px;
   }
-}
 
 /* =========================
    Announcement Management
