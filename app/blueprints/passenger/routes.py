@@ -120,7 +120,7 @@ def _serialize_trip_summary(trip):
     return {
         "trip_id": trip.id,
         "departure_time": (
-            trip.departure_time.strftime("%I:%M %p")
+            trip.departure_time.strftime("%I:%M %p").lstrip("0")
             if trip.departure_time else None
         ),
         "departure_date": (
@@ -637,24 +637,53 @@ def get_registration_status(reference_code):
 
 @passenger_bp.route("/passenger/registrations", methods=["GET"])
 def registration_status_lookup():
-    """Small convenience redirect so a plain HTML form can look up a
-    registration by reference code without needing JavaScript."""
     reference_code = request.args.get("reference_code", "").strip()
+
     if not reference_code:
-        abort(400)
-    return redirect(url_for("passenger.registration_status_page", reference_code=reference_code))
+        return redirect(
+            url_for(
+                "passenger.schedule",
+                lookup_error="Please enter a reference code."
+            ) + "#registration-status"
+        )
+
+    registration = _find_registration_by_reference_code(reference_code)
+
+    if not registration:
+        return redirect(
+            url_for(
+                "passenger.schedule",
+                lookup_error="No registration found for that reference code."
+            ) + "#registration-status"
+        )
+
+    return redirect(
+        url_for(
+            "passenger.registration_status_page",
+            reference_code=reference_code
+        )
+    )
 
 
 @passenger_bp.route("/passenger/registrations/<reference_code>", methods=["GET"])
 def registration_status_page(reference_code):
     registration = _find_registration_by_reference_code(reference_code)
+
     if not registration:
-        abort(404)
+        return render_template(
+            "passenger/registration_success.html",
+            registration=None,
+            trip=None,
+            lookup_error="No registration found for that reference code.",
+        )
+
     trip = db.session.get(Trip, registration.trip_id)
+
     return render_template(
         "passenger/registration_success.html",
         registration=registration,
         trip=_serialize_trip_detail(trip) if trip else None,
+        lookup_error=None,
     )
 
 @passenger_bp.route("/passenger/guide", methods=["GET"])

@@ -4,123 +4,85 @@
 
 {% block content %}
 
-<div class="container py-5" style="max-width: 700px;">
+<div class="trip-details-page">
+
+<div class="trip-details-container">
 
     <!-- Back -->
     <a
         href="{{ url_for('passenger.schedule') }}"
-        class="text-decoration-none small text-muted"
+        class="trip-back-link"
     >
-        &larr; Back to schedule
+        <i class="bi bi-arrow-left"></i>
+        Back to schedule
     </a>
 
-    <!-- Trip Card -->
-    <div class="card border-0 shadow-sm mt-3">
+    <!-- Trip Details Card -->
+    <section class="trip-details-card">
 
-        <div class="card-body p-4">
+        <!-- Header -->
+        <div class="trip-details-header">
 
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <p class="trip-details-eyebrow">Scheduled Trip</p>
 
-                <div>
-                    <h5 class="fw-bold mb-1">
-                        Trip Details
-                    </h5>
+                <h1>Trip Details</h1>
 
-                    <div class="text-muted small">
+                <div class="trip-route">
+                    <span>{{ trip.route_origin }}</span>
+                    <i class="bi bi-arrow-right"></i>
+                    <span>{{ trip.route_destination }}</span>
+                </div>
+            </div>
+
+            <span class="status-pill {{ trip.status|lower|replace(' ', '-') }}">
+                {{ trip.status }}
+            </span>
+
+        </div>
+
+
+        <!-- Journey -->
+        <div class="trip-section">
+
+            <h2>Journey</h2>
+
+            <div class="trip-route-box">
+
+                <div class="trip-location">
+                    <span class="trip-detail-label">From</span>
+                    <span class="trip-location-name">
                         {{ trip.route_origin }}
-                        <i class="bi bi-arrow-right mx-1"></i>
-                        {{ trip.route_destination }}
-                    </div>
+                    </span>
                 </div>
 
-                <span class="status-pill {{ trip.status|lower|replace(' ', '-') }}">
-                    {{ trip.status }}
-                </span>
+                <div class="trip-route-arrow">
+                    <i class="bi bi-arrow-right"></i>
+                </div>
+
+                <div class="trip-location">
+                    <span class="trip-detail-label">To</span>
+                    <span class="trip-location-name">
+                        {{ trip.route_destination }}
+                    </span>
+                </div>
 
             </div>
 
-            <hr>
+        </div>
 
-            <!-- Route -->
-            <div class="row g-4 mb-4">
 
-                <div class="col-6">
-                    <div class="text-muted small mb-1">
-                        Origin
-                    </div>
+        <!-- Schedule -->
+        <div class="trip-section">
 
-                    <div class="fw-semibold">
-                        {{ trip.route_origin }}
-                    </div>
-                </div>
+            <h2>Schedule</h2>
 
-                <div class="col-6">
-                    <div class="text-muted small mb-1">
-                        Destination
-                    </div>
+            <div class="trip-info-grid">
 
-                    <div class="fw-semibold">
-                        {{ trip.route_destination }}
-                    </div>
-                </div>
+                <div class="trip-info-item">
+                    <span class="trip-detail-label">Travel Date</span>
 
-            </div>
-
-            <!-- Boat / Date / Time -->
-            <div class="row g-4 mb-4">
-
-                <!-- Boat -->
-                <div class="col-12">
-
-                    <div class="text-muted small mb-1">
-                        Available Boat
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2">
-
-                        <i
-                            class="bi bi-life-preserver"
-                            style="color: var(--navy);"
-                        ></i>
-
-                        <span class="fw-semibold">
-                            {% if trip.boat %}
-                                {{ trip.boat.name }}
-                            {% else %}
-                                Boat not assigned
-                            {% endif %}
-                        </span>
-
-                    </div>
-
-                </div>
-
-                <!-- Departure Time -->
-                <div class="col-6">
-
-                    <div class="text-muted small mb-1">
-                        Departure Time
-                    </div>
-
-                    <div class="fw-semibold">
-                        {% if trip.departure_time %}
-                            {{ trip.departure_time }}
-                        {% else %}
-                            TBA
-                        {% endif %}
-                    </div>
-
-                </div>
-
-                <!-- Travel Date -->
-                <div class="col-6">
-
-                    <div class="text-muted small mb-1">
-                        Travel Date
-                    </div>
-
-                    <div class="fw-semibold">
+                    <span class="trip-detail-value">
                         {% if trip.departure_date %}
                             {{ trip.departure_date }}
                         {% elif trip.departure_time %}
@@ -128,89 +90,144 @@
                         {% else %}
                             TBA
                         {% endif %}
-                    </div>
-
+                    </span>
                 </div>
 
-            </div>
+                <div class="trip-info-item">
+                    <span class="trip-detail-label">Departure Time</span>
 
-            <hr>
-
-            <!-- Additional Trip Information -->
-            <div class="row g-4 mb-4">
-
-                <!-- Crew -->
-                <div class="col-6">
-
-                    <div class="text-muted small mb-1">
-                        Crew
-                    </div>
-
-                    <div class="fw-semibold">
-                        {{ trip.crew_name or "Not yet assigned" }}
-                    </div>
-
-                </div>
-
-                <!-- Capacity -->
-                <div class="col-6">
-
-                    <div class="text-muted small mb-1">
-                        Capacity
-                    </div>
-
-                    <div class="fw-semibold">
-
-                        {% if trip.remaining_capacity is not none %}
-
-                            {{ trip.remaining_capacity }}
-                            seat(s) remaining
-                            of
-                            {{ trip.capacity }}
-
+                    <span class="trip-detail-value">
+                        {% if trip.departure_time %}
+                            {{ trip.departure_time }}
                         {% else %}
-
-                            Unknown
-
+                            TBA
                         {% endif %}
+                    </span>
+                </div>
 
+            </div>
+
+        </div>
+
+
+        <!-- Boat Information -->
+        <div class="trip-section">
+
+            <h2>Boat Information</h2>
+
+            <div class="trip-info-grid">
+
+                <div class="trip-info-item">
+
+                    <span class="trip-detail-label">Boat</span>
+
+                    <div class="trip-boat-value">
+
+                        <span>
+                            {% if trip.boat %}
+                                {{ trip.boat.name }}
+                            {% else %}
+                                Boat not assigned
+                            {% endif %}
+                        </span>
                     </div>
+
+                </div>
+
+                <div class="trip-info-item">
+
+                    <span class="trip-detail-label">Crew</span>
+
+                    <span class="trip-detail-value">
+                        {{ trip.crew_name or "Not yet assigned" }}
+                    </span>
 
                 </div>
 
             </div>
 
-            <!-- Delay -->
-            {% if trip.delay_reason %}
+        </div>
 
-            <div class="alert alert-warning py-2 small mb-3">
 
-                <strong>Delay:</strong>
-                {{ trip.delay_reason }}
+        <!-- Capacity -->
+        <div class="trip-section">
 
-                {% if trip.new_departure_time %}
-                    <br>
-                    <strong>New departure:</strong>
-                    {{ trip.new_departure_time }}
+            <h2>Availability</h2>
+
+            <div class="trip-capacity">
+
+                <div>
+                    <span class="trip-detail-label">Seats remaining</span>
+
+                    <span class="trip-capacity-value">
+                        {% if trip.remaining_capacity is not none %}
+                            {{ trip.remaining_capacity }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </span>
+                </div>
+
+                {% if trip.capacity is not none %}
+                    <span class="trip-capacity-total">
+                        of {{ trip.capacity }} seats
+                    </span>
                 {% endif %}
 
             </div>
 
-            {% endif %}
+        </div>
 
-            <!-- Cancellation -->
-            {% if trip.cancel_reason %}
 
-            <div class="alert alert-danger py-2 small mb-3">
+        <!-- Delay -->
+        {% if trip.delay_reason %}
 
-                <strong>Cancellation reason:</strong>
-                {{ trip.cancel_reason }}
+        <div class="trip-notice trip-notice-warning">
 
+            <div class="trip-notice-icon">
+                <i class="bi bi-exclamation-circle"></i>
             </div>
 
-            {% endif %}
+            <div>
+                <span class="trip-notice-title">Trip delayed</span>
 
-            <!-- Registration -->
+                <p>{{ trip.delay_reason }}</p>
+
+                {% if trip.new_departure_time %}
+                    <span class="trip-notice-detail">
+                        New departure: {{ trip.new_departure_time }}
+                    </span>
+                {% endif %}
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- Cancellation -->
+        {% if trip.cancel_reason %}
+
+        <div class="trip-notice trip-notice-danger">
+
+            <div class="trip-notice-icon">
+                <i class="bi bi-x-circle"></i>
+            </div>
+
+            <div>
+                <span class="trip-notice-title">Trip cancelled</span>
+
+                <p>{{ trip.cancel_reason }}</p>
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- Registration -->
+        <div class="trip-registration">
+
             {% if trip.accepts_registration %}
 
                 <a
@@ -218,24 +235,25 @@
                         'passenger.registration_form_page',
                         trip_id=trip.trip_id
                     ) }}"
-                    class="btn text-white w-100"
-                    style="background-color: var(--navy);"
+                    class="trip-register-button"
                 >
                     Register for this trip
+                    <i class="bi bi-arrow-right"></i>
                 </a>
 
             {% else %}
 
-                <div class="alert alert-secondary text-center mb-0">
-
+                <div class="trip-registration-unavailable">
                     {{ trip.notice }}
-
                 </div>
 
             {% endif %}
 
         </div>
-    </div>
+
+    </section>
+
+</div>
 
 </div>
 

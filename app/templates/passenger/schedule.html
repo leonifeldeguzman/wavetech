@@ -3,13 +3,40 @@
 {% block title %}Schedule{% endblock %}
 
 {% block content %}
-<div class="container py-5">
 
-  <h4 class="fw-bold mb-4">Available Trips</h4>
+<div class="schedule-page">
 
-  <div class="card border-0 shadow-sm mb-5 overflow-hidden">
+  <div class="schedule-container">
 
-    <!-- Table Header -->
+    <!-- Page Title -->
+    <h1 class="schedule-page-title">
+      Schedules &amp; Fares
+    </h1>
+
+
+    <!-- =========================================
+         DAILY TIMETABLE
+    ========================================== -->
+
+    <section class="schedule-info-card timetable-card">
+
+  <div class="schedule-card-header">
+
+    <div class="schedule-card-title">
+      <i class="bi bi-calendar3"></i>
+      <h2>Daily Timetable</h2>
+    </div>
+
+    <div class="schedule-route">
+      <span>Cabuyao Terminal</span>
+      <i class="bi bi-arrow-right"></i>
+      <span>Talim Island</span>
+    </div>
+
+  </div>
+
+  <div class="schedule-table-wrapper">
+
     <div class="schedule-header">
       <div>Boat Name</div>
       <div>Departure Time</div>
@@ -18,7 +45,6 @@
       <div>Status</div>
     </div>
 
-    <!-- Trip List -->
     <div class="list-group list-group-flush">
 
       {% for trip in trips %}
@@ -27,11 +53,11 @@
         href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}"
         class="list-group-item list-group-item-action py-3"
       >
-        <div class="row align-items-center g-3">
+        <div class="schedule-table-row">
 
           <!-- Boat Name -->
-          <div class="col-12 col-md">
-            <div class="fw-semibold">
+          <div>
+            <div>
               {% if trip.boat %}
                 {{ trip.boat.name }}
               {% else %}
@@ -41,17 +67,17 @@
           </div>
 
           <!-- Departure Time -->
-          <div class="col-6 col-md">
+          <div>
             <div>{{ trip.departure_time }}</div>
           </div>
 
           <!-- Travel Date -->
-          <div class="col-6 col-md">
+          <div>
             <div>{{ trip.departure_date }}</div>
           </div>
 
           <!-- Capacity -->
-          <div class="col-12 col-md">
+          <div>
 
             {% if trip.capacity is not none
                   and trip.capacity > 0
@@ -77,17 +103,11 @@
                 </div>
 
                 {% if remaining <= 0 %}
-
-                  <span class="capacity-text">
-                    Full
-                  </span>
-
+                  <span class="capacity-text">Full</span>
                 {% else %}
-
                   <span class="capacity-text">
                     {{ remaining }} seats left
                   </span>
-
                 {% endif %}
 
               </div>
@@ -103,7 +123,7 @@
           </div>
 
           <!-- Status -->
-          <div class="col-12 col-md">
+          <div>
             <span
               class="status-pill {{ trip.status|lower|replace(' ', '-') }}"
             >
@@ -123,22 +143,120 @@
       {% endfor %}
 
     </div>
+
   </div>
 
+</section>
 
-  <!-- Registration Status -->
-  <div class="card border-0 shadow-sm">
 
-    <div class="card-body">
+    <!-- =========================================
+         FARE INFORMATION
+    ========================================== -->
 
-      <h6 class="fw-bold mb-3">
-        Check Registration Status
-      </h6>
+    <section class="schedule-info-card fare-card">
+
+      <div class="schedule-card-title">
+        <i class="bi bi-ticket-perforated"></i>
+        <h2>Fare Information</h2>
+      </div>
+
+
+      <div class="fare-grid">
+
+        <div class="fare-item">
+          <span class="fare-type">Regular</span>
+          <strong>₱150</strong>
+        </div>
+
+        <div class="fare-item">
+          <span class="fare-type">Student</span>
+          <strong>₱120</strong>
+          <small>20% off</small>
+        </div>
+
+        <div class="fare-item">
+          <span class="fare-type">Senior</span>
+          <strong>₱120</strong>
+          <small>20% off</small>
+        </div>
+
+        <div class="fare-item">
+          <span class="fare-type">PWD</span>
+          <strong>₱120</strong>
+          <small>20% off</small>
+        </div>
+
+        <div class="fare-item">
+          <span class="fare-type">Child (3–7)</span>
+          <strong>₱75</strong>
+          <small>50% off</small>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =========================================
+         TRAVEL INFORMATION
+    ========================================== -->
+
+    <div class="schedule-info-grid">
+
+      <!-- Travel Duration -->
+      <section class="schedule-info-card travel-info-card">
+
+        <div class="schedule-card-title">
+          <i class="bi bi-clock"></i>
+          <h2>Travel Duration</h2>
+        </div>
+
+        <p class="schedule-info-main">
+          Estimated Travel Time:
+          <strong>1 hour and 30 minutes</strong>
+        </p>
+
+        <p class="schedule-info-note">
+          May vary depending on weather and sea conditions.
+        </p>
+
+      </section>
+
+
+      <!-- Terminal Hours -->
+      <section class="schedule-info-card travel-info-card">
+
+        <div class="schedule-card-title">
+          <i class="bi bi-hourglass-split"></i>
+          <h2>Terminal Hours</h2>
+        </div>
+
+        <p class="schedule-info-main">
+          Operating Hours:
+          <strong>8:00 AM - 5:00 PM</strong>
+        </p>
+
+        <p class="schedule-info-note">
+          Ticket counter opens 1 hour before first departure
+        </p>
+
+      </section>
+
+    </div>
+
+
+    <!-- =========================================
+         REGISTRATION STATUS
+    ========================================== -->
+
+    <section class="registration-status-card" id="registration-status">
+
+      <h2>Check Registration Status</h2>
 
       <form
         method="get"
         action="{{ url_for('passenger.registration_status_lookup') }}"
-        class="d-flex gap-2"
+        class="registration-status-form"
       >
 
         <input
@@ -151,17 +269,24 @@
 
         <button
           type="submit"
-          class="btn text-white"
-          style="background-color: var(--navy)"
+          class="registration-status-btn"
         >
           Check Status
         </button>
 
       </form>
 
-    </div>
+      {% if request.args.get("lookup_error") %}
+        <div class="registration-lookup-error">
+          <i class="bi bi-exclamation-circle"></i>
+          <span>{{ request.args.get("lookup_error") }}</span>
+        </div>
+      {% endif %}
+
+    </section>
 
   </div>
 
 </div>
+
 {% endblock %}
