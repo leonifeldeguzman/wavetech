@@ -5,95 +5,538 @@
 
 {% block content %}
 
-<div class="container py-4">
+<div class="passenger-home">
 
-    <!-- Announcements Header -->
-    <div class="mb-4">
-        <h4 class="fw-bold mb-1">Announcements</h4>
-        <p class="text-muted mb-0">
-            Latest announcements and safety alerts
-        </p>
-    </div>
+    <!-- =====================================================
+         HERO
+         ===================================================== -->
 
-    <!-- Announcements List -->
-    {% for announcement in announcements %}
+    <section class="home-hero">
 
-    <div class="card border-0 shadow-sm mb-3
-                {% if announcement.type == 'Safety Alert' %}
-                    passenger-safety-alert
-                {% endif %}">
+        <img
+            src="{{ url_for('static', filename='images/laguna_lake.jpg') }}"
+            alt="Laguna de Bay"
+            class="home-hero-image"
+        >
 
-        <div class="card-body p-4">
+        <div class="home-hero-overlay"></div>
 
-            <div class="d-flex align-items-start gap-3">
+        <div class="home-hero-content">
 
-                <!-- Icon -->
-                <div class="passenger-announcement-icon flex-shrink-0">
-                    {% if announcement.type == 'Safety Alert' %}
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                    {% else %}
-                        <i class="bi bi-info-circle-fill"></i>
-                    {% endif %}
+            <h1>
+                Your Journey<br>
+                Starts Here
+            </h1>
+
+            <p>
+                Real-time updates, travel info, and<br>
+                everything you need for a smooth and safe trip.
+            </p>
+
+            <div class="home-hero-actions">
+
+                <a
+                    href="{{ url_for('passenger.register_page') }}"
+                    class="home-primary-btn"
+                >
+                    Pre-Register Now
+                </a>
+
+                <a
+                    href="#announcements"
+                    class="home-secondary-btn"
+                >
+                    View Notices
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         ENVIRONMENT SUMMARY
+         ===================================================== -->
+
+    <section class="home-environment-card">
+
+        <!-- WEATHER -->
+
+        <div class="home-environment-item">
+
+            <div class="home-environment-icon">
+                <i class="bi bi-sun"></i>
+            </div>
+
+            <div>
+                <div class="home-environment-label">
+                    Weather
                 </div>
 
-                <!-- Announcement Content -->
-                <div class="flex-grow-1">
+                {% if windy_status in ("live", "cached") and windy_reading %}
 
-                    <!-- Title + Type -->
-                    <div class="d-flex justify-content-between align-items-start gap-3">
-
-                        <div>
-                            <h6 class="fw-bold mb-1">
-                                {{ announcement.title }}
-                            </h6>
-
-                            {% if announcement.published_at %}
-                            <div class="text-muted small">
-                                {{ announcement.published_at | ph_time }}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <span class="announcement-type flex-shrink-0">
-                            {{ announcement.type }}
-                        </span>
-
+                    <div class="home-environment-value">
+                        {{ windy_reading.weather_condition or "Unavailable" }}
                     </div>
 
-                    <!-- Message -->
-                    <div class="mt-3">
-                        <p class="mb-0" style="white-space: pre-line;">
-    {{ announcement.content }}
-</p>
+                    <div class="home-environment-subvalue">
+                        {% if windy_reading.temperature_c is not none %}
+                            {{ windy_reading.temperature_c }} &deg;C
+                        {% else %}
+                            Temperature unavailable
+                        {% endif %}
                     </div>
 
+                {% else %}
+
+                    <div class="home-environment-value">
+                        Unavailable
+                    </div>
+
+                    <div class="home-environment-subvalue">
+                        No recent data
+                    </div>
+
+                {% endif %}
+            </div>
+
+        </div>
+
+
+        <!-- WIND -->
+
+        <div class="home-environment-item">
+
+            <div class="home-environment-icon">
+                <i class="bi bi-wind"></i>
+            </div>
+
+            <div>
+                <div class="home-environment-label">
+                    Wind Speed
+                </div>
+
+                {% if windy_status in ("live", "cached") and windy_reading %}
+
+                    <div class="home-environment-value">
+                        {% if windy_reading.wind_speed_kmh is not none %}
+                            {{ windy_reading.wind_speed_kmh }} km/h
+                        {% else %}
+                            Unavailable
+                        {% endif %}
+                    </div>
+
+                    <div class="home-environment-subvalue">
+                        {{ windy_reading.wind_direction or "Direction unavailable" }}
+                        Direction
+                    </div>
+
+                {% else %}
+
+                    <div class="home-environment-value">
+                        Unavailable
+                    </div>
+
+                    <div class="home-environment-subvalue">
+                        No recent data
+                    </div>
+
+                {% endif %}
+            </div>
+
+        </div>
+
+
+        <!-- WAVE -->
+
+        <div class="home-environment-item">
+
+            <div class="home-environment-icon">
+                <i class="bi bi-water"></i>
+            </div>
+
+            <div>
+                <div class="home-environment-label">
+                    Wave Height
+                </div>
+
+                {% if latest and latest.wave_height_m is not none %}
+
+                    <div class="home-environment-value">
+                        {{ latest.wave_height_m }} m
+                    </div>
+
+                    <div class="home-environment-subvalue">
+                        Current reading
+                    </div>
+
+                {% else %}
+
+                    <div class="home-environment-value">
+                        No Data
+                    </div>
+
+                    <div class="home-environment-subvalue">
+                        Not yet recorded
+                    </div>
+
+                {% endif %}
+            </div>
+
+        </div>
+
+
+        <!-- WATER -->
+
+        <div class="home-environment-item">
+
+            <div class="home-environment-icon">
+                <i class="bi bi-droplet"></i>
+            </div>
+
+            <div>
+                <div class="home-environment-label">
+                    Water Level
+                </div>
+
+                {% if llda_status in ("live", "cached") and llda_reading %}
+
+                    <div class="home-environment-value">
+                        {{ llda_reading.water_level_m }} m
+                    </div>
+
+                    <div class="home-environment-subvalue">
+                        {{ llda_status|capitalize }}
+                    </div>
+
+                {% else %}
+
+                    <div class="home-environment-value">
+                        Unavailable
+                    </div>
+
+                    <div class="home-environment-subvalue">
+                        No recent data
+                    </div>
+
+                {% endif %}
+            </div>
+
+        </div>
+
+
+        <!-- SAFETY -->
+
+        <div class="home-environment-item">
+
+            <div class="home-environment-icon">
+                <i class="bi bi-shield-check"></i>
+            </div>
+
+            <div>
+                <div class="home-environment-label">
+                    Safety
+                </div>
+
+                <div class="home-safety-value {{ safety_status|lower }}">
+                    {{ safety_status }}
+                </div>
+
+                <div class="home-environment-subvalue">
+                    {% if safety_status == "SAFE" %}
+                        All clear
+                    {% elif safety_status == "CAUTION" %}
+                        Exercise caution
+                    {% elif safety_status == "UNSAFE" %}
+                        Travel not recommended
+                    {% else %}
+                        Manual verification
+                    {% endif %}
                 </div>
 
             </div>
 
         </div>
-    </div>
 
-    {% else %}
+    </section>
 
-    <!-- Empty State -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-body text-center py-5">
 
-            <i class="bi bi-megaphone fs-1 text-muted"></i>
+    <!-- =====================================================
+         MAIN CONTENT
+         ===================================================== -->
 
-            <h6 class="fw-bold mt-3 mb-1">
-                No announcements
-            </h6>
+    <main class="home-content">
 
-            <p class="text-muted small mb-0">
-                There are currently no active announcements or safety alerts.
-            </p>
 
-        </div>
-    </div>
+        <!-- CURRENT TRIP + ENVIRONMENTAL STATUS -->
 
-    {% endfor %}
+        <section class="home-overview-grid">
+
+            <div class="home-card current-trip-card">
+
+                <div class="home-card-heading">
+
+                    <div class="home-card-title">
+                        <i class="bi bi-send-fill"></i>
+                        <h2>Current Trip Overview</h2>
+                    </div>
+
+                    {% if current_trip %}
+                        <span class="home-trip-status {{ current_trip.status|lower|replace(' ', '-') }}">
+                            {{ current_trip.status }}
+                        </span>
+                    {% endif %}
+
+                </div>
+
+
+                {% if current_trip %}
+
+
+                    <div class="home-trip-main">
+
+                        <div class="home-trip-boat">
+                            <span>Boat</span>
+
+                            <div>
+                                {% if current_trip.boat %}
+                                    {{ current_trip.boat.name }}
+                                {% else %}
+                                    Boat pending
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="home-trip-route">
+                            <span>Origin</span>
+
+                            <div>
+                                {{ current_trip.route_origin }}
+                            </div>
+                        </div>
+
+                        <div class="home-trip-route">
+                            <span>Destination</span>
+
+                            <div>
+                                {{ current_trip.route_destination }}
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <div class="home-trip-grid">
+
+                        <div>
+                            <div>
+                                <span>Travel Date</span>
+                                <strong>{{ current_trip_date }}</strong>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span>Departure</span>
+                            <strong>{{ current_trip_time }}</strong>
+                        </div>
+
+                    </div>
+
+                     <div class="home-trip-footer">
+
+                        <div class="home-trip-update-note">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            Recently updated · {{ current_trip.updated_at | ph_time }}
+                        </div>
+
+                        <a
+                            href="{{ url_for('passenger.trip_detail_page', trip_id=current_trip.id) }}"
+                            class="home-trip-details-btn"
+                        >
+                            View Trip Details
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="home-trip-empty">
+
+                        <i class="bi bi-calendar-x"></i>
+
+                        <strong>No upcoming trip schedule</strong>
+
+                        <span>
+                            There are currently no available trips.
+                        </span>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- ENVIRONMENTAL STATUS -->
+
+            <div class="home-card environmental-status-card">
+
+                <div class="home-card-heading">
+
+                    <div class="home-card-title">
+                        <i class="fa-solid fa-leaf environmental-status-icon"></i>
+                        <h2>Environmental Status</h2>
+                    </div>
+
+                </div>
+
+                <div class="home-environment-status">
+
+                    <div class="home-status-main {{ safety_status|lower }}">
+                        {% if safety_status == "SAFE" %}
+                            Good Condition
+                        {% elif safety_status == "CAUTION" %}
+                            Exercise Caution
+                        {% elif safety_status == "UNSAFE" %}
+                            Unsafe Conditions
+                        {% else %}
+                            Data Unavailable
+                        {% endif %}
+                    </div>
+
+                    <div class="home-status-updated">
+
+                        {% if windy_reading %}
+                            Updated {{ windy_reading.retrieved_at | ph_time }}
+                        {% elif llda_reading %}
+                            Updated {{ llda_reading.retrieved_at | ph_time }}
+                        {% else %}
+                            No recent update
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+                <a
+                    href="{{ url_for('passenger.schedule') }}"
+                    class="home-schedule-btn"
+                >
+                    View Schedule
+                </a>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             ANNOUNCEMENTS
+             ===================================================== -->
+
+        <section
+            class="home-card announcements-card"
+            id="announcements"
+        >
+
+            <div class="home-card-heading">
+
+                <div class="home-card-title">
+                    <i class="bi bi-megaphone"></i>
+                    <h2>Latest Announcements</h2>
+                </div>
+
+            </div>
+
+
+            <div class="home-announcements">
+
+                {% for announcement in announcements %}
+
+                <div class="home-announcement
+                    {% if announcement.type == 'Safety Alert' %}
+                        safety
+                    {% endif %}
+                ">
+
+                    <div class="home-announcement-icon">
+
+                        {% if announcement.type == 'Safety Alert' %}
+                            <i class="bi bi-exclamation-triangle"></i>
+                        {% else %}
+                            <i class="bi bi-bell"></i>
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="home-announcement-content">
+
+                        <div class="home-announcement-header">
+
+                            <div>
+
+                                <h3>
+                                    {{ announcement.title }}
+                                </h3>
+
+                                {% if announcement.published_at %}
+                                    <span>
+                                        Posted:
+                                        {{ announcement.published_at | ph_time }}
+                                    </span>
+                                {% endif %}
+
+                            </div>
+
+                            <span class="home-announcement-type">
+                                {{ announcement.type }}
+                            </span>
+
+                        </div>
+
+
+                        <p>
+                            {{ announcement.content }}
+                        </p>
+
+                    </div>
+
+                </div>
+
+                {% else %}
+
+                <div class="home-announcement-empty">
+
+                    <i class="bi bi-megaphone"></i>
+
+                    <h3>No announcements</h3>
+
+                    <p>
+                        There are currently no active announcements or safety alerts.
+                    </p>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            <a
+                href="{{ url_for('passenger.announcements') }}"
+                class="home-view-announcements"
+            >
+                <i class="bi bi-arrow-right"></i>
+                View All Announcements
+            </a>
+
+        </section>
+
+    </main>
 
 </div>
 

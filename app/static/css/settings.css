@@ -1138,7 +1138,7 @@ text-decoration: none;
 }
 
 #settings-page .activity-heading a {
-text-decoration: underline;
+text-decoration: none !important;
 }
 
 #settings-page .activity-table-wrapper {

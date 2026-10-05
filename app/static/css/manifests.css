@@ -498,6 +498,11 @@
 .manifest-modal-header {
     background-color: #0f1b3c;
     border-bottom: 0;
+    color: #ffffff;
+}
+
+.manifest-modal-header .modal-title {
+    color: #ffffff;
 }
 
 .manifest-time-input {

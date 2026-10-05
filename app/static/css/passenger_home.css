@@ -1,0 +1,949 @@
+/* =========================================================
+   WAVETECH
+   PASSENGER HOME PAGE
+   ========================================================= */
+
+.passenger-home {
+    min-height: 100vh;
+    background: #f5f6f8;
+    color: #111111;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.home-hero {
+    position: relative;
+    min-height: 420px;
+    overflow: hidden;
+}
+
+.home-hero-image {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+    object-position: center;
+}
+
+.home-hero-overlay {
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(8, 29, 62, 0.68) 0%,
+            rgba(8, 29, 62, 0.42) 42%,
+            rgba(8, 29, 62, 0.05) 75%,
+            rgba(8, 29, 62, 0) 100%
+        );
+}
+
+.home-hero-content {
+    position: relative;
+    z-index: 2;
+
+    width: 100%;
+    max-width: 1240px;
+
+    margin: 0 auto;
+    padding: 68px 40px 105px;
+}
+
+.home-hero-content h1 {
+    margin: 0 0 48px;
+
+    color: #ffffff;
+
+    font-size: clamp(2.1rem, 4vw, 3rem);
+    font-weight: 700;
+    line-height: 1.12;
+}
+
+.home-hero-content p {
+    margin: 0 0 25px;
+
+    color: #ffffff;
+
+    font-size: 0.98rem;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.home-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.home-primary-btn,
+.home-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 42px;
+    padding: 9px 18px;
+
+    border-radius: 7px;
+
+    font-size: 0.88rem;
+    text-decoration: none;
+
+    transition: 0.2s ease;
+}
+
+.home-primary-btn {
+    background: #0f1b3c;
+    color: #ffffff;
+}
+
+.home-primary-btn:hover {
+    background: #09132f;
+    color: #ffffff;
+}
+
+.home-secondary-btn {
+    border: 1px solid rgba(255, 255, 255, 0.8);
+
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+
+    backdrop-filter: blur(3px);
+}
+
+.home-secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+
+
+/* =========================================================
+   ENVIRONMENT SUMMARY
+   ========================================================= */
+
+.home-environment-card {
+    position: relative;
+    z-index: 5;
+
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    max-width: 1120px;
+
+    margin: -50px auto 0;
+
+    padding: 24px 18px;
+
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 8px 25px rgba(15, 32, 55, 0.12);
+}
+
+.home-environment-item {
+    display: flex;
+    align-items: flex-start;
+
+    min-width: 0;
+
+    padding: 0 24px;
+
+    gap: 12px;
+
+    border-right: 1px solid #e5e8ed;
+}
+
+.home-environment-item:last-child {
+    border-right: 0;
+}
+
+.home-environment-icon {
+    flex-shrink: 0;
+
+    color: #4d9cff;
+
+    font-size: 1.15rem;
+}
+
+.home-environment-label {
+    margin-bottom: 7px;
+
+    color: #666666;
+
+    font-size: 0.8rem;
+}
+
+.home-environment-value {
+    color: #0f3568;
+
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.home-environment-subvalue {
+    margin-top: 4px;
+
+    color: #777777;
+
+    font-size: 0.75rem;
+}
+
+.home-safety-value.safe {
+    color: #0c9f47;
+}
+
+.home-safety-value.caution {
+    color: #b77900;
+}
+
+.home-safety-value.unsafe {
+    color: #d92d20;
+}
+
+.home-safety-value.unavailable {
+    color: #777777;
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+   ========================================================= */
+
+.home-content {
+    width: 100%;
+    max-width: 1120px;
+
+    margin: 66px auto 0;
+
+    padding: 0 20px;
+}
+
+.home-overview-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+
+    gap: 24px;
+
+    margin-bottom: 65px;
+
+    align-items: stretch;
+}
+
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.home-card {
+    width: 100%;
+    max-width: 100%;
+
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    box-sizing: border-box;
+
+    box-shadow:
+        0 8px 25px rgba(15, 32, 55, 0.12);
+}
+
+
+/* =========================================================
+   CURRENT TRIP
+   ========================================================= */
+
+.current-trip-card {
+    padding: 24px 30px;
+
+    border: 1px solid #8da2c0;
+}
+
+.environmental-status-card {
+    display: flex;
+    flex-direction: column;
+    
+    padding: 39px 30px;
+}
+
+/* =========================================================
+   CURRENT TRIP OVERVIEW
+   ========================================================= */
+
+.home-trip-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 5px 12px;
+
+    border: 1px solid currentColor;
+    border-radius: 999px;
+
+    font-size: 0.74rem;
+    font-weight: 500;
+
+    line-height: 1;
+}
+
+.home-trip-status.open {
+    color: #16803c;
+    background: #f0fdf4;
+    border-color: #86d6a1;
+}
+
+.home-trip-status.delayed {
+    color: #a16207;
+    background: #fffbeb;
+    border-color: #e9c46a;
+}
+
+.home-trip-status.cancelled {
+    color: #b42318;
+    background: #fff5f5;
+    border-color: #e5a3a3;
+}
+
+
+.home-trip-update-note {
+    display: flex;
+    align-items: center;
+
+    gap: 5px;
+
+    margin: 0;
+
+    color: #8a94a3;
+    margin-top: 6px;
+
+    font-size: 0.72rem;
+    font-weight: 400;
+}
+
+.home-trip-update-note i {
+    color: #4d9cff;
+    font-size: 0.75rem;
+}
+
+.home-trip-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-top: 18px;
+}
+
+.home-trip-main {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 10px;
+
+    margin-bottom: 10px;
+    padding-bottom: 20px;
+}
+
+
+.home-trip-main > div {
+    display: flex;
+    flex-direction: column;
+
+    gap: 6px;
+}
+
+
+.home-trip-main span,
+.home-trip-grid span {
+    color: #777777;
+
+    font-size: 0.76rem;
+}
+
+
+.home-trip-main strong {
+    color: #171717;
+
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+
+.home-trip-route strong {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+}
+
+
+.home-trip-route strong i {
+    color: #9aa3ad;
+    font-size: 0.78rem;
+}
+
+
+.home-trip-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 25px;
+}
+
+
+.home-trip-grid > div {
+    display: flex;
+    flex-direction: column;
+
+    gap: 6px;
+}
+
+
+.home-trip-grid > div:first-child {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+
+.home-trip-grid > div:first-child > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+
+.home-trip-grid strong {
+    color: #171717;
+
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+
+.home-trip-status-text.open {
+    color: #16803c;
+}
+
+.home-trip-status-text.delayed {
+    color: #a16207;
+}
+
+.home-trip-status-text.cancelled {
+    color: #b42318;
+}
+
+
+.home-trip-details-btn {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 7px;
+
+    margin-top: 0;
+
+    color: #315a7d;
+
+    font-size: 0.8rem;
+    font-weight: 500;
+
+    text-decoration: none;
+}
+
+.home-trip-details-btn:hover {
+    color: #0f1b3c;
+}
+
+
+.home-trip-empty {
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    min-height: 130px;
+
+    text-align: center;
+}
+
+
+.home-trip-empty i {
+    margin-bottom: 10px;
+
+    color: #9aa3ad;
+
+    font-size: 1.5rem;
+}
+
+
+.home-trip-empty strong {
+    margin-bottom: 4px;
+
+    color: #333333;
+
+    font-size: 0.88rem;
+}
+
+
+.home-trip-empty span {
+    color: #888888;
+
+    font-size: 0.76rem;
+}
+
+/* =========================================================
+   CARD HEADINGS
+   ========================================================= */
+
+.home-card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-bottom: 28px;
+}
+
+.home-card-title {
+    display: flex;
+    align-items: center;
+
+    gap: 13px;
+    
+}
+
+.home-card-title i {
+    color: #3f92ff;
+
+    font-size: 1.15rem;
+}
+
+.home-card-title h2 {
+    margin: 0;
+
+    color: #123b6d;
+
+    font-size: 0.98rem;
+    font-weight: 700;
+}
+
+.home-status-badge {
+    padding: 5px 15px;
+
+    border-radius: 999px;
+
+    background: #e0f3df;
+    color: #0d9a48;
+
+    font-size: 0.76rem;
+}
+
+
+/* =========================================================
+   TRIP DETAILS
+   ========================================================= */
+
+.home-trip-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    column-gap: 40px;
+    row-gap: 27px;
+}
+
+.home-trip-grid > div {
+    display: flex;
+    flex-direction: column;
+
+    gap: 7px;
+}
+
+.home-trip-grid span {
+    color: #777777;
+
+    font-size: 0.8rem;
+}
+
+.home-trip-grid strong {
+    color: #171717;
+
+    font-size: 0.91rem;
+    font-weight: 500;
+}
+
+
+/* =========================================================
+   ENVIRONMENTAL STATUS
+   ========================================================= */
+
+.home-environment-status {
+    flex: 1;
+}
+
+.home-status-main {
+    margin-bottom: 7px;
+    margin-left: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.home-status-main.safe {
+    color: #0c9f47;
+}
+
+.home-status-main.caution {
+    color: #b77900;
+}
+
+.home-status-main.unsafe {
+    color: #d92d20;
+}
+
+.home-status-main.unavailable {
+    color: #777777;
+}
+
+.home-status-updated {
+    color: #777777;
+    margin-left: 12px;
+    font-size: 0.8rem;
+}
+
+.home-schedule-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+
+    min-height: 38px;
+
+    margin-top: auto;
+
+    border-radius: 6px;
+
+    background: #f0f7ff;
+    color: #315a7d;
+
+    font-size: 0.84rem;
+    text-decoration: none;
+}
+
+.home-schedule-btn:hover {
+    background: #e5f1ff;
+    color: #244b70;
+}
+
+
+/* =========================================================
+   ANNOUNCEMENTS
+   ========================================================= */
+
+.announcements-card {
+    padding: 45px 55px 55px;
+    margin-bottom: 50px;
+}
+
+.announcements-page {
+    margin-top: 45px;
+    margin-bottom: 60px;
+}
+
+.announcements-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    margin-bottom: 18px;
+
+    color: #6b7280;
+
+    font-size: 0.84rem;
+    text-decoration: none;
+
+    transition: color 0.2s ease;
+}
+
+.announcements-back-link:hover {
+    color: var(--navy);
+}
+
+.home-announcements {
+    display: flex;
+    flex-direction: column;
+
+    gap: 24px;
+}
+
+.home-announcement {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 18px;
+
+    padding: 20px 22px;
+
+    border: 1px solid #bfd2e8;
+    border-radius: 8px;
+
+    background: #f7fbff;
+}
+
+.home-announcement-icon {
+    flex-shrink: 0;
+
+    padding-top: 2px;
+
+    color: #555555;
+
+    font-size: 1.15rem;
+}
+
+.home-announcement.safety .home-announcement-icon {
+    color: #ef4444;
+}
+
+.home-announcement-content {
+    flex: 1;
+
+    min-width: 0;
+}
+
+.home-announcement-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 20px;
+}
+
+.home-announcement-header h3 {
+    margin: 0 0 7px;
+
+    color: #171717;
+
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.home-announcement-header span {
+    color: #777777;
+
+    font-size: 0.76rem;
+}
+
+.home-announcement-type {
+    flex-shrink: 0;
+
+    padding: 5px 11px;
+
+    border-radius: 4px;
+
+    background: #0f1b3c;
+    color: #ffffff !important;
+
+    font-size: 0.72rem !important;
+}
+
+.home-announcement.safety .home-announcement-type {
+    background: #ffe8e8;
+    color: #d92d20 !important;
+}
+
+.home-announcement-content p {
+    margin: 13px 0 0;
+
+    color: #222222;
+
+    font-size: 0.84rem;
+    line-height: 1.55;
+
+    white-space: pre-line;
+}
+
+.home-announcement-empty {
+    padding: 40px 20px;
+
+    text-align: center;
+}
+
+.home-announcement-empty i {
+    color: #9aa3ad;
+
+    font-size: 2rem;
+}
+
+.home-announcement-empty h3 {
+    margin: 12px 0 5px;
+
+    font-size: 0.95rem;
+}
+
+.home-announcement-empty p {
+    margin: 0;
+
+    color: #777777;
+
+    font-size: 0.8rem;
+}
+
+.home-view-announcements {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    margin-top: 28px;
+
+    color: #3f92ff;
+
+    font-size: 0.84rem;
+    text-decoration: none;
+}
+
+.home-view-announcements:hover {
+    color: #0f1b3c;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.home-footer {
+    padding: 48px 20px 30px;
+
+    color: #888888;
+
+    font-size: 0.78rem;
+
+    text-align: center;
+}
+
+.environmental-status-icon {
+    color: #0c9f47;
+    font-size: 1.15rem;
+    margin-left: 12px;
+}
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 991.98px) {
+
+    .home-environment-card {
+        grid-template-columns: repeat(2, 1fr);
+
+        gap: 22px;
+    }
+
+    .home-environment-item {
+        border-right: 0;
+    }
+
+    .home-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+@media (max-width: 767.98px) {
+
+    .home-hero {
+        min-height: 460px;
+    }
+
+    .home-hero-content {
+        padding: 55px 25px 100px;
+    }
+
+    .home-hero-content h1 {
+        margin-bottom: 30px;
+
+        font-size: 2rem;
+    }
+
+    .home-hero-content p br {
+        display: none;
+    }
+
+    .home-hero-actions {
+        flex-wrap: wrap;
+    }
+
+    .home-environment-card {
+        grid-template-columns: 1fr;
+
+        width: calc(100% - 30px);
+
+        margin-top: -35px;
+
+        padding: 20px;
+    }
+
+    .home-environment-item {
+        padding: 12px 5px;
+
+        border-bottom: 1px solid #e5e8ed;
+    }
+
+    .home-environment-item:last-child {
+        border-bottom: 0;
+    }
+
+    .home-content {
+        margin-top: 40px;
+
+        padding: 0 15px;
+    }
+
+    .home-overview-grid {
+        gap: 20px;
+
+        margin-bottom: 35px;
+    }
+
+    .current-trip-card,
+    .environmental-status-card {
+        padding: 25px 20px;
+    }
+
+    .home-trip-grid {
+        grid-template-columns: 1fr 1fr;
+
+        gap: 22px;
+    }
+
+    .announcements-card {
+        padding: 28px 20px 24px;
+    }
+
+    .home-announcement {
+        padding: 17px;
+    }
+
+    .home-announcement-header {
+        flex-direction: column;
+
+        gap: 10px;
+    }
+
+    .home-announcement-type {
+        align-self: flex-start;
+    }
+
+}

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.extensions import db
 
 class Trip(db.Model):
@@ -7,6 +9,13 @@ class Trip(db.Model):
     boat_id = db.Column(db.Integer, db.ForeignKey("boats.id"), nullable=True)
     crew_name = db.Column(db.String(100), nullable=True)
 
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+    
     departure_time = db.Column(db.DateTime, nullable=False)
     route_origin = db.Column(db.String(100), nullable=False, default="Cabuyao Terminal")
     route_destination = db.Column(db.String(100), nullable=False, default="Talim Island")

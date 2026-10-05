@@ -285,8 +285,68 @@
 
     </section>
 
+    <!-- Status result (Step 3 card is loaded here) -->
+    <div
+      id="registration-status-result"
+      class="registration-status-result"
+      aria-live="polite"
+    ></div>
+
   </div>
 
 </div>
+
+<script>
+(function () {
+
+  const form = document.querySelector(".registration-status-form");
+  const result = document.getElementById("registration-status-result");
+
+  if (!form || !result || !window.fetch) return;
+
+  form.addEventListener("submit", function (event) {
+
+    event.preventDefault();
+
+    const url = new URL(form.action, window.location.href);
+    url.searchParams.set(
+      "reference_code",
+      form.elements["reference_code"].value.trim()
+    );
+
+    /* Fall back to a normal page load if anything unexpected happens */
+    function fallback() {
+      window.location.href = url.toString();
+    }
+
+    fetch(url.toString(), { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (response) {
+        if (!response.ok || response.redirected) {
+          fallback();
+          return null;
+        }
+        return response.text();
+      })
+      .then(function (html) {
+
+        if (html === null) return;
+
+        /* A full page came back instead of the result card */
+        if (/<html[\s>]/i.test(html)) {
+          fallback();
+          return;
+        }
+
+        const oldError = document.querySelector(".registration-lookup-error");
+        if (oldError) oldError.remove();
+
+        result.innerHTML = html;
+        result.scrollIntoView({ behavior: "smooth", block: "start" });
+      })
+      .catch(fallback);
+  });
+
+})();
+</script>
 
 {% endblock %}

@@ -1,73 +1,127 @@
-{% if registration %}
+{% extends "passenger/base.html" %}
 
-    <div class="success-card">
+{% block title %}Registration Status{% endblock %}
 
-        <div class="success-icon">
-            <i class="bi bi-check-lg"></i>
-        </div>
+{% block content %}
 
-        <h1>Registration Successful</h1>
+<div class="schedule-page">
 
-        <p class="success-message">
-            Your registration has been submitted successfully.
-        </p>
+    <div class="registration-panel registration-visible">
 
-        <div class="success-details">
+        <div class="registration-step-content">
 
-            <div class="success-detail-item">
-                <span class="success-detail-label">Reference Code</span>
-                <strong>{{ registration.reference_code }}</strong>
-            </div>
+            {# Status comes from the database; normalize it, then pick the view #}
+            {% set raw_status = (registration.status or '')|trim|lower|replace(' ', '-')|replace('_', '-') %}
+            {% set state = 'pending' if raw_status.startswith('pending')
+                           else (raw_status if raw_status in ['approved', 'rejected'] else 'other') %}
 
-            <div class="success-detail-item">
-                <span class="success-detail-label">Trip</span>
+            {% set view = {
+                'pending': {
+                    'icon': 'bi-check-lg',
+                    'icon_class': '',
+                    'heading': 'Registration Successful',
+                    'message': 'Your registration has been submitted and is currently awaiting verification.'
+                },
+                'approved': {
+                    'icon': 'bi-check-lg',
+                    'icon_class': '',
+                    'heading': 'Registration Approved',
+                    'message': 'Your registration has been approved.'
+                },
+                'rejected': {
+                    'icon': 'bi-x-lg',
+                    'icon_class': 'success-icon-rejected',
+                    'heading': 'Registration Rejected',
+                    'message': 'Your registration has been rejected.'
+                },
+                'other': {
+                    'icon': 'bi-info-circle',
+                    'icon_class': 'success-icon-neutral',
+                    'heading': 'Registration Status',
+                    'message': 'Here are the details of your registration.'
+                }
+            }[state] %}
 
-                {% if trip %}
-                    <strong>
-                        {{ trip.boat_name if trip.boat_name else "Boat pending" }}
-                    </strong>
-                {% else %}
-                    <strong>Trip details are no longer available.</strong>
-                {% endif %}
-            </div>
+            <div class="registration-card success-card">
 
-            <div class="success-detail-item">
-                <span class="success-detail-label">Passenger Details</span>
+                <div class="success-icon {{ view.icon_class }}">
+                    <i class="bi {{ view.icon }}"></i>
+                </div>
 
-                <strong>
-                    {{ registration.first_name }} {{ registration.last_name }}
-                </strong>
+                <h3>{{ view.heading }}</h3>
+
+                <p class="success-message">
+                    {{ view.message }}
+                </p>
+
+                <div class="reference-box">
+                    <span>Reference Code</span>
+                    <strong>{{ registration.reference_code }}</strong>
+                </div>
+
+                <div class="registration-details-card">
+
+                    <div class="registration-detail-row">
+                        <span>Passenger Name</span>
+                        <strong>
+                            {{ registration.first_name }} {{ registration.last_name }}
+                        </strong>
+                    </div>
+
+                    <div class="registration-detail-row">
+                        <span>Trip</span>
+                        <strong>
+                            {% if trip %}
+                                {{ trip.route_origin }} → {{ trip.route_destination }}
+                            {% else %}
+                                Trip details unavailable
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="registration-detail-row">
+                        <span>Schedule</span>
+                        <strong>
+                            {{ trip.departure_time if trip and trip.departure_time else "—" }}
+                        </strong>
+                    </div>
+
+                    <div class="registration-detail-row">
+                        <span>Date</span>
+                        <strong>
+                            {{ trip.departure_date if trip and trip.departure_date else "—" }}
+                        </strong>
+                    </div>
+
+                    <div class="registration-detail-row">
+                        <span>Status</span>
+                        <strong class="registration-status status-{{ state if state != 'other' else raw_status }}">
+                            {{ status_label or registration.status }}
+                        </strong>
+                    </div>
+
+                </div>
+
+                <div class="registration-important">
+                    <strong>IMPORTANT:</strong>
+                    Present this Reference Code to the operator before boarding.
+                </div>
+
+                <div class="success-actions">
+                    <a
+                        href="{{ url_for('passenger.schedule') }}"
+                        class="success-btn"
+                    >
+                        Back to Schedule
+                    </a>
+                </div>
+
             </div>
 
         </div>
 
     </div>
 
-{% else %}
+</div>
 
-    <div class="success-card registration-not-found-card">
-
-        <div class="success-icon registration-not-found-icon">
-            <i class="bi bi-search"></i>
-        </div>
-
-        <h1>Registration Not Found</h1>
-
-        <p class="success-message">
-            We couldn't find a registration with the reference code you entered.
-        </p>
-
-        <p class="registration-not-found-note">
-            Please check your reference code and try again.
-        </p>
-
-        <a
-            href="{{ url_for('passenger.schedule') }}"
-            class="success-btn"
-        >
-            Back to Schedule
-        </a>
-
-    </div>
-
-{% endif %}
+{% endblock %}

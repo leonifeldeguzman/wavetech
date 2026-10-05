@@ -268,20 +268,27 @@
 /* Selected trip information */
 .custom-trip-selected {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
     min-width: 0;
+    gap: 20px;
 }
 
 .selected-trip-main {
     color: #111827;
     font-size: 0.9rem;
     font-weight: 500;
+    white-space: nowrap;
 }
 
+
 .selected-trip-crew {
+    margin-left: auto;
+
     color: #6b7280;
     font-size: 0.78rem;
+    white-space: nowrap;
 }
 
 

@@ -209,6 +209,19 @@ EMPTY STATE
     text-align: center !important;
 }
 
+
+/* =========================================================
+BUTTON
+========================================================= */
+.activity-back-settings {
+    color: #666666;
+    font-size: 0.82rem;
+    text-decoration: none;
+}
+
+.activity-back-settings:hover {
+    color: #0f1b3c;
+}
 /* =========================================================
 RESPONSIVE
 ========================================================= */

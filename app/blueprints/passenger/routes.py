@@ -30,7 +30,8 @@ from app.utils.api_responses import success_response, error_response
 from app.models.announcement import Announcement
 from app.services import semaphore_service, unisms_service
 from app.services.activity_log_service import log_action, ACTION_REGISTRATION_SMS_SENT
-
+from app.models.environmental_reading import EnvironmentalReading
+from app.services import monitoring_service
 # ---------------------------------------------------------------------------
 # Business rules (documented here since they are not fully explicit in the
 # existing manifests blueprint — see ASSUMPTIONS in the final report).
@@ -151,7 +152,14 @@ def _serialize_trip_detail(trip):
         "crew_name": trip.crew_name,
         "delay_reason": trip.delay_reason,
         "cancel_reason": trip.cancel_reason,
-        "new_departure_time": trip.new_departure_time.isoformat() if trip.new_departure_time else None,
+        "new_departure_time": (
+            f"{trip.new_departure_time.strftime('%B')} "
+            f"{trip.new_departure_time.day}, "
+            f"{trip.new_departure_time.strftime('%Y')} "
+            f"{trip.new_departure_time.strftime('%I:%M %p').lstrip('0')}"
+            if trip.new_departure_time
+            else None
+        ),
         "departed_at": trip.departed_at.isoformat() if trip.departed_at else None,
     })
     return data
@@ -446,9 +454,88 @@ def create_registration():
 # logic is duplicated here.
 # ---------------------------------------------------------------------------
 
+from datetime import datetime
+
 @passenger_bp.route("/passenger/", methods=["GET"])
 def home():
+
+    llda_conditions = monitoring_service.get_llda_conditions()
+    windy_conditions = monitoring_service.get_windy_conditions()
+
+    latest_wave_reading = (
+        EnvironmentalReading.query
+        .filter(EnvironmentalReading.wave_height_m.isnot(None))
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+
+    safety_status = "UNAVAILABLE"
+
+    if (
+        llda_conditions["status"] in ("live", "cached")
+        and llda_conditions["reading"]
+        and windy_conditions["status"] in ("live", "cached")
+        and windy_conditions["reading"]
+    ):
+        water_level = llda_conditions["reading"].water_level_m
+        wind_speed = windy_conditions["reading"].wind_speed_kmh
+
+        if water_level is not None and wind_speed is not None:
+            if wind_speed <= 20 and 10.50 <= water_level <= 12.50:
+                safety_status = "SAFE"
+            elif wind_speed <= 30 and 10.00 <= water_level <= 13.00:
+                safety_status = "CAUTION"
+            else:
+                safety_status = "UNSAFE"
+
+    # Recently updated upcoming trip
+    current_trip = (
+        Trip.query
+        .order_by(Trip.updated_at.desc())
+        .first()
+    )
+
+    current_trip_date = None
+    current_trip_time = None
+
+    if current_trip and current_trip.departure_time:
+        current_trip_date = current_trip.departure_time.strftime("%B %d, %Y")
+        current_trip_time = current_trip.departure_time.strftime("%I:%M%p").lstrip("0")
+
     announcements = (
+        Announcement.query
+        .filter_by(status=Announcement.STATUS_ACTIVE)
+        .order_by(Announcement.published_at.desc())
+        .limit(2)
+        .all()
+    )
+
+    return render_template(
+        "passenger/home.html",
+        announcements=announcements,
+
+        latest_wave_reading=latest_wave_reading,
+
+        llda_status=llda_conditions["status"],
+        llda_reading=llda_conditions["reading"],
+        llda_message=llda_conditions["message"],
+
+        windy_status=windy_conditions["status"],
+        windy_reading=windy_conditions["reading"],
+        windy_message=windy_conditions["message"],
+
+        safety_status=safety_status,
+
+        current_trip=current_trip,
+        current_trip_date=current_trip_date,
+        current_trip_time=current_trip_time,
+
+        active_page="home",
+    )
+
+@passenger_bp.route("/passenger/announcements", methods=["GET"])
+def announcements():
+    announcement_rows = (
         Announcement.query
         .filter_by(status=Announcement.STATUS_ACTIVE)
         .order_by(Announcement.published_at.desc())
@@ -456,9 +543,9 @@ def home():
     )
 
     return render_template(
-        "passenger/home.html",
-        announcements=announcements,
-        active_page="home",
+        "passenger/announcements.html",
+        announcements=announcement_rows,
+        active_page="announcements",
     )
 
 @passenger_bp.route("/passenger/schedule", methods=["GET"])
@@ -664,9 +751,21 @@ def registration_status_lookup():
         )
     )
 
+REGISTRATION_STATUS_LABELS = {
+    "pending": "Pending Verification",
+    "approved": "Approved",
+    "rejected": "Rejected",
+}
+
+
+def _registration_status_label(status):
+    """Same wording Step 3 shows; unknown statuses get a tidy fallback."""
+    raw = (status or "").strip()
+    return REGISTRATION_STATUS_LABELS.get(raw.lower(), raw.replace("_", " ").title())
 
 @passenger_bp.route("/passenger/registrations/<reference_code>", methods=["GET"])
 def registration_status_page(reference_code):
+
     registration = _find_registration_by_reference_code(reference_code)
 
     if not registration:
@@ -675,6 +774,7 @@ def registration_status_page(reference_code):
             registration=None,
             trip=None,
             lookup_error="No registration found for that reference code.",
+            status_label=None,
         )
 
     trip = db.session.get(Trip, registration.trip_id)
@@ -684,6 +784,7 @@ def registration_status_page(reference_code):
         registration=registration,
         trip=_serialize_trip_detail(trip) if trip else None,
         lookup_error=None,
+        status_label=_registration_status_label(registration.status),
     )
 
 @passenger_bp.route("/passenger/guide", methods=["GET"])
