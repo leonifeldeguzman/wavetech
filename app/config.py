@@ -94,3 +94,11 @@ class Config:
     UNISMS_SENDER_ID = os.environ.get("UNISMS_SENDER_ID", "Unisoft")
 
     SMS_DISPATCH_ASYNC = False
+
+        # --- Open-Meteo weather proxy (per-station weather) ---
+    # Weather-MODEL values for a ~15 km grid cell. NOT a lake measurement.
+    # Free, keyless, non-commercial use; the credit link
+    # "Weather data by Open-Meteo.com" must be shown wherever it is displayed.
+    OPEN_METEO_API_URL = os.environ.get("OPEN_METEO_API_URL", "https://api.open-meteo.com/v1/forecast")
+    OPEN_METEO_TIMEOUT_SECONDS = float(os.environ.get("OPEN_METEO_TIMEOUT_SECONDS", "20"))
+    OPEN_METEO_MAX_ATTEMPTS = int(os.environ.get("OPEN_METEO_MAX_ATTEMPTS", "2"))

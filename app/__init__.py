@@ -64,6 +64,9 @@ def create_app():
     from app.models.system_setting import SystemSetting
     from app.models.activity_log import ActivityLog
 
+    from app.utils.cli import register_cli
+    register_cli(app)
+
     @app.before_request
     def _apply_session_timeout():
         # Session Settings (Admin Settings > Security & Activity): the

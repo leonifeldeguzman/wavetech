@@ -4,10 +4,6 @@
 
 {% block page_title %}Dashboard{% endblock %}
 
-{% block styles %}
-<link rel="stylesheet"
-      href="{{ url_for('static', filename='css/dashboard.css') }}">
-{% endblock %}
 
 {% block content %}
 
@@ -151,7 +147,7 @@
                 action="{{ url_for('dashboard.index') }}"
                 class="row g-3 align-items-end mb-4">
 
-                <div class="col-lg-8">
+                <div class="col-12 col-lg-8">
 
                     <label for="scheduling-trip"
                         class="form-label text-muted">
@@ -260,7 +256,7 @@
                 </div>
                 <!-- /.col-lg-8 -->
 
-                <div class="col-lg-4">
+                <div class="col-12 col-lg-4">
 
                     <button type="submit"
                             class="btn assess-btn text-white w-100">
@@ -401,9 +397,49 @@
 
                 </div>
 
+                                {% if level_context %}
+                <div class="mt-4">
+
+                    <div class="decision-label">
+                        Historical Context (advisory only)
+                    </div>
+
+                    <div class="decision-reason">
+
+                        {% if level_context.state == 'ok' %}
+
+                            <strong>{{ level_context.context.text }}.</strong>
+                            Latest recorded water level:
+                            {{ level_context.reading.water_level_m }} m
+                            ({{ level_context.reading.source|capitalize }},
+                            {{ level_context.reading.retrieved_at | ph_time }}).
+
+                        {% elif level_context.state == 'stale' %}
+
+                            The latest recorded water level is too old to compare with the baseline.
+
+                        {% elif level_context.state == 'no_reading' %}
+
+                            No recent recorded water level to compare yet.
+
+                        {% else %}
+
+                            Historical baseline unavailable.
+
+                        {% endif %}
+
+                        <div class="small text-muted mt-1">
+                            Compared with LLDA lake-wide daily data, 2023-2025.
+                            This note does not change the recommendation above.
+                        </div>
+
+                    </div>
+
+                </div>
+                {% endif %}
 
                 <!-- Actions -->
-                <div class="mt-4 d-flex gap-2 flex-wrap">
+                <div class="mt-4 d-flex gap-2 flex-wrap decision-actions">
 
                     <button type="button"
                             class="btn btn-outline-secondary decision-view-btn"
@@ -449,7 +485,7 @@
                 aria-labelledby="schedulingDetailsModalLabel"
                 aria-hidden="true">
 
-                <div class="modal-dialog modal-dialog-centered scheduling-details-dialog">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable scheduling-details-dialog">
 
                     <div class="modal-content scheduling-details-modal">
 

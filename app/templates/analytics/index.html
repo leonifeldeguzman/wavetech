@@ -1,19 +1,25 @@
-{% extends "base.html" %} {% block title %}Reports &amp; Analytics{% endblock %}
-{% block page_title %}Reports &amp; Analytics{% endblock %} {% block content %}
+{% extends "base.html" %}
+{% block title %}Reports &amp; Analytics{% endblock %}
+{% block page_title %}Reports &amp; Analytics{% endblock %}
+
+{% block content %}
 
 <link
   rel="stylesheet"
   href="{{ url_for('static', filename='css/analytics.css') }}"
 />
 
+<!-- KPI cards: 2 per row on phones, 4 per row on desktop -->
 <div class="row g-3 mb-4">
+
   <!-- Daily Passengers -->
   <div class="col-6 col-md-3">
     <div class="stat-card analytics-kpi h-100">
       <div class="kpi-label">Daily Passengers</div>
       <div class="kpi-value">{{ summary.daily_passengers }}</div>
       <div class="kpi-sub">
-        {% set chg = summary.passengers_change_pct %} {% if chg is none %}
+        {% set chg = summary.passengers_change_pct %}
+        {% if chg is none %}
         <span class="kpi-muted">— vs yesterday</span>
         {% elif chg > 0 %}
         <span class="kpi-up">↑ {{ chg }}% vs yesterday</span>
@@ -32,8 +38,12 @@
       <div class="kpi-label">Trips Today</div>
       <div class="kpi-value">{{ summary.trips_today }}</div>
       <div class="kpi-sub">
-        Capacity: {% if summary.overall_capacity_pct is not none %} {{
-        '%.0f'|format(summary.overall_capacity_pct) }}% {% else %} — {% endif %}
+        Capacity:
+        {% if summary.overall_capacity_pct is not none %}
+        {{ '%.0f'|format(summary.overall_capacity_pct) }}%
+        {% else %}
+        —
+        {% endif %}
       </div>
     </div>
   </div>
@@ -43,8 +53,11 @@
     <div class="stat-card analytics-kpi h-100">
       <div class="kpi-label">Avg Capacity</div>
       <div class="kpi-value">
-        {% if summary.avg_capacity_pct is not none %} {{
-        '%.0f'|format(summary.avg_capacity_pct) }}% {% else %} — {% endif %}
+        {% if summary.avg_capacity_pct is not none %}
+        {{ '%.0f'|format(summary.avg_capacity_pct) }}%
+        {% else %}
+        —
+        {% endif %}
       </div>
       <div class="kpi-sub kpi-info">Target: {{ capacity_target_pct }}%</div>
     </div>
@@ -56,7 +69,8 @@
       <div class="kpi-label">Delayed Trips</div>
       <div class="kpi-value">{{ summary.delayed_trips }}</div>
       <div class="kpi-sub">
-        {% set d = summary.delayed_diff %} {% if d > 0 %}
+        {% set d = summary.delayed_diff %}
+        {% if d > 0 %}
         <span class="kpi-warn">+{{ d }} from yesterday</span>
         {% elif d < 0 %}
         <span class="kpi-up">{{ d }} from yesterday</span>
@@ -66,28 +80,34 @@
       </div>
     </div>
   </div>
+
 </div>
 
+
+<!-- Charts: side by side on large screens, stacked below -->
 <div class="row g-3 mb-4">
+
   <!-- Passenger Flow - Today -->
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100 analytics-flow-card">
       <div class="card-body">
+
         <div class="analytics-chart-header">
-            <h6>Passenger Flow - Today</h6>
+          <h6>Passenger Flow - Today</h6>
         </div>
 
         {% if breakdown %}
-            <div style="position: relative; height: 260px">
-            <canvas
-                id="passengerFlowChart"
-                data-labels='{{ chart_labels|tojson }}'
-                data-values='{{ chart_passengers|tojson }}'
-            ></canvas>
-            </div>
+        <div class="analytics-chart-wrapper">
+          <canvas
+            id="passengerFlowChart"
+            data-labels='{{ chart_labels|tojson }}'
+            data-values='{{ chart_passengers|tojson }}'
+          ></canvas>
+        </div>
         {% else %}
         <div class="text-center text-muted py-5">No trips scheduled today.</div>
         {% endif %}
+
       </div>
     </div>
   </div>
@@ -96,8 +116,9 @@
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100 analytics-capacity-card">
       <div class="card-body">
+
         <div class="analytics-chart-header">
-            <h6>Capacity Utilization by Trip</h6>
+          <h6>Capacity Utilization by Trip</h6>
         </div>
 
         {% for row in breakdown %}
@@ -106,9 +127,11 @@
             <span>{{ row.label }}</span>
 
             <span class="fw-bold">
-              {% if row.capacity_pct is not none %} {{
-              '%.0f'|format(row.capacity_pct) }}% {% else %} —
-              <span class="fw-normal text-muted"> (no boat assigned) </span>
+              {% if row.capacity_pct is not none %}
+              {{ '%.0f'|format(row.capacity_pct) }}%
+              {% else %}
+              —
+              <span class="fw-normal text-muted">(no boat assigned)</span>
               {% endif %}
             </span>
           </div>
@@ -124,12 +147,15 @@
         {% else %}
         <div class="text-center text-muted py-5">No trips scheduled today.</div>
         {% endfor %}
+
       </div>
     </div>
   </div>
+
 </div>
 
-<!-- Manifest Records -->
+
+<!-- =====================  Manifest Records  ===================== -->
 <div class="card border-0 mb-4 analytics-manifest-card" id="manifest-records">
   <div class="card-body">
 
@@ -138,17 +164,14 @@
       action="{{ url_for('analytics.index') }}#manifest-records"
     >
 
-      <!-- Manifest Records Header -->
+      <!-- Header: title + search + filter button -->
       <div class="analytics-section-header">
 
-        <h6 class="fw-bold mb-0">
-          Manifest Records
-        </h6>
+        <h6 class="fw-bold mb-0">Manifest Records</h6>
 
         <div class="live-search-wrapper d-flex gap-2">
 
           <div class="input-group">
-
             <span class="input-group-text bg-white">
               <i class="bi bi-search"></i>
             </span>
@@ -161,7 +184,6 @@
               class="form-control live-search-input"
               placeholder="Search by boat name, date, time....."
             />
-
           </div>
 
           <button
@@ -184,18 +206,12 @@
         class="collapse {% if filters_active %}show{% endif %} mb-3"
         id="recordFilters"
       >
-
         <div class="row g-2 align-items-end border rounded p-3">
 
           <div class="col-6 col-md-3">
-
-            <label
-              for="filter-date-from"
-              class="form-label small text-muted mb-1"
-            >
+            <label for="filter-date-from" class="form-label small text-muted mb-1">
               From
             </label>
-
             <input
               type="date"
               id="filter-date-from"
@@ -203,19 +219,12 @@
               value="{{ filters.date_from }}"
               class="form-control form-control-sm"
             />
-
           </div>
 
-
-          <div class="col-md-3">
-
-            <label
-              for="filter-date-to"
-              class="form-label small text-muted mb-1"
-            >
+          <div class="col-6 col-md-3">
+            <label for="filter-date-to" class="form-label small text-muted mb-1">
               To
             </label>
-
             <input
               type="date"
               id="filter-date-to"
@@ -223,82 +232,51 @@
               value="{{ filters.date_to }}"
               class="form-control form-control-sm"
             />
-
           </div>
 
-
           <div class="col-6 col-md-2">
-
-            <label
-              for="filter-boat"
-              class="form-label small text-muted mb-1"
-            >
+            <label for="filter-boat" class="form-label small text-muted mb-1">
               Boat
             </label>
-
             <select
               id="filter-boat"
               name="boat_id"
               class="form-select form-select-sm"
             >
-
-              <option value="">
-                All boats
-              </option>
-
+              <option value="">All boats</option>
               {% for b in boats %}
-
               <option
                 value="{{ b.id }}"
                 {% if filters.boat_id == b.id %}selected{% endif %}
               >
                 {{ b.name }}
               </option>
-
               {% endfor %}
-
             </select>
-
           </div>
 
-
           <div class="col-6 col-md-2">
-
-            <label
-              for="filter-status"
-              class="form-label small text-muted mb-1"
-            >
+            <label for="filter-status" class="form-label small text-muted mb-1">
               Status
             </label>
-
             <select
               id="filter-status"
               name="status"
               class="form-select form-select-sm"
             >
-
-              <option value="">
-                All statuses
-              </option>
-
+              <option value="">All statuses</option>
               {% for s in statuses %}
-
               <option
                 value="{{ s }}"
                 {% if filters.status == s %}selected{% endif %}
               >
                 {{ s }}
               </option>
-
               {% endfor %}
-
             </select>
-
           </div>
 
-
-          <div class="col-6 col-md-2 d-flex gap-2">
-
+          <div class="col-12 col-md-2 d-flex gap-2">
             <button
               type="submit"
               class="btn btn-sm text-white flex-fill"
@@ -313,97 +291,63 @@
             >
               Clear
             </a>
-
           </div>
 
         </div>
-
       </div>
 
     </form>
 
 
     {% if not filters.date_from and not filters.date_to %}
-
     <div class="text-muted small mb-2 analytics-record-note">
       Showing the last 30 days. Use the filter to pick a date range.
     </div>
-
     {% endif %}
 
-
     {% if records.truncated %}
-
     <div class="alert alert-warning py-2 small">
       Showing only the 200 most recent matching trips. Narrow the date range
       to see the rest.
     </div>
-
     {% endif %}
 
 
-    <!-- Records Table Container -->
+    <!-- Records table -->
     <div class="analytics-table-container">
-
       <div class="table-responsive">
 
         <table
           id="manifestRecordsTable"
           class="table align-middle compact-table analytics-records-table"
         >
-
           <thead>
-
             <tr>
-
               <th>Date</th>
               <th>Schedule</th>
               <th>Boat Name</th>
               <th>Passengers</th>
               <th class="text-end">Actions</th>
-
             </tr>
-
           </thead>
 
-
           <tbody>
-
             {% for r in records.rows %}
-
-            <tr
-              class="{% if selected_trip_id == r.trip_id %}table-active{% endif %}"
-            >
+            <tr class="{% if selected_trip_id == r.trip_id %}table-active{% endif %}">
 
               <td class="fw-bold">
-
-                {% if r.show_date %}
-                  {{ r.date_label }}
-                {% endif %}
-
+                {% if r.show_date %}{{ r.date_label }}{% endif %}
               </td>
 
+              <td>{{ r.time_label }}</td>
 
-              <td>
-                {{ r.time_label }}
-              </td>
-
-
-              <td>
-
-                {{ r.boat_name or '—' }}
-
-
-              </td>
-
+              <td>{{ r.boat_name or '—' }}</td>
 
               <td>
                 {{ r.passengers }}/{{ r.capacity if r.capacity is not none else '—' }}
               </td>
 
-
               <td class="text-end">
-
                 <a
                   href="{{ url_for(
                     'analytics.index',
@@ -412,256 +356,134 @@
                     **keep_args
                   ) }}"
                   class="analytics-action-link"
-                >
-                  View
-                </a>
+                >View</a>
 
-                <span class="analytics-action-divider">
-                  |
-                </span>
+                <span class="analytics-action-divider">|</span>
 
                 <a
-                  href="{{ url_for(
-                    'analytics.export_manifest',
-                    trip_id=r.trip_id
-                  ) }}"
+                  href="{{ url_for('analytics.export_manifest', trip_id=r.trip_id) }}"
                   class="analytics-export-link"
-                >
-                  Export
-                </a>
-
+                >Export</a>
               </td>
 
             </tr>
-
-
             {% else %}
-
             <tr>
-
-              <td
-                colspan="5"
-                class="text-center text-muted py-4"
-              >
+              <td colspan="5" class="text-center text-muted py-4">
                 No manifest records match your search.
               </td>
-
             </tr>
-
             {% endfor %}
-
           </tbody>
-
         </table>
 
       </div>
-
     </div>
 
   </div>
 </div>
 
 
-
-<!-- Manifest Details -->
+<!-- =====================  Manifest Details  ===================== -->
 {% if detail %}
 
 <div
   class="card border-0 mb-4 analytics-manifest-card analytics-details-card"
   id="manifest-details"
 >
-
   <div class="card-body">
 
-    <!-- Details Header -->
     <div class="analytics-details-header">
-
-      <h6 class="fw-bold mb-0">
-        Manifest Details
-      </h6>
-
+      <h6 class="fw-bold mb-0">Manifest Details</h6>
     </div>
 
 
-    <!-- Manifest Information -->
+    <!-- Info: two columns on md+, stacked on phones -->
     <div class="row g-3 analytics-manifest-info">
 
-      <!-- Left Column -->
       <div class="col-md-6">
-
         <dl class="row mb-0">
 
-          <dt class="col-sm-4 fw-normal text-muted">
-            Date:
-          </dt>
+          <dt class="col-sm-4 fw-normal text-muted">Date:</dt>
+          <dd class="col-sm-8 fw-bold">{{ detail.date_label }}</dd>
 
-          <dd class="col-sm-8 fw-bold">
-            {{ detail.date_label }}
-          </dd>
+          <dt class="col-sm-4 fw-normal text-muted">Schedule:</dt>
+          <dd class="col-sm-8 fw-bold">{{ detail.time_label }}</dd>
 
+          <dt class="col-sm-4 fw-normal text-muted">Boat Name:</dt>
+          <dd class="col-sm-8 fw-bold">{{ detail.boat_name or '—' }}</dd>
 
-          <dt class="col-sm-4 fw-normal text-muted">
-            Schedule:
-          </dt>
-
-          <dd class="col-sm-8 fw-bold">
-            {{ detail.time_label }}
-          </dd>
-
-
-          <dt class="col-sm-4 fw-normal text-muted">
-            Boat Name:
-          </dt>
-
-          <dd class="col-sm-8 fw-bold">
-            {{ detail.boat_name or '—' }}
-          </dd>
-
-
-          <dt class="col-sm-4 fw-normal text-muted">
-            Driver's Name:
-          </dt>
-
-          <dd class="col-sm-8 fw-bold">
-            {{ detail.driver_name or '—' }}
-          </dd>
+          <dt class="col-sm-4 fw-normal text-muted">Driver's Name:</dt>
+          <dd class="col-sm-8 fw-bold">{{ detail.driver_name or '—' }}</dd>
 
         </dl>
-
       </div>
 
-
-      <!-- Right Column -->
       <div class="col-md-6">
-
         <dl class="row mb-0">
 
-          <dt class="col-sm-4 fw-normal text-muted">
-            Capacity:
-          </dt>
-
+          <dt class="col-sm-4 fw-normal text-muted">Capacity:</dt>
           <dd class="col-sm-8 fw-bold">
             {{ detail.capacity if detail.capacity is not none else '—' }}
           </dd>
 
+          <dt class="col-sm-4 fw-normal text-muted">Passengers:</dt>
+          <dd class="col-sm-8 fw-bold">{{ detail.passengers }}</dd>
 
-          <dt class="col-sm-4 fw-normal text-muted">
-            Passengers:
-          </dt>
-
-          <dd class="col-sm-8 fw-bold">
-            {{ detail.passengers }}
-          </dd>
-
-
-          <dt class="col-sm-4 fw-normal text-muted">
-            Status:
-          </dt>
-
+          <dt class="col-sm-4 fw-normal text-muted">Status:</dt>
           <dd class="col-sm-8">
-
-            <span
-              class="status-pill {{ detail.status|lower|replace(' ', '-') }}"
-            >
+            <span class="status-pill {{ detail.status|lower|replace(' ', '-') }}">
               {{ detail.status }}
             </span>
-
           </dd>
 
         </dl>
-
       </div>
 
     </div>
 
 
-    <!-- Passenger List -->
+    <!-- Passenger list -->
     <div class="analytics-passenger-section">
-
-      <h6 class="fw-bold mb-0">
-        Passenger List
-      </h6>
-
+      <h6 class="fw-bold mb-0">Passenger List</h6>
     </div>
 
-
-    <!-- Passenger Table Container -->
     <div class="analytics-table-container analytics-passenger-table">
-
       <div class="table-responsive">
 
         <table class="table align-middle compact-table mb-0">
-
           <thead>
-
             <tr>
-
               <th>No.</th>
               <th>Name</th>
               <th>Age</th>
               <th>Address</th>
               <th>Time</th>
               <th>Type</th>
-
             </tr>
-
           </thead>
 
-
           <tbody>
-
             {% for p in detail.passenger_list %}
-
             <tr>
-
-              <td>
-                {{ p.no }}
-              </td>
-
-              <td>
-                {{ p.full_name }}
-              </td>
-
-              <td>
-                {{ p.age }}
-              </td>
-
-              <td>
-                {{ p.address or '—' }}
-              </td>
-
-              <td>
-                {{ p.check_in_label }}
-              </td>
-
-              <td>
-                {{ p.passenger_type }}
-              </td>
-
+              <td>{{ p.no }}</td>
+              <td>{{ p.full_name }}</td>
+              <td>{{ p.age }}</td>
+              <td>{{ p.address or '—' }}</td>
+              <td>{{ p.check_in_label }}</td>
+              <td>{{ p.passenger_type }}</td>
             </tr>
-
-
             {% else %}
-
             <tr>
-
-              <td
-                colspan="6"
-                class="text-center text-muted py-4"
-              >
+              <td colspan="6" class="text-center text-muted py-4">
                 No passengers on this manifest.
               </td>
-
             </tr>
-
             {% endfor %}
-
           </tbody>
-
         </table>
 
       </div>
-
     </div>
 
 
@@ -679,228 +501,164 @@
         Cancel
       </a>
 
-
       <a
-        href="{{ url_for(
-          'analytics.export_manifest',
-          trip_id=detail.trip_id
-        ) }}"
+        href="{{ url_for('analytics.export_manifest', trip_id=detail.trip_id) }}"
         class="btn analytics-export-btn"
       >
-
         <i class="bi bi-download me-1"></i>
         Export PDF
-
       </a>
 
     </div>
 
   </div>
-
 </div>
 
 {% elif selected_trip_id %}
 
 <div class="alert alert-warning">That manifest could not be found.</div>
 
-{% endif %} {% endblock %} {% block scripts %}
+{% endif %}
+
+{% endblock %}
+
+
+{% block scripts %}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script>
+  document.addEventListener("DOMContentLoaded", function () {
 
-    document.addEventListener("DOMContentLoaded", function () {
-
+    /* ---------- Live search for the records table ---------- */
     function setupLiveSearch(inputId, table, columns) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
 
-        const input = document.getElementById(inputId);
+      const tbody = table.querySelector("tbody");
+      if (!tbody) return;
 
-        if (!input) return;
+      const originalRows = Array.from(tbody.querySelectorAll("tr")).filter(
+        (row) => !row.querySelector("td[colspan]")
+      );
 
-        const tbody = table.querySelector("tbody");
+      input.addEventListener("input", function () {
+        const search = this.value.trim().toLowerCase();
+        let visibleCount = 0;
 
-        if (!tbody) return;
+        originalRows.forEach(function (row) {
+          const cells = row.querySelectorAll("td");
 
-        const originalRows = Array.from(
-            tbody.querySelectorAll("tr")
-        ).filter(row => !row.querySelector("td[colspan]"));
-
-
-        input.addEventListener("input", function () {
-
-            const search = this.value.trim().toLowerCase();
-
-            let visibleCount = 0;
-
-
-            originalRows.forEach(function (row) {
-
-                const cells = row.querySelectorAll("td");
-
-                const match =
-                    search === "" ||
-                    columns.some(function (column) {
-
-                        return cells[column] &&
-                            cells[column].textContent
-                                .toLowerCase()
-                                .includes(search);
-
-                    });
-
-
-                row.style.display = match ? "" : "none";
-
-                if (match) {
-                    visibleCount++;
-                }
-
+          const match =
+            search === "" ||
+            columns.some(function (column) {
+              return (
+                cells[column] &&
+                cells[column].textContent.toLowerCase().includes(search)
+              );
             });
 
-
-            let noResults =
-                tbody.querySelector(".live-search-no-results");
-
-
-            if (search !== "" && visibleCount === 0) {
-
-                if (!noResults) {
-
-                    noResults = document.createElement("tr");
-
-                    noResults.className =
-                        "live-search-no-results";
-
-
-                    const cell =
-                        document.createElement("td");
-
-                    cell.colSpan =
-                        table.querySelectorAll("thead th").length;
-
-                    cell.className =
-                        "text-center text-muted py-3";
-
-
-                    noResults.appendChild(cell);
-
-                    tbody.appendChild(noResults);
-
-                }
-
-
-                noResults.querySelector("td").textContent =
-                    'No results found for "' +
-                    this.value +
-                    '"';
-
-
-                noResults.style.display = "";
-
-            }
-
-            else if (noResults) {
-
-                noResults.style.display = "none";
-
-            }
-
+          row.style.display = match ? "" : "none";
+          if (match) visibleCount++;
         });
 
+        let noResults = tbody.querySelector(".live-search-no-results");
+
+        if (search !== "" && visibleCount === 0) {
+          if (!noResults) {
+            noResults = document.createElement("tr");
+            noResults.className = "live-search-no-results";
+
+            const cell = document.createElement("td");
+            cell.colSpan = table.querySelectorAll("thead th").length;
+            cell.className = "text-center text-muted py-3";
+
+            noResults.appendChild(cell);
+            tbody.appendChild(noResults);
+          }
+
+          noResults.querySelector("td").textContent =
+            'No results found for "' + this.value + '"';
+          noResults.style.display = "";
+        } else if (noResults) {
+          noResults.style.display = "none";
+        }
+      });
     }
 
-
-    const manifestTable =
-        document.getElementById("manifestRecordsTable");
-
+    const manifestTable = document.getElementById("manifestRecordsTable");
 
     if (manifestTable) {
-
-        setupLiveSearch(
-            "manifestSearch",
-            manifestTable,
-            [0, 1, 2, 3]
-        );
-
+      setupLiveSearch("manifestSearch", manifestTable, [0, 1, 2, 3]);
     }
 
-});
+    /* ---------- Capacity bar widths (from data-width) ---------- */
+    document.querySelectorAll("[data-width]").forEach(function (el) {
+      el.style.width = el.dataset.width + "%";
+    });
 
-  // Bar widths come from data-width so no template code sits inside style.
-  document.querySelectorAll("[data-width]").forEach(function (el) {
-    el.style.width = el.dataset.width + "%";
-  });
-
+    /* ---------- Passenger flow chart ---------- */
     const flowCanvas = document.getElementById("passengerFlowChart");
 
-  if (flowCanvas && typeof Chart !== "undefined") {
-    let flowLabels = [];
-    let flowValues = [];
+    if (flowCanvas && typeof Chart !== "undefined") {
+      let flowLabels = [];
+      let flowValues = [];
 
-    try {
-      flowLabels = JSON.parse(flowCanvas.dataset.labels);
-      flowValues = JSON.parse(flowCanvas.dataset.values);
-    } catch (err) {
-      console.error("Passenger flow chart data could not be parsed:", err);
-    }
+      try {
+        flowLabels = JSON.parse(flowCanvas.dataset.labels);
+        flowValues = JSON.parse(flowCanvas.dataset.values);
+      } catch (err) {
+        console.error("Passenger flow chart data could not be parsed:", err);
+      }
 
-    const existingFlowChart = Chart.getChart(flowCanvas);
-    if (existingFlowChart) existingFlowChart.destroy();
+      const existingFlowChart = Chart.getChart(flowCanvas);
+      if (existingFlowChart) existingFlowChart.destroy();
 
-    new Chart(flowCanvas, {
-      type: "line",
+      new Chart(flowCanvas, {
+        type: "line",
 
-      data: {
-        labels: flowLabels,
-
-        datasets: [
-          {
-            label: "Passengers",
-
-            data: flowValues,
-
-            borderColor: "#0f1b3c",
-
-            backgroundColor: "#0f1b3c",
-
-            pointBackgroundColor: "#0f1b3c",
-
-            pointBorderColor: "#0f1b3c",
-
-            tension: 0,
-
-            pointRadius: 5,
-
-            pointHoverRadius: 7,
-          },
-        ],
-      },
-
-      options: {
-        maintainAspectRatio: false,
-
-        plugins: {
-          legend: {
-            display: false,
-          },
+        data: {
+          labels: flowLabels,
+          datasets: [
+            {
+              label: "Passengers",
+              data: flowValues,
+              borderColor: "#0f1b3c",
+              backgroundColor: "#0f1b3c",
+              pointBackgroundColor: "#0f1b3c",
+              pointBorderColor: "#0f1b3c",
+              tension: 0,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+            },
+          ],
         },
 
-        scales: {
-          x: {
-            // Centers points in their slot so a single point isn't clipped at the axis edge.
-            offset: true,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+
+          plugins: {
+            legend: { display: false },
           },
 
-          y: {
-            beginAtZero: true,
-            ticks: {
-              precision: 0,
+          scales: {
+            x: {
+              // Centers points so a single point isn't clipped at the axis edge.
+              offset: true,
+              // Lets many trip labels rotate/skip instead of colliding on phones.
+              ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 },
+            },
+
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 },
             },
           },
         },
-      },
-    });
-  }
+      });
+    }
+  });
 </script>
 
 {% endblock %}

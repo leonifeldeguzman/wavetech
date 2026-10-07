@@ -664,3 +664,43 @@
 
 }
 
+@media (max-width: 575.98px) {
+
+    .manifest-page-header {
+        align-items: stretch;
+    }
+
+    /* Let the toolbar use the full width and wrap onto a second row */
+    .manifest-toolbar {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    /* Row 1: arrows + date picker (stretches) + Today */
+    .manifest-date-form {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .manifest-date-picker {
+        width: 100%;
+    }
+
+    .manifest-date-picker input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .manifest-date-btn,
+    .manifest-today-btn {
+        flex-shrink: 0;
+    }
+
+    /* Row 2: Add Time Slot button, full width */
+    .manifest-add-btn {
+        flex: 1 1 100%;
+        align-self: stretch;
+        justify-content: center;
+        height: 38px;
+    }
+}

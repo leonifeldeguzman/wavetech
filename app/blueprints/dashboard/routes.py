@@ -6,7 +6,7 @@ from app.extensions import db
 from app.models.trip import Trip
 from app.models.manifest_entry import ManifestEntry
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import scheduling_service, settings_service
+from app.services import historical_baseline_service, scheduling_service, settings_service
 
 
 @dashboard_bp.route("/dashboard")
@@ -53,6 +53,7 @@ def index():
     selected_trip = None
     scheduling_assessment = None
     safety_alert_action = None
+    level_context = None
     trip_id = request.args.get("trip_id", type=int)
     if trip_id is not None:
         selected_trip = db.session.get(Trip, trip_id)
@@ -65,6 +66,9 @@ def index():
             safety_alert_action = scheduling_service.build_safety_alert(
                 scheduling_assessment, selected_trip
             )
+            level_context = historical_baseline_service.get_level_context()
+
+            
 
 
     if latest_reading is None:
@@ -97,6 +101,7 @@ def index():
         selected_trip=selected_trip,
         scheduling_assessment=scheduling_assessment,
         safety_alert_action=safety_alert_action,
+        level_context=level_context,
         refresh_interval_seconds=settings_service.get_refresh_interval_seconds(),
         active_page="dashboard"
     )

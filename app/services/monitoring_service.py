@@ -28,7 +28,10 @@ never silently feed a future scheduling recommendation.
 """
 from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import llda_service, settings_service, windy_service
+from sqlalchemy import func
+from app.models.lake_station import LakeStation
+from app.services import llda_service, settings_service, weather_service, windy_service
+from app.services.weather_service import WeatherServiceError
 from app.services.llda_service import LLDAServiceError
 from app.services.windy_service import WindyServiceError
 from app.utils.timezone import to_naive_utc
@@ -130,6 +133,96 @@ def get_windy_conditions() -> dict:
     db.session.commit()
 
     return {"status": STATUS_LIVE, "reading": reading, "message": None}
+
+SOURCE_OPEN_METEO = "open_meteo"
+
+
+def _is_fresh(retrieved_at) -> bool:
+    """True if a stored naive-UTC timestamp is inside the refresh window.
+    Rejects a negative age, like _fresh_reading()."""
+    if retrieved_at is None:
+        return False
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    delta = now_utc - retrieved_at
+    interval = timedelta(seconds=settings_service.get_refresh_interval_seconds())
+    return timedelta(0) <= delta < interval
+
+
+def _latest_station_batch() -> list:
+    """Rows from the newest Open-Meteo fetch. One fetch inserts one row per
+    station, all with the same retrieved_at, so that timestamp identifies
+    the batch."""
+    newest = (
+        db.session.query(func.max(EnvironmentalReading.retrieved_at))
+        .filter(
+            EnvironmentalReading.source == SOURCE_OPEN_METEO,
+            EnvironmentalReading.station_id.isnot(None),
+        )
+        .scalar()
+    )
+    if newest is None:
+        return []
+    return (
+        EnvironmentalReading.query
+        .filter(
+            EnvironmentalReading.source == SOURCE_OPEN_METEO,
+            EnvironmentalReading.station_id.isnot(None),
+            EnvironmentalReading.retrieved_at == newest,
+        )
+        .all()
+    )
+
+
+def _pair(stations, readings) -> list:
+    by_station = {r.station_id: r for r in readings}
+    return [{"station": s, "reading": by_station.get(s.id)} for s in stations]
+
+
+def get_station_weather() -> dict:
+    """Per-station weather from Open-Meteo (a weather-MODEL proxy, not a lake
+    measurement). Same live/cached/unavailable cycle as the other sources.
+
+    Returns {"status", "stations": [{"station", "reading"}], "message"}.
+    Water level is never stored here: it is lake-wide.
+    """
+    stations = LakeStation.query.order_by(LakeStation.id).all()
+    if not stations:
+        return {"status": STATUS_UNAVAILABLE, "stations": [],
+                "message": "No stations are configured."}
+
+    batch = _latest_station_batch()
+    covered = {r.station_id for r in batch}
+    if batch and all(s.id in covered for s in stations) and _is_fresh(batch[0].retrieved_at):
+        return {"status": STATUS_LIVE, "stations": _pair(stations, batch), "message": None}
+
+    try:
+        fetched = weather_service.fetch_station_weather(stations)
+    except WeatherServiceError as exc:
+        if batch:
+            return {"status": STATUS_CACHED, "stations": _pair(stations, batch),
+                    "message": str(exc)}
+        return {"status": STATUS_UNAVAILABLE, "stations": _pair(stations, []),
+                "message": "Weather data is unavailable. Manual verification is required."}
+
+    by_no = {s.station_no: s for s in stations}
+    rows = []
+    for w in fetched:
+        station = by_no[w.station_no]
+        rows.append(EnvironmentalReading(
+            source=SOURCE_OPEN_METEO,
+            station_id=station.id,
+            location_label=f"{station.name} (Station {station.station_no})",
+            wind_speed_kmh=w.wind_speed_kmh,
+            wind_direction=w.wind_direction,
+            weather_condition=w.weather_condition,
+            temperature_c=w.temperature_c,
+            recorded_at=w.recorded_at,
+            retrieved_at=w.retrieved_at,
+        ))
+    db.session.add_all(rows)
+    db.session.commit()
+
+    return {"status": STATUS_LIVE, "stations": _pair(stations, rows), "message": None}
 
 
 def no_data_blocks_recommendation(*conditions: dict) -> bool:

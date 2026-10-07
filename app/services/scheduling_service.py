@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from app.models.announcement import Announcement
-from app.services import llda_mock_service, monitoring_service, settings_service
+from app.models.environmental_reading import EnvironmentalReading
+from app.services import monitoring_service, settings_service
+from app.utils.ph_clock import ph_today
 from app.utils.timezone import to_ph_time
 
 RECOMMENDATION_PROCEED = "PROCEED"
@@ -136,7 +138,11 @@ def evaluate_conditions(windy_reading: Any, llda_reading: Any) -> SchedulingAsse
         llda_recorded = None
     else:
         water = _classify_water(getattr(llda_reading, "water_level_m", None), thresholds)
-        llda_recorded = getattr(llda_reading, "recorded_at", None)
+                # Manual rows have no recorded_at, so fall back to retrieved_at.
+        llda_recorded = (
+            getattr(llda_reading, "recorded_at", None)
+            or getattr(llda_reading, "retrieved_at", None)
+        )
 
     results = [wind, water, weather]
     if any(r.status == STATUS_UNAVAILABLE for r in results):
@@ -188,9 +194,39 @@ def evaluate_conditions(windy_reading: Any, llda_reading: Any) -> SchedulingAsse
         windy_retrieved_at=windy_retrieved,
         llda_recorded_at=llda_recorded,
         last_updated_at=last_updated_at,
-        llda_source_label="MOCK/DEVELOPMENT DATA",
+        llda_source_label=_water_source_label(llda_reading),
     )
+def get_current_water_reading():
+    """Newest LLDA/manual water level, accepted only if recorded today
+    (PH calendar day). Older or missing means None, so the assessment
+    becomes UNAVAILABLE. Never falls back to a config value."""
+    reading = (
+        EnvironmentalReading.query
+        .filter(
+            EnvironmentalReading.water_level_m.isnot(None),
+            EnvironmentalReading.source.in_(("llda", "manual")),
+        )
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+    if reading is None or reading.retrieved_at is None:
+        return None
+    # retrieved_at is naive UTC; convert to the PH calendar day.
+    taken_ph = reading.retrieved_at + timedelta(hours=8)
+    if taken_ph.date() != ph_today():
+        return None
+    return reading
 
+
+def _water_source_label(reading) -> str:
+    if reading is None:
+        return "No water level recorded today"
+    source = getattr(reading, "source", None)
+    if source == "manual":
+        return "Manual observation"
+    if source == "llda":
+        return "LLDA daily average"
+    return "Source unknown"
 
 def get_assessment() -> SchedulingAssessment:
     """Assess the latest/current environmental conditions.
@@ -209,7 +245,7 @@ def get_assessment() -> SchedulingAssessment:
     )
 
     try:
-        llda_reading = llda_mock_service.fetch_water_level()
+        llda_reading = get_current_water_reading()
     except (TypeError, ValueError):
         llda_reading = None
 

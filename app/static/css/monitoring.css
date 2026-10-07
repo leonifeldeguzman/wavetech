@@ -920,3 +920,39 @@
     }
 
 }
+
+/* =========================================================
+   HISTORICAL BASELINE
+   ========================================================= */
+
+.monitoring-baseline-card {
+    margin-bottom: 30px;
+}
+
+
+.monitoring-baseline-note {
+    margin: 0;
+
+    padding: 22px 38px 0;
+
+    color: #6b7280;
+
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+
+.monitoring-baseline-card .monitoring-table-wrapper {
+    padding-top: 18px;
+    padding-bottom: 10px;
+}
+
+
+.monitoring-baseline-context {
+    padding: 8px 38px 28px;
+
+    color: #222222;
+
+    font-size: 0.86rem;
+    line-height: 1.5;
+}

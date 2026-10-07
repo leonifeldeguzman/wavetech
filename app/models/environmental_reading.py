@@ -1,4 +1,5 @@
 from app.extensions import db
+from datetime import datetime, timezone
 
 class EnvironmentalReading(db.Model):
     __tablename__ = "environmental_readings"
@@ -20,15 +21,26 @@ class EnvironmentalReading(db.Model):
     entered_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     # Only set when source == "manual" — who encoded it
 
+    station_id = db.Column(
+        db.Integer,
+        db.ForeignKey("lake_stations.id", name="fk_environmental_readings_station_id"),
+        nullable=True,
+        index=True,
+    )
+    # Which LLDA station the WEATHER values belong to. NULL for older rows
+    # (the single configured point) and always NULL for manual / LLDA
+    # water-level rows: water level is lake-wide, never per station.
+
     recorded_at = db.Column(db.DateTime, nullable=True)
     # The timestamp the SOURCE (e.g. LLDA) reports for the reading itself.
     # Distinct from retrieved_at below, which is when WaveTech pulled it.
     # Null for manual entries, where "recorded" and "retrieved" are the same moment.
 
-    retrieved_at = db.Column(db.DateTime, server_default=db.func.now())
-    # When WaveTech stored this row. For "llda" rows this is also the
-    # moment the live fetch succeeded, so it doubles as the "Retrieved"
-    # timestamp shown on the dashboard when a cached reading is displayed.
+    retrieved_at = db.Column(
+    db.DateTime,
+    default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+    server_default=db.func.now(),
+)
 
     entered_by = db.relationship("User")
 

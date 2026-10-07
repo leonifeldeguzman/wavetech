@@ -23,7 +23,17 @@ from app.models.announcement import Announcement
 from app.models.user import User
 from app.services import scheduling_service
 
+WATER_PATCH_TARGET = "app.services.scheduling_service.get_current_water_reading"
 WINDY_PATCH_TARGET = "app.services.scheduling_service.monitoring_service.get_windy_conditions"
+
+
+def _water_reading(level=12.1):
+    return SimpleNamespace(
+        source="manual",
+        water_level_m=level,
+        recorded_at=None,
+        retrieved_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
 
 
 def _windy_reading(wind=10.0, weather="Sunny"):
@@ -82,7 +92,8 @@ def test_dashboard_offers_safety_alert_for_unsafe_result(app, make_boat, make_tr
     trip_id = make_trip(boat_id=boat_id, status="Open")
     admin_client = _admin(app)
 
-    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Rainy")):
+    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Rainy")), \
+         patch(WATER_PATCH_TARGET, return_value=_water_reading()):
         response = admin_client.get(f"/dashboard?trip_id={trip_id}")
 
     assert response.status_code == 200
@@ -95,7 +106,8 @@ def test_dashboard_offers_safety_alert_for_caution_result(app, make_boat, make_t
     trip_id = make_trip(boat_id=boat_id, status="Open")
     admin_client = _admin(app)
 
-    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Cloudy")):
+    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Cloudy")), \
+         patch(WATER_PATCH_TARGET, return_value=_water_reading()):
         response = admin_client.get(f"/dashboard?trip_id={trip_id}")
 
     assert response.status_code == 200
@@ -108,7 +120,8 @@ def test_dashboard_does_not_offer_safety_alert_for_proceed(app, make_boat, make_
     trip_id = make_trip(boat_id=boat_id, status="Open")
     admin_client = _admin(app)
 
-    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Sunny")):
+    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Sunny")), \
+         patch(WATER_PATCH_TARGET, return_value=_water_reading()):
         response = admin_client.get(f"/dashboard?trip_id={trip_id}")
 
     assert response.status_code == 200
@@ -124,7 +137,8 @@ def test_operator_sees_safety_alert_action_when_unsafe(app, make_boat, make_trip
     trip_id = make_trip(boat_id=boat_id, status="Open")
     operator_client = _operator(app)
 
-    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Rainy")):
+    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Rainy")), \
+         patch(WATER_PATCH_TARGET, return_value=_water_reading()):
         response = operator_client.get(f"/dashboard?trip_id={trip_id}")
 
     assert response.status_code == 200
@@ -136,7 +150,8 @@ def test_safety_alert_action_does_not_touch_trip_or_manifest(app, make_boat, mak
     trip_id = make_trip(boat_id=boat_id, status="Open")
     admin_client = _admin(app)
 
-    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Rainy")):
+    with patch(WINDY_PATCH_TARGET, return_value=_windy_reading(weather="Rainy")), \
+         patch(WATER_PATCH_TARGET, return_value=_water_reading()):
         admin_client.get(f"/dashboard?trip_id={trip_id}")
 
     with app.app_context():

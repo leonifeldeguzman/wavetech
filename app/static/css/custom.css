@@ -349,7 +349,7 @@ nav.d-lg-flex .sidebar-brand {
     }
 }
 
-  /* Main content */
+   /* Main content */
 
   body > .d-flex {
     min-height: 100vh;
@@ -826,5 +826,16 @@ nav.d-lg-flex .sidebar-brand {
 
     .app-page-title {
         font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 991.98px) {
+    body > .d-flex > .flex-grow-1 {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+
+    nav.d-lg-flex {
+        display: none !important;
     }
 }

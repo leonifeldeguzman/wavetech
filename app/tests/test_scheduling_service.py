@@ -131,6 +131,9 @@ def test_assessment_does_not_modify_trip_or_manifest(app, make_boat, make_trip):
         with patch(
             "app.services.scheduling_service.monitoring_service.get_windy_conditions",
             return_value={"status": "live", "reading": _wind(), "message": None},
+        ), patch(
+            "app.services.scheduling_service.get_current_water_reading",
+            return_value=_water(),
         ):
             result = scheduling_service.get_assessment()
 
@@ -149,6 +152,9 @@ def test_dashboard_assessment_does_not_change_trip(admin_client, app, make_boat,
     with patch(
         "app.services.scheduling_service.monitoring_service.get_windy_conditions",
         return_value={"status": "live", "reading": _wind(), "message": None},
+    ), patch(
+        "app.services.scheduling_service.get_current_water_reading",
+        return_value=_water(),
     ):
         response = admin_client.get(f"/dashboard?trip_id={trip_id}")
 
@@ -160,6 +166,27 @@ def test_dashboard_assessment_does_not_change_trip(admin_client, app, make_boat,
         trip = db.session.get(Trip, trip_id)
         assert trip.status == "Open"
 
+    
+def test_old_manual_water_level_is_unavailable(app):
+    from datetime import timedelta
+    from app.models.environmental_reading import EnvironmentalReading
+    with app.app_context():
+        old = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+        db.session.add(EnvironmentalReading(
+            source="manual", water_level_m=12.5, retrieved_at=old))
+        db.session.commit()
+        assert scheduling_service.get_current_water_reading() is None
+
+
+def test_todays_manual_water_level_is_used(app):
+    from app.models.environmental_reading import EnvironmentalReading
+    with app.app_context():
+        db.session.add(EnvironmentalReading(
+            source="manual", water_level_m=12.5,
+            retrieved_at=datetime.now(timezone.utc).replace(tzinfo=None)))
+        db.session.commit()
+        reading = scheduling_service.get_current_water_reading()
+        assert reading is not None and reading.water_level_m == 12.5
 
 # ---------------------------------------------------------------------------
 # DSS -> Safety Alert generation (scheduling_service.build_safety_alert)

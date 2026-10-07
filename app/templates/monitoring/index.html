@@ -23,7 +23,7 @@
     <section class="monitoring-summary-grid">
 
 
-        <!-- WEATHER -->
+               <!-- WEATHER (station summary, Open-Meteo model) -->
         <div class="monitoring-summary-card">
 
             <div class="monitoring-summary-icon">
@@ -36,24 +36,23 @@
                     Weather
                 </div>
 
-                {% if windy_status in ("live", "cached") and windy_reading %}
+                {% if weather_summary and weather_summary.condition %}
 
                     <div class="monitoring-summary-value">
-                        {{ windy_reading.weather_condition or "Unavailable" }}
+                        {{ weather_summary.condition }}
                     </div>
 
                     <div class="monitoring-summary-subvalue">
-                        {% if windy_reading.temperature_c is not none %}
-                            {{ windy_reading.temperature_c }}&deg;C
-                        {% else %}
-                            Temperature unavailable
+                        at {{ weather_summary.count }} of {{ weather_summary.total }} stations
+                        {% if weather_summary.temp_min is not none %}
+                            &middot; {{ weather_summary.temp_min }}&ndash;{{ weather_summary.temp_max }}&deg;C
                         {% endif %}
                     </div>
 
                     <div class="monitoring-summary-source">
-                        Source: {{ windy_reading.source if windy_reading.source else "Unavailable" }}
+                        Source: Open-Meteo weather model
                     </div>
-                    
+
                 {% else %}
 
                     <div class="monitoring-summary-value">
@@ -71,7 +70,7 @@
         </div>
 
 
-        <!-- WIND SPEED -->
+               <!-- WIND SPEED (highest among stations, Open-Meteo model) -->
         <div class="monitoring-summary-card">
 
             <div class="monitoring-summary-icon">
@@ -84,25 +83,22 @@
                     Wind Speed
                 </div>
 
-                {% if windy_status in ("live", "cached") and windy_reading %}
+                {% if wind_summary %}
 
                     <div class="monitoring-summary-value">
-
-                        {% if windy_reading.wind_speed_kmh is not none %}
-                            {{ windy_reading.wind_speed_kmh }} km/h
-                        {% else %}
-                            Unavailable
-                        {% endif %}
-
+                        {{ wind_summary.speed }} km/h
                     </div>
 
                     <div class="monitoring-summary-subvalue">
-                        {{ windy_reading.wind_direction or "Direction unavailable" }}
-                        Direction
+                        {{ wind_summary.direction or "Direction unavailable" }}
+                        &middot; highest at {{ wind_summary.station_name }}
+                        (Station {{ wind_summary.station_no }})
                     </div>
+
                     <div class="monitoring-summary-source">
-                        Source: {{ windy_reading.source if windy_reading.source else "Unavailable" }}
+                        Source: Open-Meteo weather model
                     </div>
+
                 {% else %}
 
                     <div class="monitoring-summary-value">
@@ -176,21 +172,40 @@
                 <div class="monitoring-summary-label">
                     Water Level
                 </div>
+                                {% if water_level_card.reading %}
 
-                {% if llda_status in ("live", "cached") and llda_reading %}
+                    {% set wl = water_level_card.reading %}
 
                     <div class="monitoring-summary-value">
-                        {{ llda_reading.water_level_m }} m
+                        {{ wl.water_level_m }} m
                     </div>
 
                     <div class="monitoring-summary-subvalue">
-                        {{ llda_status|capitalize }}
+                        {% if water_level_card.is_today %}
+                            Recorded today
+                        {% elif water_level_card.age_days == 1 %}
+                            Last recorded {{ water_level_card.date_label }} (1 day ago)
+                        {% else %}
+                            Last recorded {{ water_level_card.date_label }}
+                            ({{ water_level_card.age_days }} days ago)
+                        {% endif %}
                     </div>
 
                     <div class="monitoring-summary-source">
-                        Source: {{ llda_reading.source if llda_reading.source else "Unavailable" }}
+                        {% if wl.source == "manual" %}
+                            Manual observation
+                        {% else %}
+                            Source: LLDA
+                        {% endif %}
                     </div>
-                    
+
+                    {% if baseline %}
+                    <div class="monitoring-summary-source">
+                        Typical for this date: {{ "%.2f"|format(baseline.p10) }}&ndash;{{ "%.2f"|format(baseline.p90) }} m
+                        
+                    </div>
+                    {% endif %}
+
                 {% else %}
 
                     <div class="monitoring-summary-value">
@@ -198,10 +213,17 @@
                     </div>
 
                     <div class="monitoring-summary-subvalue">
-                        Manual verification required
+                        No water level recorded. Manual entry required.
                     </div>
 
+                    {% if baseline %}
+                    <div class="monitoring-summary-source">
+                        Typical for this date: {{ "%.2f"|format(baseline.p10) }}&ndash;{{ "%.2f"|format(baseline.p90) }} m
+                    </div>
+                    {% endif %}
+
                 {% endif %}
+                
 
             </div>
 
@@ -232,34 +254,14 @@
 
             <div class="monitoring-map-container">
 
-                <div
+                                <div
                     id="monitoring-map"
                     class="monitoring-map"
 
                     data-lat="{{ monitoring_lat }}"
                     data-lon="{{ monitoring_lon }}"
                     data-location-label="{{ monitoring_location_label }}"
-
-                    data-windy-status="{{ windy_status }}"
-
-                    data-windy-updated="{{
-                        (windy_reading.retrieved_at | ph_time)
-                        if windy_reading else ''
-                    }}"
-
-                    data-llda-status="{{ llda_status }}"
-
-                    data-llda-water-level="{{
-                        llda_reading.water_level_m
-                        if (llda_status in ('live', 'cached') and llda_reading)
-                        else ''
-                    }}"
-
-                    data-llda-updated="{{
-                        (llda_reading.retrieved_at | ph_time)
-                        if (llda_status in ('live', 'cached') and llda_reading)
-                        else ''
-                    }}"
+                    data-stations='{{ map_stations|tojson }}'
                 ></div>
 
             </div>
@@ -297,7 +299,7 @@
                         Water Level Status
                     </div>
 
-                    {% if llda_status == "live" %}
+                                        {% if llda_status == "live" %}
 
                         <div class="monitoring-status-value">
                             Live monitoring active
@@ -307,6 +309,12 @@
 
                         <div class="monitoring-status-value">
                             Using cached data
+                        </div>
+
+                    {% elif water_level_card.reading %}
+
+                        <div class="monitoring-status-value">
+                            LLDA feed not connected. Using manual entry.
                         </div>
 
                     {% else %}
@@ -335,13 +343,13 @@
                         Weather Monitoring
                     </div>
 
-                    {% if windy_status == "live" %}
+                    {% if station_weather_status == "live" %}
 
                         <div class="monitoring-status-value">
                             Live weather data available
                         </div>
 
-                    {% elif windy_status == "cached" %}
+                    {% elif station_weather_status == "cached" %}
 
                         <div class="monitoring-status-value">
                             Using cached weather data
@@ -375,8 +383,8 @@
 
                     <div class="monitoring-status-value">
 
-                        {% if windy_reading %}
-                            {{ windy_reading.retrieved_at | ph_time }}
+                        {% if station_weather_updated %}
+                            {{ station_weather_updated | ph_time }}
                         {% elif llda_reading %}
                             {{ llda_reading.retrieved_at | ph_time }}
                         {% else %}
@@ -390,6 +398,119 @@
             </div>
 
         </div>
+
+    </section>
+
+        <!-- =====================================================
+         STATION WEATHER (Open-Meteo model values, NOT lake measurements)
+         ===================================================== -->
+
+    <section class="monitoring-card monitoring-stations-card">
+
+        <div class="monitoring-section-heading">
+
+            <div>
+                <h2>Station Weather</h2>
+                <p>Weather at the LLDA monitoring stations near Talim Island</p>
+            </div>
+
+            {% if station_weather_status == "live" %}
+                <span class="badge text-bg-success">Live</span>
+            {% elif station_weather_status == "cached" %}
+                <span class="badge text-bg-warning">Cached data</span>
+            {% else %}
+                <span class="badge text-bg-secondary">Unavailable</span>
+            {% endif %}
+
+        </div>
+        <div class="px-3 pb-3"> 
+        <p class="small text-muted">
+            Weather-model values for a grid cell of about 15 km, not
+            measurements taken on the lake. Stations in the same grid cell
+            show identical values. Water level is lake-wide (LLDA keeps one
+            daily average for the whole lake), so it is not shown per station.
+        </p>
+
+        {% if station_weather_status == "cached" %}
+        <div class="alert alert-warning py-2 small">
+            Could not refresh the weather. Showing the last saved values.
+        </div>
+        {% endif %}
+
+        {% if station_cards %}
+
+        <div class="row g-3">
+
+            {% for card in station_cards %}
+            <div class="col-12 col-md-6 col-xl-4">
+
+                <div class="border rounded p-3 h-100">
+
+                    <div class="fw-bold">{{ card.station.name }}</div>
+                    <div class="small text-muted mb-2">
+                        Station {{ card.station.station_no }}
+                    </div>
+
+                    {% if card.reading %}
+
+                        <div>
+                            {{ card.reading.weather_condition or "Condition unavailable" }}
+                            &middot;
+                            {% if card.reading.temperature_c is not none %}
+                                {{ card.reading.temperature_c }}&deg;C
+                            {% else %}
+                                Temperature unavailable
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            Wind:
+                            {% if card.reading.wind_speed_kmh is not none %}
+                                {{ card.reading.wind_speed_kmh }} km/h
+                                {{ card.reading.wind_direction or "" }}
+                            {% else %}
+                                Unavailable
+                            {% endif %}
+                        </div>
+
+                        {% if card.shared_with %}
+                        <div class="small text-muted mt-2">
+                            Same grid cell as: {{ card.shared_with|join(", ") }}
+                        </div>
+                        {% endif %}
+
+                    {% else %}
+
+                        <div class="text-muted">No data</div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+            {% endfor %}
+
+        </div>
+
+        {% else %}
+
+        <div class="monitoring-empty-state">
+            <i class="bi bi-inbox"></i>
+            <div>Station weather unavailable.</div>
+            <small>Manual verification is required.</small>
+        </div>
+
+        {% endif %}
+
+        <div class="small text-muted mt-3">
+            {% if station_weather_updated %}
+                Retrieved {{ station_weather_updated | ph_time }}.
+            {% endif %}
+            Weather data by
+            <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>.
+            Weather model, not a lake measurement. Advisory only.
+        </div>
+        </div> 
 
     </section>
 
@@ -471,14 +592,14 @@
                 <div class="monitoring-source-content">
 
                     <div class="monitoring-source-title">
-                        Windy Weather
+                        Open-Meteo Weather
                     </div>
 
                     <div class="monitoring-source-value">
 
-                        {% if windy_status == "live" %}
+                        {% if station_weather_status == "live" %}
                             Live
-                        {% elif windy_status == "cached" %}
+                        {% elif station_weather_status == "cached" %}
                             Cached Data
                         {% else %}
                             Unavailable
@@ -489,9 +610,9 @@
                 </div>
 
                 <span class="monitoring-source-status
-                    {% if windy_status == 'live' %}
+                    {% if station_weather_status == 'live' %}
                         source-live
-                    {% elif windy_status == 'cached' %}
+                    {% elif station_weather_status == 'cached' %}
                         source-cached
                     {% else %}
                         source-unavailable
@@ -676,6 +797,120 @@
 
             <small>
                 Use the manual entry form below to add the first reading.
+            </small>
+
+        </div>
+
+        {% endif %}
+
+    </section>
+
+        <!-- =====================================================
+         HISTORICAL BASELINE (reference data, NOT a current reading)
+         ===================================================== -->
+
+    <section class="monitoring-card monitoring-baseline-card">
+
+        <div class="monitoring-section-heading">
+
+            <div>
+
+                <h2>
+                    Historical Baseline
+                </h2>
+
+                <p>
+                    Seasonal context from past years
+                </p>
+
+            </div>
+
+            <span class="badge text-bg-secondary">
+                Historical &middot; lake-wide
+            </span>
+
+        </div>
+
+
+        {% if baseline %}
+        <p class="monitoring-baseline-note">
+            Water levels recorded within {{ baseline.window_days }} days of
+            {{ baseline.day.strftime("%B %d") }} in
+            {{ baseline.years[0] }}&ndash;{{ baseline.years[-1] }}
+            ({{ baseline.n }} daily records).
+            {{ baseline.label }}
+        </p>
+
+        <div class="monitoring-table-wrapper">
+
+            <table class="monitoring-table">
+
+                <thead>
+                    <tr>
+                        <th>Lowest seen</th>
+                        <th>10th percentile</th>
+                        <th>Median</th>
+                        <th>90th percentile</th>
+                        <th>Highest seen</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <td>{{ "%.2f"|format(baseline.min) }} m</td>
+                        <td>{{ "%.2f"|format(baseline.p10) }} m</td>
+                        <td>{{ "%.2f"|format(baseline.p50) }} m</td>
+                        <td>{{ "%.2f"|format(baseline.p90) }} m</td>
+                        <td>{{ "%.2f"|format(baseline.max) }} m</td>
+                    </tr>
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="monitoring-baseline-context">
+
+            {% if baseline_context %}
+
+                <strong>{{ baseline_context.text }}.</strong>
+                Latest recorded water level:
+                {{ baseline_water_reading.water_level_m }} m
+                ({{ baseline_water_reading.source|capitalize }},
+                {{ baseline_water_reading.retrieved_at | ph_time }}).
+
+            {% elif baseline_water_reading %}
+
+                The latest recorded water level
+                ({{ baseline_water_reading.water_level_m }} m,
+                {{ baseline_water_reading.source|capitalize }},
+                {{ baseline_water_reading.retrieved_at | ph_time }})
+                is too old to compare with the baseline.
+
+            {% else %}
+
+                No recorded water level to compare yet.
+
+            {% endif %}
+
+            <div class="small text-muted mt-2">
+                Advisory context only. The operator decides.
+            </div>
+
+        </div>
+
+        {% else %}
+
+        <div class="monitoring-empty-state">
+
+            <i class="bi bi-inbox"></i>
+
+            <div>
+                Historical baseline unavailable.
+            </div>
+
+            <small>
+                No historical data has been imported yet.
             </small>
 
         </div>
@@ -997,86 +1232,41 @@
             }
         ).addTo(map);
 
-
-        const marker = L.marker([lat, lon]).addTo(map);
-
-        window.__wavetechMonitoringMarker = marker;
-
-        updateMonitoringPopup(marker, mapEl.dataset);
-    }
-
-
-    function updateMonitoringPopup(marker, data) {
-
-        const windyLine =
-            data.windyStatus === 'live'
-
-                ? `LIVE${data.windyUpdated
-                    ? ' — updated ' + data.windyUpdated
-                    : ''}`
-
-                : (
-                    data.windyStatus === 'cached'
-
-                        ? `CACHED DATA${data.windyUpdated
-                            ? ' — last updated ' + data.windyUpdated
-                            : ''}`
-
-                        : 'UNAVAILABLE'
-                );
-
-
-        let lldaLine;
-
-
-        if (
-            (data.lldaStatus === 'live' ||
-             data.lldaStatus === 'cached') &&
-            data.lldaWaterLevel
-        ) {
-
-            const label =
-                data.lldaStatus === 'live'
-                    ? 'LIVE'
-                    : 'CACHED DATA';
-
-            lldaLine =
-                `${label} — ${data.lldaWaterLevel} m` +
-                `${data.lldaUpdated
-                    ? ' (' + data.lldaUpdated + ')'
-                    : ''}`;
-
-        } else {
-
-            lldaLine = 'UNAVAILABLE';
-
+        // Station markers (weather-model values, not lake measurements)
+        let stations = [];
+        try {
+            stations = JSON.parse(mapEl.dataset.stations || '[]');
+        } catch (e) {
+            stations = [];
         }
 
+        const esc = function (s) {
+            const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+            return String(s).replace(/[&<>"']/g, function (c) { return entities[c]; });
+        };
 
-        const popupHtml = `
+        const bounds = [];
+        stations.forEach(function (s) {
+            let weatherLine = 'No weather data';
+            if (s.weather || s.temp !== null || s.wind !== null) {
+                weatherLine =
+                    esc(s.weather || 'Condition unavailable') +
+                    (s.temp !== null ? ', ' + esc(s.temp) + '&deg;C' : '') +
+                    (s.wind !== null ? '<br>Wind: ' + esc(s.wind) + ' km/h ' + esc(s.dir || '') : '');
+            }
+            L.circleMarker([s.lat, s.lon], { radius: 8 })
+                .addTo(map)
+                .bindPopup(
+                    '<div class="small"><div class="fw-bold">' + esc(s.name) +
+                    ' (Station ' + esc(s.no) + ')</div>' + weatherLine +
+                    '<div class="text-muted mt-1">Weather model, not a lake measurement</div></div>'
+                );
+            bounds.push([s.lat, s.lon]);
+        });
 
-            <div class="small">
-
-                <div class="fw-bold mb-1">
-                    ${data.locationLabel}
-                </div>
-
-                <div>
-                    <strong>Windy:</strong>
-                    ${windyLine}
-                </div>
-
-                <div>
-                    <strong>LLDA:</strong>
-                    ${lldaLine}
-                </div>
-
-            </div>
-
-        `;
-
-
-        marker.bindPopup(popupHtml);
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [30, 30] });
+        }
     }
 
 

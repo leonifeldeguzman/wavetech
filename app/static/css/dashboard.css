@@ -36,6 +36,7 @@
     color: #4b5563;
     font-size: 0.82rem;
     margin-top: 4px;
+    overflow-wrap: break-word;
 }
 
 .dashboard-kpi-positive {
@@ -280,12 +281,15 @@
     font-size: 0.9rem;
     font-weight: 500;
     white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 
 .selected-trip-crew {
+    flex-shrink: 0;
     margin-left: auto;
-
     color: #6b7280;
     font-size: 0.78rem;
     white-space: nowrap;
@@ -453,16 +457,7 @@
 }
 
 
-/* Mobile */
-@media (max-width: 576px) {
 
-    .trip-option-details {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 3px;
-    }
-
-}
 
 /* ---------- ACTIVE TRIP MONITORING ---------- */
 
@@ -589,40 +584,7 @@
     padding: 13px 8px;
 }
 
-/* ---------- RESPONSIVE ---------- */
 
-@media (max-width: 991.98px) {
-    .dashboard-section-card .card-body {
-        padding: 24px;
-    }
-
-    .decision-grid {
-        grid-template-columns: 1fr;
-        gap: 18px;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .dashboard-section-card .card-body {
-        padding: 20px;
-    }
-
-    .dashboard-kpi {
-        min-height: auto;
-    }
-
-    .decision-summary {
-        padding: 22px;
-    }
-
-    .active-trip-header-route {
-        margin-top: 8px;
-    }
-
-    .active-trip-table {
-        min-width: 700px;
-    }
-}
 
 /* =========================================================
    SCHEDULING DECISION-SUPPORT MODAL
@@ -855,10 +817,135 @@
 }
 
 
-/* ---------- RESPONSIVE ---------- */
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+/* ---------- Tablet (< 992px) ---------- */
+
+@media (max-width: 991.98px) {
+
+    .dashboard-section-card .card-body {
+        padding: 24px;
+    }
+
+    .decision-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+}
+
+
+/* ---------- Mobile (< 768px) ---------- */
+
+@media (max-width: 767.98px) {
+
+    .dashboard-section-card .card-body {
+        padding: 20px 18px;
+    }
+
+    .dashboard-section-divider {
+        margin: 16px 0 18px;
+    }
+
+    /* KPI cards */
+    .dashboard-kpi {
+        min-height: auto;
+        padding: 16px;
+    }
+
+    .dashboard-kpi-label {
+        font-size: 0.85rem;
+    }
+
+    .dashboard-kpi-value {
+        font-size: 1.4rem;
+    }
+
+    .dashboard-kpi-sub {
+        font-size: 0.76rem;
+    }
+
+    /* Decision summary */
+    .decision-summary {
+        padding: 18px;
+    }
+
+    /* Active trips: table scrolls sideways inside its card */
+    .active-trip-header-route {
+        margin-top: 8px;
+    }
+
+    .active-trip-table {
+        min-width: 700px;
+    }
+}
+
+
+/* ---------- Small phones (< 576px) ---------- */
 
 @media (max-width: 575.98px) {
 
+    .dashboard-page {
+        font-size: 0.9rem;
+    }
+
+    .dashboard-section-title {
+        font-size: 1rem;
+    }
+
+    /* Trip dropdown: stack trip name and crew, allow wrapping */
+    .custom-trip-toggle {
+        padding: 8px 38px 8px 12px;
+    }
+
+    .custom-trip-selected {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 2px;
+    }
+
+    .selected-trip-main {
+        max-width: 100%;
+        overflow: visible;
+        white-space: normal;
+    }
+
+    .selected-trip-crew {
+        margin-left: 0;
+        white-space: normal;
+    }
+
+    .custom-trip-menu {
+        max-height: 55vh;
+    }
+
+    .custom-trip-option {
+        padding: 10px;
+    }
+
+    .trip-option-details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+    }
+
+    /* Summary buttons: full width */
+    .decision-actions .btn {
+        flex: 1 1 100%;
+    }
+
+    .decision-safety-badge {
+        font-size: 0.85rem;
+    }
+
+    .decision-recommendation {
+        font-size: 1rem;
+    }
+
+    /* Details modal */
     .scheduling-details-dialog {
         max-width: calc(100% - 24px);
         margin: 12px auto;
@@ -872,15 +959,10 @@
         padding: 20px 19px 0;
     }
 
-    .scheduling-result-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
-        padding-left: 12px;
-        padding-right: 12px;
-    }
-
-    .scheduling-environment-table td {
+    /* custom.css forces nowrap on every table cell; let these wrap */
+    .table.scheduling-environment-table td {
         padding: 10px 8px;
+        white-space: normal;
     }
 
     .scheduling-condition-label {
@@ -889,6 +971,13 @@
 
     .scheduling-condition-status {
         width: 30%;
+    }
+
+    .scheduling-result-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding-left: 12px;
+        padding-right: 12px;
     }
 
     .scheduling-modal-footer {
