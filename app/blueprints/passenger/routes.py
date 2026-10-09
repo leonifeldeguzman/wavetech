@@ -31,7 +31,7 @@ from app.models.announcement import Announcement
 from app.services import semaphore_service, unisms_service
 from app.services.activity_log_service import log_action, ACTION_REGISTRATION_SMS_SENT
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import monitoring_service
+from app.services import monitoring_service, scheduling_service
 # ---------------------------------------------------------------------------
 # Business rules (documented here since they are not fully explicit in the
 # existing manifests blueprint — see ASSUMPTIONS in the final report).
@@ -459,8 +459,11 @@ from datetime import datetime
 @passenger_bp.route("/passenger/", methods=["GET"])
 def home():
 
-    llda_conditions = monitoring_service.get_llda_conditions()
-    windy_conditions = monitoring_service.get_windy_conditions()
+    windy_conditions = monitoring_service.get_dss_weather_conditions()
+
+    # Same rule as decision-support: newest manual/LLDA water level,
+    # accepted only if recorded today (PH day). Otherwise None.
+    water_reading = scheduling_service.get_current_water_reading()
 
     latest_wave_reading = (
         EnvironmentalReading.query
@@ -469,24 +472,7 @@ def home():
         .first()
     )
 
-    safety_status = "UNAVAILABLE"
-
-    if (
-        llda_conditions["status"] in ("live", "cached")
-        and llda_conditions["reading"]
-        and windy_conditions["status"] in ("live", "cached")
-        and windy_conditions["reading"]
-    ):
-        water_level = llda_conditions["reading"].water_level_m
-        wind_speed = windy_conditions["reading"].wind_speed_kmh
-
-        if water_level is not None and wind_speed is not None:
-            if wind_speed <= 20 and 10.50 <= water_level <= 12.50:
-                safety_status = "SAFE"
-            elif wind_speed <= 30 and 10.00 <= water_level <= 13.00:
-                safety_status = "CAUTION"
-            else:
-                safety_status = "UNSAFE"
+    
 
     # Recently updated upcoming trip
     current_trip = (
@@ -516,15 +502,11 @@ def home():
 
         latest_wave_reading=latest_wave_reading,
 
-        llda_status=llda_conditions["status"],
-        llda_reading=llda_conditions["reading"],
-        llda_message=llda_conditions["message"],
+        water_reading=water_reading,
 
         windy_status=windy_conditions["status"],
         windy_reading=windy_conditions["reading"],
         windy_message=windy_conditions["message"],
-
-        safety_status=safety_status,
 
         current_trip=current_trip,
         current_trip_date=current_trip_date,

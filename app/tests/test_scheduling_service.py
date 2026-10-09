@@ -97,14 +97,14 @@ def test_invalid_values_return_unavailable(app):
         assert result.recommendation == scheduling_service.RECOMMENDATION_UNAVAILABLE
 
 
-def test_windy_api_failure_is_gracefully_unavailable(app):
+def test_weather_unavailable_returns_unavailable(app):
     with app.app_context():
         with patch(
-            "app.services.scheduling_service.monitoring_service.get_windy_conditions",
+            "app.services.scheduling_service.monitoring_service.get_dss_weather_conditions",
             return_value={
                 "status": "unavailable",
                 "reading": None,
-                "message": "Windy failed",
+                "message": "Weather unavailable",
             },
         ):
             result = scheduling_service.get_assessment()
@@ -129,7 +129,7 @@ def test_assessment_does_not_modify_trip_or_manifest(app, make_boat, make_trip):
         before_manifest_count = ManifestEntry.query.filter_by(trip_id=trip_id).count()
 
         with patch(
-            "app.services.scheduling_service.monitoring_service.get_windy_conditions",
+            "app.services.scheduling_service.monitoring_service.get_dss_weather_conditions",
             return_value={"status": "live", "reading": _wind(), "message": None},
         ), patch(
             "app.services.scheduling_service.get_current_water_reading",
@@ -150,7 +150,7 @@ def test_dashboard_assessment_does_not_change_trip(admin_client, app, make_boat,
     trip_id = make_trip(boat_id=boat_id, status="Open")
 
     with patch(
-        "app.services.scheduling_service.monitoring_service.get_windy_conditions",
+        "app.services.scheduling_service.monitoring_service.get_dss_weather_conditions",
         return_value={"status": "live", "reading": _wind(), "message": None},
     ), patch(
         "app.services.scheduling_service.get_current_water_reading",

@@ -24,7 +24,7 @@ from app.models.user import User
 from app.services import scheduling_service
 
 WATER_PATCH_TARGET = "app.services.scheduling_service.get_current_water_reading"
-WINDY_PATCH_TARGET = "app.services.scheduling_service.monitoring_service.get_windy_conditions"
+WINDY_PATCH_TARGET = "app.services.scheduling_service.monitoring_service.get_dss_weather_conditions"
 
 
 def _water_reading(level=12.1):

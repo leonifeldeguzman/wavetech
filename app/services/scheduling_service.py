@@ -237,13 +237,13 @@ def get_assessment() -> SchedulingAssessment:
     The LLDA value remains the temporary development mock until an authorized
     LLDA machine-readable source is available.
     """
-    windy = monitoring_service.get_windy_conditions()
+    weather = monitoring_service.get_dss_weather_conditions()
     windy_reading = (
-        windy.get("reading")
-        if windy.get("status") == monitoring_service.STATUS_LIVE
+        weather.get("reading")
+        if weather.get("status") == monitoring_service.STATUS_LIVE
         else None
     )
-
+    
     try:
         llda_reading = get_current_water_reading()
     except (TypeError, ValueError):

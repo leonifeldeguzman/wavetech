@@ -766,14 +766,31 @@
 
 
                             <!-- Retrieved Data -->
+                                                        <!-- Data sources -->
                             <div class="scheduling-retrieved">
 
-                                <strong>Data retrieved:</strong>
-                                {{ scheduling_assessment.last_updated_at | ph_time }}
+                                <div>
+                                    <strong>Weather and wind:</strong>
+                                    Open-Meteo weather model, Cardona (Station XXI).
+                                    Not a lake measurement.
+                                    {% if scheduling_assessment.windy_retrieved_at %}
+                                        Retrieved {{ scheduling_assessment.windy_retrieved_at | ph_time }}.
+                                    {% endif %}
+                                </div>
 
+                                <div>
+                                    <strong>Water level:</strong>
+                                    {{ scheduling_assessment.llda_source_label -}}
+                                    {% if scheduling_assessment.llda_recorded_at -%}
+                                        , recorded {{ scheduling_assessment.llda_recorded_at | ph_time }}
+                                    {%- endif %}
+                                </div>
+
+                                <div class="small text-muted mt-1">
+                                    <a href="https://open-meteo.com/"
+                                       target="_blank" rel="noopener">Weather data by Open-Meteo.com</a>
+                                </div>
                             </div>
-
-                        </div>
 
 
                         <!-- Modal Footer -->

@@ -29,7 +29,7 @@
             </h1>
 
             <p>
-                Real-time updates, travel info, and<br>
+                Timely updates, travel info, and<br>
                 everything you need for a smooth and safe trip.
             </p>
 
@@ -62,88 +62,88 @@
 
     <section class="home-environment-card">
 
-        <!-- WEATHER -->
+            <!-- WEATHER -->
 
-        <div class="home-environment-item">
+            <div class="home-environment-item">
 
-            <div class="home-environment-icon">
-                <i class="bi bi-sun"></i>
-            </div>
-
-            <div>
-                <div class="home-environment-label">
-                    Weather
+                <div class="home-environment-icon">
+                    <i class="bi bi-sun"></i>
                 </div>
 
-                {% if windy_status in ("live", "cached") and windy_reading %}
-
-                    <div class="home-environment-value">
-                        {{ windy_reading.weather_condition or "Unavailable" }}
+                <div>
+                    <div class="home-environment-label">
+                        Weather
                     </div>
 
-                    <div class="home-environment-subvalue">
-                        {% if windy_reading.temperature_c is not none %}
-                            {{ windy_reading.temperature_c }} &deg;C
-                        {% else %}
-                            Temperature unavailable
-                        {% endif %}
-                    </div>
+                    {% if windy_status in ("live", "cached") and windy_reading %}
 
-                {% else %}
+                        <div class="home-environment-value">
+                            {{ windy_reading.weather_condition or "Unavailable" }}
+                        </div>
 
-                    <div class="home-environment-value">
-                        Unavailable
-                    </div>
+                        <div class="home-environment-subvalue">
+                            {% if windy_reading.temperature_c is not none %}
+                                {{ windy_reading.temperature_c }} &deg;C
+                            {% else %}
+                                Temperature unavailable
+                            {% endif %}
+                        </div>
 
-                    <div class="home-environment-subvalue">
-                        No recent data
-                    </div>
+                    {% else %}
 
-                {% endif %}
-            </div>
-
-        </div>
-
-
-        <!-- WIND -->
-
-        <div class="home-environment-item">
-
-            <div class="home-environment-icon">
-                <i class="bi bi-wind"></i>
-            </div>
-
-            <div>
-                <div class="home-environment-label">
-                    Wind Speed
-                </div>
-
-                {% if windy_status in ("live", "cached") and windy_reading %}
-
-                    <div class="home-environment-value">
-                        {% if windy_reading.wind_speed_kmh is not none %}
-                            {{ windy_reading.wind_speed_kmh }} km/h
-                        {% else %}
+                        <div class="home-environment-value">
                             Unavailable
-                        {% endif %}
+                        </div>
+
+                        <div class="home-environment-subvalue">
+                            No recent data
+                        </div>
+
+                    {% endif %}
+                </div>
+
+            </div>
+
+
+            <!-- WIND -->
+
+            <div class="home-environment-item">
+
+                <div class="home-environment-icon">
+                    <i class="bi bi-wind"></i>
+                </div>
+
+                <div>
+                    <div class="home-environment-label">
+                        Wind Speed
                     </div>
 
-                    <div class="home-environment-subvalue">
-                        {{ windy_reading.wind_direction or "Direction unavailable" }}
-                        Direction
-                    </div>
+                    {% if windy_status in ("live", "cached") and windy_reading %}
 
-                {% else %}
+                        <div class="home-environment-value">
+                            {% if windy_reading.wind_speed_kmh is not none %}
+                                {{ windy_reading.wind_speed_kmh }} km/h
+                            {% else %}
+                                Unavailable
+                            {% endif %}
+                        </div>
 
-                    <div class="home-environment-value">
-                        Unavailable
-                    </div>
+                        <div class="home-environment-subvalue">
+                            {{ windy_reading.wind_direction or "Direction unavailable" }}
+                            Direction
+                        </div>
 
-                    <div class="home-environment-subvalue">
-                        No recent data
-                    </div>
+                    {% else %}
 
-                {% endif %}
+                        <div class="home-environment-value">
+                            Unavailable
+                        </div>
+
+                        <div class="home-environment-subvalue">
+                            No recent data
+                        </div>
+
+                    {% endif %}
             </div>
 
         </div>
@@ -201,14 +201,18 @@
                     Water Level
                 </div>
 
-                {% if llda_status in ("live", "cached") and llda_reading %}
+                                {% if water_reading %}
 
                     <div class="home-environment-value">
-                        {{ llda_reading.water_level_m }} m
+                        {{ water_reading.water_level_m }} m
                     </div>
 
                     <div class="home-environment-subvalue">
-                        {{ llda_status|capitalize }}
+                        {% if water_reading.source == 'manual' %}
+                            Manual observation, lake-wide
+                        {% else %}
+                            LLDA daily average, lake-wide
+                        {% endif %}
                     </div>
 
                 {% else %}
@@ -218,7 +222,7 @@
                     </div>
 
                     <div class="home-environment-subvalue">
-                        No recent data
+                        No reading recorded today
                     </div>
 
                 {% endif %}
@@ -393,30 +397,24 @@
 
                 </div>
 
-                <div class="home-environment-status">
+                                <div class="home-environment-status">
 
-                    <div class="home-status-main {{ safety_status|lower }}">
-                        {% if safety_status == "SAFE" %}
-                            Good Condition
-                        {% elif safety_status == "CAUTION" %}
-                            Exercise Caution
-                        {% elif safety_status == "UNSAFE" %}
-                            Unsafe Conditions
+                    <div class="home-status-main">
+                        Lake Conditions
+                    </div>
+
+                    <div class="home-status-updated">
+                        {% if windy_reading %}
+                            Weather model for Cardona, not a lake measurement.
+                            Updated {{ windy_reading.retrieved_at | ph_time }}
                         {% else %}
-                            Data Unavailable
+                            No recent update
                         {% endif %}
                     </div>
 
                     <div class="home-status-updated">
-
-                        {% if windy_reading %}
-                            Updated {{ windy_reading.retrieved_at | ph_time }}
-                        {% elif llda_reading %}
-                            Updated {{ llda_reading.retrieved_at | ph_time }}
-                        {% else %}
-                            No recent update
-                        {% endif %}
-
+                        <a href="https://open-meteo.com/"
+                           target="_blank" rel="noopener">Weather data by Open-Meteo.com</a>
                     </div>
 
                 </div>

@@ -225,6 +225,38 @@ def get_station_weather() -> dict:
     return {"status": STATUS_LIVE, "stations": _pair(stations, rows), "message": None}
 
 
+# Station whose weather feeds Scheduling Decision-Support.
+# ASSUMPTION: Cardona (XXI) is the station nearest the ferry route.
+# Confirm with the adviser/LLDA.
+DSS_STATION_NO = "XXI"
+
+
+def get_dss_weather_conditions() -> dict:
+    """Open-Meteo weather for the representative station, for
+    decision-support. Same shape as get_windy_conditions():
+    {"status", "reading", "message"}. Weather-model data, not a lake
+    measurement."""
+    result = get_station_weather()
+
+    reading = None
+    for item in result["stations"]:
+        if item["station"].station_no == DSS_STATION_NO:
+            reading = item["reading"]
+            break
+
+    if reading is None:
+        return {
+            "status": STATUS_UNAVAILABLE,
+            "reading": None,
+            "message": "Weather data is unavailable. Manual verification is required.",
+        }
+    return {
+        "status": result["status"],
+        "reading": reading,
+        "message": result["message"],
+    }
+
+
 def no_data_blocks_recommendation(*conditions: dict) -> bool:
     """True if any of the given `conditions` dicts is NOT good enough to
     base a scheduling recommendation on.
