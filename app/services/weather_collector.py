@@ -27,9 +27,10 @@ def start_weather_collector(app, interval_seconds: int | None = None) -> bool:
         interval_seconds = app.config.get(
             "WEATHER_COLLECTOR_INTERVAL_SECONDS",
             DEFAULT_COLLECTOR_INTERVAL_SECONDS,
-            # Never hammer Open-Meteo: wait at least 5 minutes between runs.
-            interval_seconds = max(300, int(interval_seconds))
         )
+
+    # Never hammer Open-Meteo: wait at least 5 minutes between runs.
+    interval_seconds = max(300, int(interval_seconds))
 
     with _collector_lock:
         if _collector_thread is not None and _collector_thread.is_alive():
