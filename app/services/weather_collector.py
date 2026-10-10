@@ -38,16 +38,19 @@ def start_weather_collector(app, interval_seconds: int | None = None) -> bool:
         stop_event = threading.Event()
 
         def _run():
+            app.logger.warning("Weather collector thread started")
             # Collect once at startup, then once per interval.
             # wait() returns True as soon as stop_event is set.
             while True:
                 try:
                     with app.app_context():
-                        monitoring_service.get_station_weather()
+                        result = monitoring_service.get_station_weather()
+                        app.logger.warning(
+                            "Weather collector run: status=%s message=%s",
+                            result["status"], result["message"],
+                        )
                 except Exception:
                     app.logger.exception("Background weather collection failed")
-                if stop_event.wait(interval_seconds):
-                    break
 
         thread = threading.Thread(
             target=_run, name="weather-collector", daemon=True
