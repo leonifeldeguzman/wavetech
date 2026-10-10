@@ -9,7 +9,7 @@ generated or filled in. If a fetch fails, no row is written and the gap stays.
 Same pattern as the announcement scheduler: one daemon thread per process,
 guarded by a lock so a second call is a safe no-op.
 """
-
+from app.services import monitoring_service
 import threading
 
 DEFAULT_COLLECTOR_INTERVAL_SECONDS = 3600  # once an hour
@@ -33,6 +33,8 @@ def start_weather_collector(app, interval_seconds: int | None = None) -> bool:
         if _collector_thread is not None and _collector_thread.is_alive():
             return False
 
+        from app.services import monitoring_service  # noqa: F401  (import in main thread)
+
         stop_event = threading.Event()
 
         def _run():
@@ -41,8 +43,6 @@ def start_weather_collector(app, interval_seconds: int | None = None) -> bool:
             while True:
                 try:
                     with app.app_context():
-                        # Imported here to avoid a circular import at startup.
-                        from app.services import monitoring_service
                         monitoring_service.get_station_weather()
                 except Exception:
                     app.logger.exception("Background weather collection failed")

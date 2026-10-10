@@ -87,6 +87,11 @@ def create_app():
     def index():
         return redirect(url_for("passenger.home"))
 
+    # Configure all model relationships now, in the main thread, so the
+    # background threads below don't race the first web request to do it.
+    from sqlalchemy.orm import configure_mappers
+    configure_mappers()
+
        # Announcement Management: automatically publish Scheduled
     # announcements whose time has arrived, without requiring anyone to
     # open or refresh a page (see app/services/announcement_service.py).
