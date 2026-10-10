@@ -27,7 +27,7 @@ from app.models.system_setting import SystemSetting
 SETTINGS_ROW_ID = 1
 
 # Selectable auto-refresh durations shown in Admin Settings.
-REFRESH_INTERVAL_OPTIONS = [10, 30, 60, 300, 600]
+REFRESH_INTERVAL_OPTIONS = [0, 10, 30, 60, 300, 600]
 
 MIN_SESSION_TIMEOUT_MINUTES = 1
 MAX_SESSION_TIMEOUT_MINUTES = 1440  # 24 hours
@@ -231,12 +231,15 @@ def update_refresh_interval(raw_seconds) -> int:
     try:
         seconds = int(raw_seconds)
     except (TypeError, ValueError):
-        raise SettingsValidationError("Refresh interval must be a whole number of seconds.")
+        raise SettingsValidationError(
+            "Refresh interval must be a whole number of seconds."
+        )
 
     if seconds not in REFRESH_INTERVAL_OPTIONS:
         raise SettingsValidationError(
             "Refresh interval must be one of: "
-            + ", ".join(str(s) for s in REFRESH_INTERVAL_OPTIONS) + " seconds."
+            + ", ".join(str(s) for s in REFRESH_INTERVAL_OPTIONS)
+            + " seconds."
         )
 
     settings = get_settings()

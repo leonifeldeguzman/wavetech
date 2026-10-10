@@ -1109,35 +1109,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
     /*
-     * Scheduling Decision-Support auto-refresh
-     *
-     * The selected trip remains in the URL, so refreshing the page
-     * updates the environmental assessment for the same trip.
-     */
+    * Scheduling Decision-Support auto-refresh
+    *
+    * The selected trip remains in the URL, so refreshing the page
+    * updates the environmental assessment for the same trip.
+    */
 
     const schedulingPanel =
-        document.getElementById('scheduling-decision-support');
+        document.getElementById("scheduling-decision-support");
 
+    if (schedulingPanel) {
 
-    if (
-        schedulingPanel &&
-        schedulingPanel.dataset.autoRefresh === '1'
-    ) {
-
-        const refreshIntervalMs =
-            Number(schedulingPanel.dataset.refreshInterval) * 1000;
-
+        const refreshIntervalSeconds =
+            Number(schedulingPanel.dataset.refreshInterval);
 
         if (
-            refreshIntervalMs > 0 &&
-            Number.isFinite(refreshIntervalMs)
+            Number.isFinite(refreshIntervalSeconds) &&
+            refreshIntervalSeconds > 0
         ) {
 
             setInterval(function () {
 
                 window.location.reload();
 
-            }, refreshIntervalMs);
+            }, refreshIntervalSeconds * 1000);
 
         }
 

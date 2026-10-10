@@ -768,6 +768,19 @@ body {
 .registration-lookup-error i {
     font-size: 0.85rem;
 }
+
+/* =========================================
+   REGISTRATION PAGE CARD SPACING
+========================================= */
+
+.direct-registration-card {
+    margin-top: 28px;
+}
+
+.registration-card {
+    margin-top: 20px;
+}
+
 /* =========================================
    FORM
 ========================================= */
@@ -847,6 +860,8 @@ body {
     font-size: 0.95rem;
 
     cursor: pointer;
+
+    text-decoration: none;
 }
 
 .registration-cancel-btn {
@@ -1266,7 +1281,134 @@ body {
 
     opacity: 0.92;
 }
+/* =========================================
+   PASSENGER TYPE DROPDOWN
+   Direct Registration Card Only
+========================================= */
 
+#passengerTypeDropdown {
+    position: relative;
+    width: 100%;
+}
+
+
+#passengerTypeToggle {
+    width: 100%;
+    height: 44px;
+    padding: 0 15px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    border: 1px solid #cddbea;
+    border-radius: 9px;
+
+    background: #ffffff;
+
+    font-family: inherit;
+    font-size: 0.88rem;
+    text-align: left;
+
+    cursor: pointer;
+}
+
+/* Placeholder */
+#passengerTypeSelected {
+    color: #8fa2bb;
+}
+
+/* Selected passenger type */
+#passengerTypeToggle.has-value #passengerTypeSelected {
+    color: #263d59;
+}
+
+#passengerTypeToggle:hover {
+    border-color: #aebfd3;
+}
+
+
+#passengerTypeToggle:focus {
+    outline: none;
+    border-color: #9db5d0;
+}
+
+
+#passengerTypeToggle i {
+    color: #5f7188;
+    font-size: 0.85rem;
+    transition: transform 0.2s ease;
+}
+
+
+#passengerTypeToggle[aria-expanded="true"] i {
+    transform: rotate(180deg);
+}
+
+
+/* =========================================
+   DROPDOWN MENU
+========================================= */
+
+#passengerTypeMenu {
+    display: none;
+
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+
+    width: 100%;
+
+    background: #ffffff;
+
+    border: 1px solid #d6e0eb;
+    border-radius: 9px;
+
+    box-shadow: 0 8px 20px rgba(20, 45, 75, 0.12);
+
+    padding: 6px;
+
+    z-index: 1000;
+}
+
+
+/* =========================================
+   DROPDOWN OPTIONS
+========================================= */
+
+#passengerTypeMenu .manifest-boat-option {
+    width: 100%;
+
+    display: block;
+
+    padding: 11px 12px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: transparent;
+
+    color: #263d59;
+
+    font-family: inherit;
+    font-size: 0.88rem;
+
+    text-align: left;
+
+    cursor: pointer;
+}
+
+
+#passengerTypeMenu .manifest-boat-option:hover {
+    background: #f3f7fb;
+}
+
+
+#passengerTypeMenu .manifest-boat-option.selected {
+    background: #eef5fc;
+    color: #123b6d;
+    font-weight: 500;
+}
 
 /* =========================================
    PASSENGER TYPE DROPDOWN

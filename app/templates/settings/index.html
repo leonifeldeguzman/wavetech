@@ -549,20 +549,28 @@ page_title %}Settings{% endblock %} {% block extra_css %}
               class="refresh-form"
               id="refresh-form"
             >
+              <input
+                type="hidden"
+                name="refresh_interval_seconds"
+                id="refresh-interval-hidden"
+                value="{{ refresh_interval }}"
+              />
+
               <div class="settings-field">
                 <label for="refresh-interval">Refresh every</label>
 
                 <select
-                  name="refresh_interval_seconds"
                   id="refresh-interval"
                 >
                   {% for option in refresh_interval_options %}
-                  <option
-                    value="{{ option }}"
-                    {% if option == refresh_interval %}selected{% endif %}
-                  >
-                    {{ option }} seconds
-                  </option>
+                    {% if option > 0 %}
+                    <option
+                      value="{{ option }}"
+                      {% if option == refresh_interval %}selected{% endif %}
+                    >
+                      {{ option }} seconds
+                    </option>
+                    {% endif %}
                   {% endfor %}
                 </select>
               </div>
@@ -662,10 +670,16 @@ page_title %}Settings{% endblock %} {% block extra_css %}
     </div>
   </div>
 </div>
+
 <script>
+  /* =====================================================
+     PASSWORD TOGGLE
+  ===================================================== */
+
   function togglePassword(inputId, button) {
     const input = document.getElementById(inputId);
     const icon = button.querySelector("i");
+
     if (input.type === "password") {
       input.type = "text";
       icon.classList.remove("bi-eye");
@@ -678,6 +692,12 @@ page_title %}Settings{% endblock %} {% block extra_css %}
       button.setAttribute("aria-label", "Show password");
     }
   }
+
+
+  /* =====================================================
+     DISPLAY NAME EDIT
+  ===================================================== */
+
   function startDisplayNameEdit(button) {
     const form = button.closest(".profile-edit-form");
     const name = form.querySelector(".profile-name");
@@ -685,14 +705,19 @@ page_title %}Settings{% endblock %} {% block extra_css %}
     const editButton = form.querySelector(".settings-edit-btn");
     const saveButton = form.querySelector(".settings-save-name-btn");
     const cancelButton = form.querySelector(".settings-cancel-name-btn");
+
     name.style.display = "none";
     input.style.display = "block";
+
     editButton.style.display = "none";
     saveButton.style.display = "inline-flex";
     cancelButton.style.display = "inline-flex";
+
     input.focus();
     input.select();
   }
+
+
   function cancelDisplayNameEdit(button) {
     const form = button.closest(".profile-edit-form");
     const name = form.querySelector(".profile-name");
@@ -700,166 +725,268 @@ page_title %}Settings{% endblock %} {% block extra_css %}
     const editButton = form.querySelector(".settings-edit-btn");
     const saveButton = form.querySelector(".settings-save-name-btn");
     const cancelButton = form.querySelector(".settings-cancel-name-btn");
+
     input.value = name.textContent.trim();
+
     name.style.display = "block";
     input.style.display = "none";
+
     editButton.style.display = "inline-flex";
     saveButton.style.display = "none";
     cancelButton.style.display = "none";
   }
+
+
+  /* =====================================================
+     SETTINGS NAVIGATION
+  ===================================================== */
+
   document.addEventListener("DOMContentLoaded", function () {
     const navItems = document.querySelectorAll(
-      "#settings-page .settings-nav-item",
+      "#settings-page .settings-nav-item"
     );
+
     const sections = document.querySelectorAll(
-      "#settings-page .settings-section",
+      "#settings-page .settings-section"
     );
+
     navItems.forEach(function (navItem) {
       navItem.addEventListener("click", function (event) {
         event.preventDefault();
+
         const targetId = this.dataset.section;
+
         navItems.forEach(function (item) {
           item.classList.remove("active");
         });
+
         sections.forEach(function (section) {
           section.classList.remove("active");
         });
+
         this.classList.add("active");
+
         const targetSection = document.getElementById(targetId);
+
         if (targetSection) {
           targetSection.classList.add("active");
         }
+
         history.replaceState(
           null,
           "",
-          window.location.pathname + window.location.search,
+          window.location.pathname + window.location.search
         );
       });
     });
+
+
+    /* =====================================================
+   REFRESH INTERVAL TOGGLE
+===================================================== */
+
+const refreshToggle = document.getElementById("refresh-toggle");
+const refreshForm = document.getElementById("refresh-form");
+const refreshInterval = document.getElementById("refresh-interval");
+const refreshIntervalHidden = document.getElementById("refresh-interval-hidden");
+const refreshSaveButton = document.getElementById("refresh-save-btn");
+const refreshStatus = document.getElementById("refresh-status");
+
+function updateRefreshToggleUI() {
+  if (
+    !refreshToggle ||
+    !refreshForm ||
+    !refreshInterval ||
+    !refreshIntervalHidden ||
+    !refreshSaveButton ||
+    !refreshStatus
+  ) {
+    return;
+  }
+
+  if (refreshToggle.checked) {
+    refreshForm.classList.remove("is-disabled");
+
+    refreshInterval.disabled = false;
+
+    refreshSaveButton.disabled = false;
+    refreshSaveButton.classList.remove("is-disabled");
+
+    refreshIntervalHidden.value = refreshInterval.value;
+
+    refreshStatus.textContent = "Auto-refresh is currently on";
+    refreshStatus.classList.remove("off");
+    refreshStatus.classList.add("on");
+  } else {
+    refreshForm.classList.add("is-disabled");
+
+    refreshInterval.disabled = true;
+
+    refreshSaveButton.disabled = false;
+    refreshSaveButton.classList.remove("is-disabled");
+
+    refreshIntervalHidden.value = "0";
+
+    refreshStatus.textContent = "Auto-refresh is currently off";
+    refreshStatus.classList.remove("on");
+    refreshStatus.classList.add("off");
+  }
+}
+
+if (refreshToggle) {
+  refreshToggle.addEventListener("change", updateRefreshToggleUI);
+}
+
+if (refreshInterval) {
+  refreshInterval.addEventListener("change", function () {
+    if (
+      refreshToggle &&
+      refreshToggle.checked &&
+      refreshIntervalHidden
+    ) {
+      refreshIntervalHidden.value = refreshInterval.value;
+    }
   });
+}
+
+if (refreshToggle) {
+  updateRefreshToggleUI();
+}
+});
+
+  /* =====================================================
+     PERSONAL INFORMATION EDIT
+  ===================================================== */
 
   function startPersonalInfoEdit(button) {
-  const card = button.closest(".personal-card");
+    const card = button.closest(".personal-card");
 
-  const displayValues = card.querySelectorAll(
-    ".personal-display-value"
-  );
+    const displayValues = card.querySelectorAll(
+      ".personal-display-value"
+    );
 
-  const inputs = card.querySelectorAll(
-    ".personal-edit-input"
-  );
+    const inputs = card.querySelectorAll(
+      ".personal-edit-input"
+    );
 
-  const editButton = card.querySelector(".personal-edit-btn");
-  const saveButton = card.querySelector(".personal-save-btn");
-  const cancelButton = card.querySelector(".personal-cancel-btn");
+    const editButton = card.querySelector(".personal-edit-btn");
+    const saveButton = card.querySelector(".personal-save-btn");
+    const cancelButton = card.querySelector(".personal-cancel-btn");
 
-  displayValues.forEach(function (value) {
-    value.style.display = "none";
-  });
+    displayValues.forEach(function (value) {
+      value.style.display = "none";
+    });
 
-  inputs.forEach(function (input) {
-    input.style.display = "block";
-  });
+    inputs.forEach(function (input) {
+      input.style.display = "block";
+    });
 
-  editButton.style.display = "none";
-  saveButton.style.display = "inline-flex";
-  cancelButton.style.display = "inline-flex";
+    editButton.style.display = "none";
+    saveButton.style.display = "inline-flex";
+    cancelButton.style.display = "inline-flex";
 
-  const firstInput = inputs[0];
+    const firstInput = inputs[0];
 
-  if (firstInput) {
-    firstInput.focus();
-    firstInput.select();
+    if (firstInput) {
+      firstInput.focus();
+      firstInput.select();
+    }
   }
-}
 
 
-function cancelPersonalInfoEdit(button) {
-  const card = button.closest(".personal-card");
+  function cancelPersonalInfoEdit(button) {
+    const card = button.closest(".personal-card");
 
-  const displayValues = card.querySelectorAll(
-    ".personal-display-value"
-  );
+    const displayValues = card.querySelectorAll(
+      ".personal-display-value"
+    );
 
-  const inputs = card.querySelectorAll(
-    ".personal-edit-input"
-  );
+    const inputs = card.querySelectorAll(
+      ".personal-edit-input"
+    );
 
-  const editButton = card.querySelector(".personal-edit-btn");
-  const saveButton = card.querySelector(".personal-save-btn");
-  const cancelButton = card.querySelector(".personal-cancel-btn");
+    const editButton = card.querySelector(".personal-edit-btn");
+    const saveButton = card.querySelector(".personal-save-btn");
+    const cancelButton = card.querySelector(".personal-cancel-btn");
 
-  inputs.forEach(function (input, index) {
-    const displayValue = displayValues[index];
+    inputs.forEach(function (input, index) {
+      const displayValue = displayValues[index];
 
-    if (displayValue) {
-      input.value =
-        displayValue.textContent.trim() === "—"
-          ? ""
-          : displayValue.textContent.trim();
+      if (displayValue) {
+        input.value =
+          displayValue.textContent.trim() === "—"
+            ? ""
+            : displayValue.textContent.trim();
+      }
+
+      input.style.display = "none";
+    });
+
+    displayValues.forEach(function (value) {
+      value.style.display = "block";
+    });
+
+    editButton.style.display = "inline-flex";
+    saveButton.style.display = "none";
+    cancelButton.style.display = "none";
+  }
+
+
+  function savePersonalInfo(button) {
+    const card = button.closest(".personal-card");
+    const form = card.querySelector(".personal-info-form");
+
+    if (!form) {
+      return;
     }
 
-    input.style.display = "none";
-  });
+    const firstName = form.querySelector(
+      'input[name="first_name"]'
+    );
 
-  displayValues.forEach(function (value) {
-    value.style.display = "block";
-  });
+    const lastName = form.querySelector(
+      'input[name="last_name"]'
+    );
 
-  editButton.style.display = "inline-flex";
-  saveButton.style.display = "none";
-  cancelButton.style.display = "none";
-}
+    if (!firstName || !lastName) {
+      return;
+    }
 
+    if (!firstName.value.trim()) {
+      alert("First name cannot be empty.");
+      firstName.focus();
+      return;
+    }
 
-function savePersonalInfo(button) {
-  const card = button.closest(".personal-card");
-  const form = card.querySelector(".personal-info-form");
+    if (!lastName.value.trim()) {
+      alert("Last name cannot be empty.");
+      lastName.focus();
+      return;
+    }
 
-  if (!form) {
-    return;
+    form.submit();
   }
 
-  const firstName = form.querySelector(
-    'input[name="first_name"]'
-  );
 
-  const lastName = form.querySelector(
-    'input[name="last_name"]'
-  );
+  /* =====================================================
+     SAFETY THRESHOLDS EDIT
+  ===================================================== */
 
-  if (!firstName || !lastName) {
-    return;
-  }
-
-  if (!firstName.value.trim()) {
-    alert("First name cannot be empty.");
-    firstName.focus();
-    return;
-  }
-
-  if (!lastName.value.trim()) {
-    alert("Last name cannot be empty.");
-    lastName.focus();
-    return;
-  }
-
-  form.submit();
-}
-
-function startSafetyEdit(button) {
+  function startSafetyEdit(button) {
     const card = button.closest(".settings-card");
     const form = card.querySelector("#safety-threshold-form");
 
-    if (!form) return;
+    if (!form) {
+      return;
+    }
 
     const inputs = form.querySelectorAll("input");
     const actionRow = button.parentElement;
     const buttons = actionRow.querySelectorAll("button");
 
     inputs.forEach(function (input) {
-        input.dataset.originalValue = input.value;
-        input.removeAttribute("readonly");
+      input.dataset.originalValue = input.value;
+      input.removeAttribute("readonly");
     });
 
     buttons[0].style.display = "none";
@@ -867,98 +994,49 @@ function startSafetyEdit(button) {
     buttons[2].style.display = "inline-flex";
 
     if (inputs[0]) {
-        inputs[0].focus();
-        inputs[0].select();
+      inputs[0].focus();
+      inputs[0].select();
     }
-}
+  }
 
-function cancelSafetyEdit(button) {
+
+  function cancelSafetyEdit(button) {
     const card = button.closest(".settings-card");
     const form = card.querySelector("#safety-threshold-form");
 
-    if (!form) return;
+    if (!form) {
+      return;
+    }
 
     const actionRow = button.parentElement;
     const buttons = actionRow.querySelectorAll("button");
     const inputs = form.querySelectorAll("input");
 
     inputs.forEach(function (input) {
-        if (input.dataset.originalValue !== undefined) {
-            input.value = input.dataset.originalValue;
-        }
+      if (input.dataset.originalValue !== undefined) {
+        input.value = input.dataset.originalValue;
+      }
 
-        input.setAttribute("readonly", "");
-        delete input.dataset.originalValue;
+      input.setAttribute("readonly", "");
+      delete input.dataset.originalValue;
     });
 
     buttons[0].style.display = "inline-flex";
     buttons[1].style.display = "none";
     buttons[2].style.display = "none";
-}
+  }
 
-function saveSafetyEdit(button) {
+
+  function saveSafetyEdit(button) {
     const card = button.closest(".settings-card");
     const form = card.querySelector("#safety-threshold-form");
 
-    if (!form) return;
+    if (!form) {
+      return;
+    }
 
     form.requestSubmit();
-}
-
-      /* =====================================================
-       REFRESH INTERVAL UI TOGGLE
-       UI ONLY — does not change backend flow
-    ===================================================== */
-
-    const refreshToggle = document.getElementById("refresh-toggle");
-    const refreshForm = document.getElementById("refresh-form");
-    const refreshInterval = document.getElementById("refresh-interval");
-    const refreshSaveButton = document.getElementById("refresh-save-btn");
-    const refreshStatus = document.getElementById("refresh-status");
-
-    function updateRefreshToggleUI() {
-      if (
-        !refreshToggle ||
-        !refreshForm ||
-        !refreshInterval ||
-        !refreshSaveButton ||
-        !refreshStatus
-      ) {
-        return;
-      }
-
-      const enabled = refreshToggle.checked;
-
-      if (enabled) {
-        refreshForm.classList.remove("is-disabled");
-
-        refreshInterval.disabled = false;
-
-        refreshSaveButton.disabled = false;
-        refreshSaveButton.classList.remove("is-disabled");
-
-        refreshStatus.textContent = "Auto-refresh is currently on";
-        refreshStatus.classList.remove("off");
-        refreshStatus.classList.add("on");
-      } else {
-        refreshForm.classList.add("is-disabled");
-
-        refreshInterval.disabled = true;
-
-        refreshSaveButton.disabled = true;
-        refreshSaveButton.classList.add("is-disabled");
-
-        refreshStatus.textContent = "Auto-refresh is currently off";
-        refreshStatus.classList.remove("on");
-        refreshStatus.classList.add("off");
-      }
-    }
-
-    if (refreshToggle) {
-      refreshToggle.addEventListener("change", updateRefreshToggleUI);
-
-      updateRefreshToggleUI();
-    }
-
+  }
 </script>
+
 {% endblock %}

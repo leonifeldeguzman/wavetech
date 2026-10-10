@@ -1278,8 +1278,8 @@
     // AUTO REFRESH
     // =========================================================
 
-    const REFRESH_INTERVAL_MS =
-        Number("{{ refresh_interval_seconds }}") * 1000;
+    const refreshIntervalSeconds =
+        Number("{{ refresh_interval_seconds }}");
 
 
     function isEditingManualForm() {
@@ -1299,15 +1299,25 @@
     }
 
 
-    setInterval(function () {
+    if (
+        Number.isFinite(refreshIntervalSeconds) &&
+        refreshIntervalSeconds > 0
+    ) {
 
-        if (!isEditingManualForm()) {
+        const refreshIntervalMs =
+            refreshIntervalSeconds * 1000;
 
-            window.location.reload();
+        setInterval(function () {
 
-        }
+            if (!isEditingManualForm()) {
 
-    }, REFRESH_INTERVAL_MS);
+                window.location.reload();
+
+            }
+
+        }, refreshIntervalMs);
+
+    }
 
 </script>
 

@@ -89,6 +89,10 @@
                             {% endif %}
                         </div>
 
+                        <div class="home-environment-subvalue environmental-condition {{ environmental_condition.css_class }}">
+                            {{ environmental_condition.label }}
+                        </div>
+
                     {% else %}
 
                         <div class="home-environment-value">
@@ -162,10 +166,10 @@
                     Wave Height
                 </div>
 
-                {% if latest and latest.wave_height_m is not none %}
+                {% if latest_reading and latest_reading.wave_height_m is not none %}
 
                     <div class="home-environment-value">
-                        {{ latest.wave_height_m }} m
+                        {{ latest_reading.wave_height_m }} m
                     </div>
 
                     <div class="home-environment-subvalue">
@@ -201,17 +205,28 @@
                     Water Level
                 </div>
 
-                                {% if water_reading %}
+                                {% if water_level_card.reading %}
 
                     <div class="home-environment-value">
-                        {{ water_reading.water_level_m }} m
+                        {{ water_level_card.reading.water_level_m }} m
                     </div>
 
                     <div class="home-environment-subvalue">
-                        {% if water_reading.source == 'manual' %}
-                            Manual observation, lake-wide
+                        {% if water_level_card.reading.source == 'manual' %}
+                            Manual observation
                         {% else %}
-                            LLDA daily average, lake-wide
+                            LLDA daily average
+                        {% endif %}
+                    </div>
+
+                    <div class="home-environment-subvalue">
+                        {% if water_level_card.is_today %}
+                            Recorded today
+                        {% elif water_level_card.age_days == 1 %}
+                            Last recorded {{ water_level_card.date_label }} (1 day ago)
+                        {% else %}
+                            Last recorded {{ water_level_card.date_label }}
+                            ({{ water_level_card.age_days }} days ago)
                         {% endif %}
                     </div>
 
@@ -222,7 +237,7 @@
                     </div>
 
                     <div class="home-environment-subvalue">
-                        No reading recorded today
+                        No reading recorded
                     </div>
 
                 {% endif %}
@@ -244,20 +259,29 @@
                     Safety
                 </div>
 
-                <div class="home-safety-value {{ safety_status|lower }}">
-                    {{ safety_status }}
+                <div class="home-safety-value
+                    {% if safety_status == 'clear' %}safe
+                    {% elif safety_status in ['critical-low', 'critical-high'] %}unsafe
+                    {% elif safety_status in ['caution', 'warning'] %}caution
+                    {% else %}unavailable
+                    {% endif %}">
+                    {{ safety_label }}
                 </div>
 
                 <div class="home-environment-subvalue">
-                    {% if safety_status == "SAFE" %}
+                    {% if safety_status == "clear" %}
                         All clear
-                    {% elif safety_status == "CAUTION" %}
+                    {% elif safety_status in ["caution", "warning"] %}
                         Exercise caution
-                    {% elif safety_status == "UNSAFE" %}
+                    {% elif safety_status in ["critical-low", "critical-high"] %}
                         Travel not recommended
                     {% else %}
                         Manual verification
                     {% endif %}
+                </div>
+
+                <div class="home-environment-subvalue">
+                    Based on lake water level
                 </div>
 
             </div>
@@ -382,51 +406,65 @@
                 {% endif %}
 
             </div>
+            <!-- QUICK ACTIONS -->
 
+            <div class="home-card quick-actions-card">
 
-            <!-- ENVIRONMENTAL STATUS -->
+            <div class="quick-actions">
 
-            <div class="home-card environmental-status-card">
-
-                <div class="home-card-heading">
-
-                    <div class="home-card-title">
-                        <i class="fa-solid fa-leaf environmental-status-icon"></i>
-                        <h2>Environmental Status</h2>
+                <a
+                    href="{{ url_for('passenger.register_page') }}"
+                    class="quick-action-item"
+                >
+                    <div class="quick-action-icon">
+                        <i class="bi bi-person-plus"></i>
                     </div>
 
-                </div>
-
-                                <div class="home-environment-status">
-
-                    <div class="home-status-main">
-                        Lake Conditions
+                    <div class="quick-action-content">
+                        <strong>Pre-Register</strong>
+                        <span>Register for your ferry trip</span>
                     </div>
 
-                    <div class="home-status-updated">
-                        {% if windy_reading %}
-                            Weather model for Cardona, not a lake measurement.
-                            Updated {{ windy_reading.retrieved_at | ph_time }}
-                        {% else %}
-                            No recent update
-                        {% endif %}
-                    </div>
+                    <i class="bi bi-chevron-right quick-action-arrow"></i>
+                </a>
 
-                    <div class="home-status-updated">
-                        <a href="https://open-meteo.com/"
-                           target="_blank" rel="noopener">Weather data by Open-Meteo.com</a>
-                    </div>
-
-                </div>
 
                 <a
                     href="{{ url_for('passenger.schedule') }}"
-                    class="home-schedule-btn"
+                    class="quick-action-item"
                 >
-                    View Schedule
+                    <div class="quick-action-icon">
+                        <i class="bi bi-calendar3"></i>
+                    </div>
+
+                    <div class="quick-action-content">
+                        <strong>View Schedule</strong>
+                        <span>Check available trips</span>
+                    </div>
+
+                    <i class="bi bi-chevron-right quick-action-arrow"></i>
+                </a>
+
+
+                <a
+                    href="{{ url_for('passenger.guide') }}"
+                    class="quick-action-item"
+                >
+                    <div class="quick-action-icon">
+                        <i class="bi bi-book"></i>
+                    </div>
+
+                    <div class="quick-action-content">
+                        <strong>Guide</strong>
+                        <span>Learn the ferry terminal process</span>
+                    </div>
+
+                    <i class="bi bi-chevron-right quick-action-arrow"></i>
                 </a>
 
             </div>
+
+        </div>
 
         </section>
 

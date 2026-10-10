@@ -6,7 +6,7 @@ from app.extensions import db
 from app.models.trip import Trip
 from app.models.manifest_entry import ManifestEntry
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import historical_baseline_service, scheduling_service, settings_service
+from app.services import historical_baseline_service, monitoring_service, scheduling_service, settings_service
 
 
 @dashboard_bp.route("/dashboard")
@@ -41,12 +41,7 @@ def index():
         boarding_now_count = ManifestEntry.query.filter_by(trip_id=boarding_trip.id).count()
         boarding_now_boat = boarding_trip.boat.name if boarding_trip.boat else None
 
-    latest_reading = (
-        EnvironmentalReading.query
-        .filter(EnvironmentalReading.water_level_m.isnot(None))
-        .order_by(EnvironmentalReading.retrieved_at.desc())
-        .first()
-    )
+    safety_status, safety_label, latest_reading = monitoring_service.get_current_safety()
 
     # Scheduling Decision-Support is read-only. The selected trip is used
     # only as context for the operator; no Trip or manifest row is changed.
@@ -70,22 +65,6 @@ def index():
 
             
 
-
-    if latest_reading is None:
-        safety_status = "pending"
-        safety_label = "Pending Setup"
-    elif latest_reading.water_level_m < 10.50:
-        safety_status = "critical-low"
-        safety_label = "CRITICAL LOW"
-    elif latest_reading.water_level_m > 12.50:
-        safety_status = "critical-high"
-        safety_label = "CRITICAL HIGH"
-    else:
-        safety_status = "clear"
-        safety_label = "CLEAR"
-
-    # pass these into render_template():
-    # safety_status=safety_status, safety_label=safety_label, latest_reading=latest_reading
 
     return render_template(
         "dashboard/index.html",

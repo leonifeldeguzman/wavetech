@@ -31,11 +31,7 @@ def index():
     # rows are not shown here; station weather has its own section.
     hidden_sources = (monitoring_service.SOURCE_OPEN_METEO, "windy")
 
-    latest = EnvironmentalReading.query.filter(
-        EnvironmentalReading.source.notin_(hidden_sources)
-    ).order_by(
-        EnvironmentalReading.retrieved_at.desc()
-    ).first()
+    latest = monitoring_service.get_latest_reading()
 
     history = EnvironmentalReading.query.filter(
         EnvironmentalReading.source.notin_(hidden_sources)
@@ -50,15 +46,7 @@ def index():
     # Newest water level from a real current source (LLDA or manual).
     # Not `latest` above: that is the newest row of ANY source, which is
     # often a Windy row with no water level.
-    baseline_water_reading = (
-        EnvironmentalReading.query
-        .filter(
-            EnvironmentalReading.water_level_m.isnot(None),
-            EnvironmentalReading.source.in_(("llda", "manual")),
-        )
-        .order_by(EnvironmentalReading.retrieved_at.desc())
-        .first()
-    )
+    baseline_water_reading = monitoring_service.get_latest_water_reading()
 
     baseline_context = None
     if baseline and baseline_water_reading:
@@ -72,17 +60,9 @@ def index():
 
     # Water level for the top card: newest LLDA/manual level, shown with its
     # age. Display only; it does not feed any recommendation.
-    water_level_card = {"reading": None, "age_days": None,
-                        "is_today": False, "date_label": None}
-    if baseline_water_reading and baseline_water_reading.retrieved_at:
-        taken_ph = baseline_water_reading.retrieved_at + timedelta(hours=8)
-        age_days = max((ph_today() - taken_ph.date()).days, 0)
-        water_level_card = {
-            "reading": baseline_water_reading,
-            "age_days": age_days,
-            "is_today": age_days == 0,
-            "date_label": taken_ph.strftime("%b %d, %Y"),
-        }
+    water_level_card = monitoring_service.build_water_level_card(
+        baseline_water_reading
+    )
 
         # Per-station weather cards. Stations with identical model values fall
     # in the same grid cell, so we tell the operator which ones share one.

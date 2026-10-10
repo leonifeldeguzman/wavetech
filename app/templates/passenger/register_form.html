@@ -1,61 +1,412 @@
 {% extends "passenger/base.html" %}
+
 {% block title %}Register{% endblock %}
 
 {% block content %}
-<div class="container py-5" style="max-width: 600px;">
 
-    <a href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}" class="text-decoration-none small text-muted">&larr; Back to trip details</a>
+<div class="passenger-register-page">
 
-    <div class="card border-0 shadow-sm mt-3">
-        <div class="card-body p-4">
-            <h5 class="fw-bold mb-1">Register for Trip</h5>
-            <p class="text-muted small mb-4">
-                {{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }} — {{ trip.departure_time }}
-            </p>
+    <div class="registration-panel registration-visible">
 
+        <div class="registration-card direct-registration-card">
+
+            <!-- =========================
+                 HEADER
+            ========================== -->
+            <div class="registration-card-header">
+                <h3>Passenger Information</h3>
+            </div>
+
+            <hr>
+
+
+            <!-- =========================
+                 GENERAL ERROR
+            ========================== -->
             {% if field_errors.get('_general') %}
-            <div class="alert alert-danger py-2">{{ field_errors['_general'] }}</div>
+
+            <div class="registration-lookup-error">
+                <i class="bi bi-exclamation-circle"></i>
+                {{ field_errors['_general'] }}
+            </div>
+
             {% endif %}
 
-            <form method="post" action="{{ url_for('passenger.submit_registration_page', trip_id=trip.trip_id) }}">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label class="form-label small text-muted">Full Name</label>
-                        <input type="text" name="full_name" class="form-control" value="{{ form_values.get('full_name', '') }}">
-                        {% if field_errors.get('full_name') %}<div class="text-danger small mt-1">{{ field_errors['full_name'] }}</div>{% endif %}
+
+            <!-- =========================
+                 FORM
+            ========================== -->
+            <form
+                method="post"
+                action="{{ url_for('passenger.submit_registration_page', trip_id=trip.trip_id) }}"
+            >
+
+                <div class="registration-form-grid">
+
+
+                    <!-- =========================
+                         FULL NAME
+                    ========================== -->
+                    <div class="registration-field">
+
+                        <label for="full_name">
+                            Full Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="full_name"
+                            name="full_name"
+                            class="registration-input"
+                            placeholder="First Name Last Name"
+                            value="{{ form_values.get('full_name', '') }}"
+                            required
+                        >
+
+                        {% if field_errors.get('full_name') %}
+
+                        <div class="registration-lookup-error">
+                            <i class="bi bi-exclamation-circle"></i>
+                            {{ field_errors['full_name'] }}
+                        </div>
+
+                        {% endif %}
+
                     </div>
-                    <div class="col-6">
-                        <label class="form-label small text-muted">Age</label>
-                        <input type="number" name="age" class="form-control" value="{{ form_values.get('age', '') }}">
-                        {% if field_errors.get('age') %}<div class="text-danger small mt-1">{{ field_errors['age'] }}</div>{% endif %}
+
+
+                    <!-- =========================
+                         AGE
+                    ========================== -->
+                    <div class="registration-field">
+
+                        <label for="age">
+                            Age
+                        </label>
+
+                        <input
+                            type="number"
+                            id="age"
+                            name="age"
+                            class="registration-input"
+                            placeholder="Enter your age"
+                            min="1"
+                            max="120"
+                            value="{{ form_values.get('age', '') }}"
+                            required
+                        >
+
+                        {% if field_errors.get('age') %}
+
+                        <div class="registration-lookup-error">
+                            <i class="bi bi-exclamation-circle"></i>
+                            {{ field_errors['age'] }}
+                        </div>
+
+                        {% endif %}
+
                     </div>
-                    <div class="col-6">
-                        <label class="form-label small text-muted">Passenger Type</label>
-                        <select name="passenger_type" class="form-select">
-                            {% for pt in passenger_types %}
-                            <option value="{{ pt }}" {% if form_values.get('passenger_type', 'Regular') == pt %}selected{% endif %}>{{ pt }}</option>
-                            {% endfor %}
-                        </select>
-                        {% if field_errors.get('passenger_type') %}<div class="text-danger small mt-1">{{ field_errors['passenger_type'] }}</div>{% endif %}
+
+
+                    <!-- =========================
+                         ADDRESS
+                    ========================== -->
+                    <div class="registration-field full-width">
+
+                        <label for="address">
+                            Address
+                        </label>
+
+                        <input
+                            type="text"
+                            id="address"
+                            name="address"
+                            class="registration-input"
+                            placeholder="House No., Street, Barangay, City/Municipality"
+                            value="{{ form_values.get('address', '') }}"
+                            required
+                        >
+
+                        {% if field_errors.get('address') %}
+
+                        <div class="registration-lookup-error">
+                            <i class="bi bi-exclamation-circle"></i>
+                            {{ field_errors['address'] }}
+                        </div>
+
+                        {% endif %}
+
                     </div>
-                    <div class="col-12">
-                        <label class="form-label small text-muted">Address</label>
-                        <input type="text" name="address" class="form-control" value="{{ form_values.get('address', '') }}">
-                        {% if field_errors.get('address') %}<div class="text-danger small mt-1">{{ field_errors['address'] }}</div>{% endif %}
+
+
+                    <!-- =========================
+                         CONTACT NUMBER
+                    ========================== -->
+                    <div class="registration-field">
+
+                        <label for="contact_number">
+                            Contact Number
+                        </label>
+
+                        <input
+                            type="text"
+                            id="contact_number"
+                            name="contact_number"
+                            class="registration-input"
+                            placeholder="09XXXXXXXXX"
+                            value="{{ form_values.get('contact_number', '') }}"
+                            required
+                        >
+
+                        {% if field_errors.get('contact_number') %}
+
+                        <div class="registration-lookup-error">
+                            <i class="bi bi-exclamation-circle"></i>
+                            {{ field_errors['contact_number'] }}
+                        </div>
+
+                        {% endif %}
+
                     </div>
-                    <div class="col-12">
-                        <label class="form-label small text-muted">Contact Number</label>
-                        <input type="text" name="contact_number" class="form-control" value="{{ form_values.get('contact_number', '') }}">
-                        {% if field_errors.get('contact_number') %}<div class="text-danger small mt-1">{{ field_errors['contact_number'] }}</div>{% endif %}
+
+
+                    <!-- =========================
+                         PASSENGER TYPE
+                    ========================== -->
+                    <div class="registration-field">
+
+                        <label for="passengerTypeDropdown">
+                            Passenger Type
+                        </label>
+
+                        <div
+                            class="manifest-boat-dropdown"
+                            id="passengerTypeDropdown"
+                        >
+
+                            <button
+                                type="button"
+                                class="manifest-boat-toggle"
+                                id="passengerTypeToggle"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                            >
+
+                                <span id="passengerTypeSelected">
+                                    {% if form_values.get('passenger_type') %}
+                                        {{ form_values.get('passenger_type') }}
+                                    {% else %}
+                                        Select Passenger Type
+                                    {% endif %}
+                                </span>
+
+                                <i class="bi bi-chevron-down"></i>
+
+                            </button>
+
+
+                            <div
+                                class="manifest-boat-menu"
+                                id="passengerTypeMenu"
+                                role="listbox"
+                            >
+
+                                {% for pt in passenger_types %}
+
+                                <button
+                                    type="button"
+                                    class="manifest-boat-option {% if form_values.get('passenger_type') == pt %}selected{% endif %}"
+                                    data-value="{{ pt }}"
+                                    role="option"
+                                >
+                                    {{ pt }}
+                                </button>
+
+                                {% endfor %}
+
+                            </div>
+
+
+                            <input
+                                type="hidden"
+                                name="passenger_type"
+                                id="passengerTypeValue"
+                                value="{{ form_values.get('passenger_type', '') }}"
+                            >
+
+                        </div>
+
+
+                        {% if field_errors.get('passenger_type') %}
+
+                        <div class="registration-lookup-error">
+                            <i class="bi bi-exclamation-circle"></i>
+                            {{ field_errors['passenger_type'] }}
+                        </div>
+
+                        {% endif %}
+
                     </div>
+
                 </div>
 
-                <button type="submit" class="btn text-white w-100 mt-4" style="background-color: var(--navy);">
-                    Submit Registration
-                </button>
+
+                <!-- =========================
+                     ACTION BUTTONS
+                ========================== -->
+                <div class="registration-actions">
+
+                    <a
+                        href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}"
+                        class="registration-cancel-btn"
+                    >
+                        Cancel
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="registration-next-btn"
+                    >
+                        Submit
+                    </button>
+
+                </div>
+
             </form>
+
         </div>
+
     </div>
 
 </div>
+
+
+<!-- =========================
+     PASSENGER TYPE DROPDOWN
+========================== -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const toggle = document.getElementById("passengerTypeToggle");
+    const menu = document.getElementById("passengerTypeMenu");
+    const selected = document.getElementById("passengerTypeSelected");
+    const hiddenInput = document.getElementById("passengerTypeValue");
+    const dropdown = document.getElementById("passengerTypeDropdown");
+
+    if (!toggle || !menu || !selected || !hiddenInput || !dropdown) {
+        return;
+    }
+    if (hiddenInput.value) {
+        selected.style.color = "#263d59";
+    }
+
+    /* =========================
+       TOGGLE DROPDOWN
+    ========================== */
+
+    toggle.addEventListener("click", function (event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const isOpen =
+            toggle.getAttribute("aria-expanded") === "true";
+
+        if (isOpen) {
+
+            menu.style.display = "none";
+
+            toggle.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+        } else {
+
+            menu.style.display = "block";
+
+            toggle.setAttribute(
+                "aria-expanded",
+                "true"
+            );
+
+        }
+
+    });
+
+
+    /* =========================
+       SELECT PASSENGER TYPE
+    ========================== */
+
+    const options = menu.querySelectorAll(
+        ".manifest-boat-option"
+    );
+
+    options.forEach(function (option) {
+
+        option.addEventListener("click", function (event) {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const value =
+                option.getAttribute("data-value");
+
+            selected.textContent =
+            option.textContent.trim();
+
+        selected.style.color = "#263d59";
+
+        hiddenInput.value = value;
+
+
+            /* Remove previous selection */
+
+            options.forEach(function (item) {
+                item.classList.remove("selected");
+            });
+
+
+            /* Mark selected option */
+
+            option.classList.add("selected");
+
+
+            /* Close dropdown */
+
+            menu.style.display = "none";
+
+            toggle.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+        });
+
+    });
+
+
+    /* =========================
+       CLOSE WHEN CLICKING OUTSIDE
+    ========================== */
+
+    document.addEventListener("click", function (event) {
+
+        if (!dropdown.contains(event.target)) {
+
+            menu.style.display = "none";
+
+            toggle.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+        }
+
+    });
+
+});
+</script>
+
 {% endblock %}

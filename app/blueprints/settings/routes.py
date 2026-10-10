@@ -117,6 +117,7 @@ def update_personal_info():
 
     first_name = request.form.get("first_name", "").strip()
     last_name = request.form.get("last_name", "").strip()
+    phone = request.form.get("phone", "").strip()
 
     if not first_name:
         flash("First name cannot be empty.")
@@ -138,6 +139,7 @@ def update_personal_info():
 
     user.full_name = full_name
     session["full_name"] = full_name
+    user.phone = phone
 
     db.session.commit()
 
@@ -205,7 +207,11 @@ def update_refresh_interval():
             details=f"Refresh interval: {old_seconds} -> {seconds} seconds.",
         )
 
-    flash(f"Refresh interval set to {seconds} seconds.")
+    if seconds == 0:
+        flash("Auto-refresh turned off.")
+    else:
+        flash(f"Refresh interval set to {seconds} seconds.")
+
     return redirect(url_for("settings.index"))
 
 

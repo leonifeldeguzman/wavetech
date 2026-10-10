@@ -369,3 +369,108 @@ def build_safety_alert(assessment: SchedulingAssessment | None, trip: Any) -> di
         "title": _SAFETY_ALERT_TITLES[status],
         "content": content,
     }
+
+
+# ---------------------------------------------------------------------------
+# Passenger-facing Environmental Status (presentation only).
+# Re-uses the classifiers above on the Open-Meteo reading; no new thresholds,
+# no water level, no effect on get_assessment()/Decision Support.
+# ---------------------------------------------------------------------------
+
+# existing status -> (passenger label, existing CSS modifier on .home-status-main)
+_ENV_CONDITION_PRESENTATION = {
+    STATUS_SAFE: ("Good Condition", "safe"),
+    STATUS_CAUTION: ("Caution", "caution"),
+    STATUS_UNSAFE: ("Poor Condition", "unsafe"),
+    STATUS_UNAVAILABLE: ("Unavailable", "unavailable"),
+}
+
+
+def get_environmental_condition(windy_reading) -> dict[str, str]:
+    """Return {"status", "label", "css_class"} for an Open-Meteo reading
+    (None when no usable reading exists). Same precedence as
+    evaluate_conditions(): Unavailable > Unsafe > Caution > Safe."""
+    if windy_reading is None:
+        status = STATUS_UNAVAILABLE
+    else:
+        statuses = {
+            _classify_wind(getattr(windy_reading, "wind_speed_kmh", None), _thresholds()).status,
+            _classify_weather(getattr(windy_reading, "weather_condition", None)).status,
+        }
+        if STATUS_UNAVAILABLE in statuses:
+            status = STATUS_UNAVAILABLE
+        elif STATUS_UNSAFE in statuses:
+            status = STATUS_UNSAFE
+        elif STATUS_CAUTION in statuses:
+            status = STATUS_CAUTION
+        else:
+            status = STATUS_SAFE
+
+    label, css_class = _ENV_CONDITION_PRESENTATION[status]
+    return {"status": status, "label": label, "css_class": css_class}
+
+
+# ---------------------------------------------------------------------------
+# Passenger-facing Overall Condition (presentation only).
+# Combines two EXISTING outputs, without recalculating either:
+#   * safety_status from monitoring_service.get_current_safety()
+#     ("clear", "critical-low", "critical-high", "pending"; the template also
+#     recognises "caution"/"warning", which the current logic never emits)
+#   * get_environmental_condition()["status"]
+#     (Safe / Caution / Unsafe / Unavailable)
+# Conservative precedence: Poor > Unavailable > Caution > Good. A good
+# weather reading can never override an unsafe water level.
+# ---------------------------------------------------------------------------
+
+_SAFETY_POOR = ("critical-low", "critical-high")
+_SAFETY_CAUTION = ("caution", "warning")
+
+
+def get_overall_condition(safety_status, environmental_condition) -> dict[str, str]:
+    """Return {"status", "label", "css_class", "reason"}.
+
+    status is one of the existing STATUS_* values; label/css_class reuse the
+    same mapping as get_environmental_condition(). An unrecognised
+    safety_status, or a missing environmental condition, counts as
+    unavailable rather than being guessed."""
+    env_status = (environmental_condition or {}).get("status", STATUS_UNAVAILABLE)
+
+    water_poor = safety_status in _SAFETY_POOR
+    water_caution = safety_status in _SAFETY_CAUTION
+    water_unknown = not (safety_status == "clear" or water_caution or water_poor)
+
+    env_poor = env_status == STATUS_UNSAFE
+    env_caution = env_status == STATUS_CAUTION
+    env_unknown = env_status not in (STATUS_SAFE, STATUS_CAUTION, STATUS_UNSAFE)
+
+    if water_poor or env_poor:
+        status = STATUS_UNSAFE
+        parts = []
+        if water_poor:
+            parts.append("Water level is outside the acceptable range")
+        if env_poor:
+            parts.append("weather or wind conditions are unfavorable")
+        joined = " and ".join(parts)
+        reason = joined[0].upper() + joined[1:] + "."
+    elif water_unknown or env_unknown:
+        status = STATUS_UNAVAILABLE
+        if water_unknown and env_unknown:
+            reason = "Water level and weather data are unavailable."
+        elif water_unknown:
+            reason = "Water level data is unavailable."
+        else:
+            reason = "Weather data is unavailable."
+    elif water_caution or env_caution:
+        status = STATUS_CAUTION
+        if water_caution and env_caution:
+            reason = "Water level and weather conditions require caution."
+        elif water_caution:
+            reason = "Water level requires caution."
+        else:
+            reason = "Weather conditions require caution."
+    else:
+        status = STATUS_SAFE
+        reason = "Water level and weather conditions are within the acceptable range."
+
+    label, css_class = _ENV_CONDITION_PRESENTATION[status]
+    return {"status": status, "label": label, "css_class": css_class, "reason": reason}

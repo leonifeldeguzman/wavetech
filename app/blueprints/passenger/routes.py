@@ -461,18 +461,24 @@ def home():
 
     windy_conditions = monitoring_service.get_dss_weather_conditions()
 
-    # Same rule as decision-support: newest manual/LLDA water level,
-    # accepted only if recorded today (PH day). Otherwise None.
-    water_reading = scheduling_service.get_current_water_reading()
-
-    latest_wave_reading = (
-        EnvironmentalReading.query
-        .filter(EnvironmentalReading.wave_height_m.isnot(None))
-        .order_by(EnvironmentalReading.retrieved_at.desc())
-        .first()
+    # Water Level + Wave Height: same service/functions the Admin Monitoring
+    # page uses, so both sides show the same readings and availability.
+    water_level_card = monitoring_service.build_water_level_card(
+        monitoring_service.get_latest_water_reading()
     )
 
-    
+    latest_reading = monitoring_service.get_latest_reading()
+
+    # Same Safety Status the Admin dashboard shows (single shared source).
+    safety_status, safety_label, _ = monitoring_service.get_current_safety()
+
+    # Environmental Status: weather-model condition from the same Open-Meteo
+    # reading shown above. Separate from Safety Status (water level) on purpose.
+    environmental_condition = scheduling_service.get_environmental_condition(
+        windy_conditions["reading"]
+        if windy_conditions["status"] in ("live", "cached")
+        else None
+    )
 
     # Recently updated upcoming trip
     current_trip = (
@@ -500,9 +506,13 @@ def home():
         "passenger/home.html",
         announcements=announcements,
 
-        latest_wave_reading=latest_wave_reading,
+        latest_reading=latest_reading,
 
-        water_reading=water_reading,
+        water_level_card=water_level_card,
+
+        safety_status=safety_status,
+        safety_label=safety_label,
+        environmental_condition=environmental_condition,
 
         windy_status=windy_conditions["status"],
         windy_reading=windy_conditions["reading"],

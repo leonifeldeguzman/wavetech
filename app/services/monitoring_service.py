@@ -34,6 +34,7 @@ from app.services import llda_service, settings_service, weather_service, windy_
 from app.services.weather_service import WeatherServiceError
 from app.services.llda_service import LLDAServiceError
 from app.services.windy_service import WindyServiceError
+from app.utils.ph_clock import ph_today
 from app.utils.timezone import to_naive_utc
 from datetime import datetime, timedelta, timezone
 
@@ -271,3 +272,87 @@ def no_data_blocks_recommendation(*conditions: dict) -> bool:
     it.)
     """
     return any(c.get("status") != STATUS_LIVE for c in conditions)
+
+
+# ---------------------------------------------------------------------------
+# Readings shown on BOTH Admin (Monitoring page) and Passenger (home page).
+# Moved unchanged from monitoring/routes.py so both sides share one source.
+# ---------------------------------------------------------------------------
+
+def get_latest_reading():
+    """Newest reading of any visible source. Admin's "Wave Activity" card
+    reads wave_height_m from this row. Rows from the per-station weather
+    proxy (open_meteo) and old Windy test rows are not shown."""
+    hidden_sources = (SOURCE_OPEN_METEO, "windy")
+    return (
+        EnvironmentalReading.query.filter(
+            EnvironmentalReading.source.notin_(hidden_sources)
+        )
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+
+
+def get_latest_water_reading():
+    """Newest water level from a real current source (LLDA or manual).
+    No freshness cut-off here: age is shown on the card instead."""
+    return (
+        EnvironmentalReading.query
+        .filter(
+            EnvironmentalReading.water_level_m.isnot(None),
+            EnvironmentalReading.source.in_(("llda", "manual")),
+        )
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+
+
+def build_water_level_card(reading):
+    """Admin's Water Level card data: the reading plus its age."""
+    card = {"reading": None, "age_days": None,
+            "is_today": False, "date_label": None}
+    if reading and reading.retrieved_at:
+        taken_ph = reading.retrieved_at + timedelta(hours=8)
+        age_days = max((ph_today() - taken_ph.date()).days, 0)
+        card = {
+            "reading": reading,
+            "age_days": age_days,
+            "is_today": age_days == 0,
+            "date_label": taken_ph.strftime("%b %d, %Y"),
+        }
+    return card
+
+
+def get_current_safety():
+    """Safety Status shown on Admin dashboard and Passenger home.
+
+    The low/high water-level limits are the Water Level safe range saved in
+    Admin Settings (settings_service.get_safety_thresholds()), the same
+    values Scheduling Decision-Support reads, so a change saved in Settings
+    applies here immediately. Nothing is hardcoded.
+    Returns (safety_status, safety_label, latest_reading)."""
+    thresholds = settings_service.get_safety_thresholds()
+    water_low = float(thresholds["water_safe_min_m"])
+    water_high = float(thresholds["water_safe_max_m"])
+
+    latest_reading = (
+        EnvironmentalReading.query
+        .filter(EnvironmentalReading.water_level_m.isnot(None))
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+
+    if latest_reading is None:
+        safety_status = "pending"
+        safety_label = "Pending Setup"
+    elif latest_reading.water_level_m < water_low:
+        safety_status = "critical-low"
+        safety_label = "CRITICAL LOW"
+    elif latest_reading.water_level_m > water_high:
+        safety_status = "critical-high"
+        safety_label = "CRITICAL HIGH"
+    else:
+        safety_status = "clear"
+        safety_label = "CLEAR"
+
+    return safety_status, safety_label, latest_reading
