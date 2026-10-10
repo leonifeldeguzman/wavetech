@@ -721,7 +721,7 @@ def registration_status_lookup():
     if not reference_code:
         return redirect(
             url_for(
-                "passenger.schedule",
+                "passenger.home",
                 lookup_error="Please enter a reference code."
             ) + "#registration-status"
         )
@@ -731,7 +731,7 @@ def registration_status_lookup():
     if not registration:
         return redirect(
             url_for(
-                "passenger.schedule",
+                "passenger.home",
                 lookup_error="No registration found for that reference code."
             ) + "#registration-status"
         )

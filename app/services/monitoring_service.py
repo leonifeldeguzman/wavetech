@@ -322,53 +322,31 @@ def build_water_level_card(reading):
     return card
 
 
-def classify_water_safety(water_level_m, thresholds=None):
-    """Classify a water level against the Safety Thresholds saved in Admin
-    Settings. Returns (safety_status, safety_label).
+def get_current_safety(assessment=None):
+    """Safety Status shown on the Admin dashboard and Passenger home.
 
-    Uses all four saved water-level values (settings_service
-    .get_safety_thresholds()), with the same inclusive boundaries as
-    Scheduling Decision-Support:
-        safe_min <= level <= safe_max          -> "safe"
-        caution_min <= level <= caution_max    -> "caution"
-        anything outside the caution range     -> "unsafe"
-    Nothing is hardcoded: change the values in Settings and this follows.
-    """
-    if thresholds is None:
-        thresholds = settings_service.get_safety_thresholds()
-    safe_min = float(thresholds["water_safe_min_m"])
-    safe_max = float(thresholds["water_safe_max_m"])
-    caution_min = float(thresholds["water_caution_min_m"])
-    caution_max = float(thresholds["water_caution_max_m"])
+    This is NOT a separate calculation: it is the Scheduling Decision-Support
+    overall condition (scheduling_service.get_assessment()), so the Safety
+    Status and the DSS panel can never disagree. That evaluation combines the
+    Safety Thresholds saved in Admin Settings for water level, wind speed and
+    weather, and reports UNAVAILABLE when required data is missing, not live,
+    or not from today. Advisory only: the Coast Guard remains the final
+    authority.
 
-    level = float(water_level_m)
-    if safe_min <= level <= safe_max:
-        return "safe", "SAFE"
-    if caution_min <= level <= caution_max:
-        return "caution", "CAUTION"
-    return "unsafe", "UNSAFE"
+    Pass an already-computed `assessment` to guarantee the caller uses the
+    exact same result for both displays.
+    Returns (safety_status, safety_label, latest_water_reading); the reading
+    is only used for the "Last check" time."""
+    from app.services import scheduling_service  # lazy: avoids a circular import
 
+    if assessment is None:
+        assessment = scheduling_service.get_assessment()
+    safety_status, safety_label = scheduling_service.get_safety_status(assessment)
 
-def get_current_safety():
-    """Safety Status shown on Admin dashboard and Passenger home.
-
-    The latest water level is classified against the Water Level safe and
-    caution ranges saved in Admin Settings (the single source of truth, also
-    used by Scheduling Decision-Support), so a change saved in Settings
-    applies here immediately. Nothing is hardcoded. Advisory only: the
-    Coast Guard remains the final authority.
-    Returns (safety_status, safety_label, latest_reading)."""
     latest_reading = (
         EnvironmentalReading.query
         .filter(EnvironmentalReading.water_level_m.isnot(None))
         .order_by(EnvironmentalReading.retrieved_at.desc())
         .first()
-    )
-
-    if latest_reading is None:
-        return "pending", "Pending Setup", None
-
-    safety_status, safety_label = classify_water_safety(
-        latest_reading.water_level_m
     )
     return safety_status, safety_label, latest_reading

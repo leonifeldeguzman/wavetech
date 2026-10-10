@@ -604,115 +604,25 @@
 
 
 /* =========================================================
-   QUICK ACTIONS
+   REGISTRATION STATUS CHECKER (Home)
+   Base styles live in passenger.css; these only fit it into the
+   Home overview grid so it matches the neighbouring home-card.
    ========================================================= */
 
-.quick-actions-card {
+.home-overview-grid .registration-status-card {
     display: flex;
     flex-direction: column;
 
+    margin-bottom: 0;
     padding: 39px 30px;
 }
 
-.quick-actions-card .home-card-title i {
-    color: #3f92ff;
-    font-size: 1.15rem;
-}
-
-.quick-actions {
-    display: flex;
+.home-overview-grid .registration-status-form {
     flex-direction: column;
-
-    gap: 10px;
-
-    flex: 1;
 }
 
-.quick-action-item {
-    display: flex;
-    align-items: center;
-
-    gap: 12px;
-
-    min-height: 58px;
-    padding: 10px 12px;
-
-    border: 1px solid #e5e8ed;
-    border-radius: 8px;
-
-    background: #ffffff;
-
-    color: inherit;
-    text-decoration: none;
-
-    transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
-}
-
-.quick-action-item:hover {
-    background: #f7fbff;
-    border-color: #bfd2e8;
-
-    transform: translateY(-1px);
-}
-
-.quick-action-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    flex-shrink: 0;
-
-    width: 34px;
-    height: 34px;
-
-    border-radius: 7px;
-
-    background: #f0f7ff;
-    color: #3f92ff;
-
-    font-size: 0.95rem;
-}
-
-.quick-action-content {
-    display: flex;
-    flex-direction: column;
-
-    gap: 3px;
-
-    min-width: 0;
-}
-
-.quick-action-content strong {
-    color: #123b6d;
-
-    font-size: 0.82rem;
-    font-weight: 600;
-}
-
-.quick-action-content span {
-    color: #777777;
-
-    font-size: 0.72rem;
-}
-
-.quick-action-arrow {
-    margin-left: auto;
-
-    flex-shrink: 0;
-
-    color: #9aa3ad;
-
-    font-size: 0.75rem;
-
-    transition: transform 0.2s ease;
-}
-
-.quick-action-item:hover .quick-action-arrow {
-    color: #3f92ff;
-    transform: translateX(2px);
+.home-overview-grid .registration-status-btn {
+    width: 100%;
 }
 
 
@@ -982,7 +892,7 @@
     }
 
     .current-trip-card,
-    .quick-actions-card {
+    .home-overview-grid .registration-status-card {
         padding: 25px 20px;
     }
 
@@ -1008,6 +918,43 @@
 
     .home-announcement-type {
         align-self: flex-start;
+    }
+
+}
+
+.registration-status-register {
+    margin: auto 0 0;
+    padding-top: 18px;
+
+    color: #777777;
+
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.registration-status-register a {
+    color: #123b6d;
+
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.registration-status-register a:hover {
+    color: #3c3c3c;
+
+    text-decoration: none;
+}
+
+
+/* Registration Status Checker: tablet (grid is one full-width column) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+
+    .home-overview-grid .registration-status-form {
+        flex-direction: row;
+    }
+
+    .home-overview-grid .registration-status-btn {
+        width: auto;
     }
 
 }

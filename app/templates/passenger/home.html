@@ -242,7 +242,7 @@
                 </div>
 
                 <div class="home-environment-subvalue">
-                    Based on lake water level
+                    Based on water level, weather and wind
                 </div>
 
             </div>
@@ -367,67 +367,62 @@
                 {% endif %}
 
             </div>
-            <!-- QUICK ACTIONS -->
+            <!-- REGISTRATION STATUS CHECKER -->
 
-            <div class="home-card quick-actions-card">
+            <div class="home-card registration-status-card" id="registration-status">
 
-            <div class="quick-actions">
+                <div class="home-card-heading">
+                    <div class="home-card-title">
+                        <i class="bi bi-search"></i>
+                        <h2>Check Registration Status</h2>
+                    </div>
+                </div>
 
-                <a
-                    href="{{ url_for('passenger.register_page') }}"
-                    class="quick-action-item"
+                <form
+                    method="get"
+                    action="{{ url_for('passenger.registration_status_lookup') }}"
+                    class="registration-status-form"
                 >
-                    <div class="quick-action-icon">
-                        <i class="bi bi-person-plus"></i>
+
+                    <input
+                        type="text"
+                        name="reference_code"
+                        class="form-control"
+                        placeholder="WT-2026-XXXXXX"
+                        required
+                    />
+
+                    <button
+                        type="submit"
+                        class="registration-status-btn"
+                    >
+                        Check Status
+                    </button>
+
+                </form>
+
+                {% if request.args.get("lookup_error") %}
+                    <div class="registration-lookup-error">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <span>{{ request.args.get("lookup_error") }}</span>
                     </div>
+                {% endif %}
 
-                    <div class="quick-action-content">
-                        <strong>Pre-Register</strong>
-                        <span>Register for your ferry trip</span>
-                    </div>
-
-                    <i class="bi bi-chevron-right quick-action-arrow"></i>
-                </a>
-
-
-                <a
-                    href="{{ url_for('passenger.schedule') }}"
-                    class="quick-action-item"
-                >
-                    <div class="quick-action-icon">
-                        <i class="bi bi-calendar3"></i>
-                    </div>
-
-                    <div class="quick-action-content">
-                        <strong>View Schedule</strong>
-                        <span>Check available trips</span>
-                    </div>
-
-                    <i class="bi bi-chevron-right quick-action-arrow"></i>
-                </a>
-
-
-                <a
-                    href="{{ url_for('passenger.guide') }}"
-                    class="quick-action-item"
-                >
-                    <div class="quick-action-icon">
-                        <i class="bi bi-book"></i>
-                    </div>
-
-                    <div class="quick-action-content">
-                        <strong>Guide</strong>
-                        <span>Learn the ferry terminal process</span>
-                    </div>
-
-                    <i class="bi bi-chevron-right quick-action-arrow"></i>
-                </a>
+                <p class="registration-status-register">
+                    No registration yet?
+                    <a href="{{ url_for('passenger.register_page') }}">Register now</a>
+                </p>
 
             </div>
 
-        </div>
-
         </section>
+
+        <!-- Status result (loaded here after a lookup) -->
+        <div
+            id="registration-status-result"
+            class="registration-status-result"
+            aria-live="polite"
+        ></div>
 
 
         <!-- =====================================================
@@ -536,5 +531,58 @@
     </main>
 
 </div>
+
+<script>
+(function () {
+
+  const form = document.querySelector(".registration-status-form");
+  const result = document.getElementById("registration-status-result");
+
+  if (!form || !result || !window.fetch) return;
+
+  form.addEventListener("submit", function (event) {
+
+    event.preventDefault();
+
+    const url = new URL(form.action, window.location.href);
+    url.searchParams.set(
+      "reference_code",
+      form.elements["reference_code"].value.trim()
+    );
+
+    /* Fall back to a normal page load if anything unexpected happens */
+    function fallback() {
+      window.location.href = url.toString();
+    }
+
+    fetch(url.toString(), { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (response) {
+        if (!response.ok || response.redirected) {
+          fallback();
+          return null;
+        }
+        return response.text();
+      })
+      .then(function (html) {
+
+        if (html === null) return;
+
+        /* A full page came back instead of the result card */
+        if (/<html[\s>]/i.test(html)) {
+          fallback();
+          return;
+        }
+
+        const oldError = document.querySelector(".registration-lookup-error");
+        if (oldError) oldError.remove();
+
+        result.innerHTML = html;
+        result.scrollIntoView({ behavior: "smooth", block: "start" });
+      })
+      .catch(fallback);
+  });
+
+})();
+</script>
 
 {% endblock %}
