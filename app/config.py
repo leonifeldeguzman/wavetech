@@ -102,3 +102,17 @@ class Config:
     OPEN_METEO_API_URL = os.environ.get("OPEN_METEO_API_URL", "https://api.open-meteo.com/v1/forecast")
     OPEN_METEO_TIMEOUT_SECONDS = float(os.environ.get("OPEN_METEO_TIMEOUT_SECONDS", "20"))
     OPEN_METEO_MAX_ATTEMPTS = int(os.environ.get("OPEN_METEO_MAX_ATTEMPTS", "2"))
+
+        # How often the background weather collector fetches Open-Meteo.
+    WEATHER_COLLECTOR_INTERVAL_SECONDS = int(
+        os.environ.get("WEATHER_COLLECTOR_INTERVAL_SECONDS", "3600")
+    )
+
+    # Set WEATHER_COLLECTOR_ENABLED=false in .env to turn the collector off
+    # (for example while running flask db upgrade or flask shell).
+    WEATHER_COLLECTOR_ENABLED = (
+        os.environ.get("WEATHER_COLLECTOR_ENABLED", "true").lower() != "false"
+    )
+
+        # Neon closes idle connections; test each one before use.
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 300}

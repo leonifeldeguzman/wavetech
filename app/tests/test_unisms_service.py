@@ -56,7 +56,11 @@ def test_send_sms_success(app, monkeypatch):
         # Basic Auth with the key as username/empty password, and a
         # plain {"recipient", "content"} JSON body — not an X-API-Key
         # header or a differently-named field, which other providers use.
-        assert json == {"recipient": "09171234567", "content": "hello"}
+        assert json == {
+            "recipient": "09171234567",
+            "content": "hello",
+            "sender_id": "Unisoft",
+        }
         assert auth.username == "test-key"
         assert auth.password == ""
         return _FakeResponse(200, {"message": {"reference_id": "msg_abc", "status": "sent"}})
@@ -65,6 +69,7 @@ def test_send_sms_success(app, monkeypatch):
 
     with app.app_context():
         app.config["UNISMS_API_KEY"] = "test-key"
+        app.config["UNISMS_SENDER_ID"] = "Unisoft"
         app.config["UNISMS_API_URL"] = "https://unismsapi.com/api/sms"
         result = unisms_service.send_sms("09171234567", "hello")
 

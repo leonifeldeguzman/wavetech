@@ -12,7 +12,7 @@ That's why several tests below make the fake send_sms behave badly
 from app.extensions import db
 from app.models.activity_log import ActivityLog
 from app.services.activity_log_service import ACTION_REGISTRATION_SMS_SENT
-from app.services.semaphore_service import SmsResult
+from app.services.unisms_service import SmsResult
 
 
 def _valid_payload(trip_id, **overrides):
@@ -38,7 +38,7 @@ def test_registration_sends_sms_when_contact_number_present(client, app, make_bo
         calls.append((number, message))
         return SmsResult(success=True, status="sent", raw_response={"ok": True})
 
-    monkeypatch.setattr("app.services.semaphore_service.send_sms", fake_send_sms)
+    monkeypatch.setattr("app.services.unisms_service.send_sms", fake_send_sms)
 
     response = client.post("/api/passenger/registrations", json=_valid_payload(trip_id))
     assert response.status_code == 201
@@ -69,7 +69,7 @@ def test_registration_skips_log_when_no_contact_number(client, app, make_boat, m
         # Mirrors the real semaphore_service behavior for a falsy number.
         return SmsResult(success=False, status="skipped_no_number")
 
-    monkeypatch.setattr("app.services.semaphore_service.send_sms", fake_send_sms)
+    monkeypatch.setattr("app.services.unisms_service.send_sms", fake_send_sms)
 
     response = client.post(
         "/api/passenger/registrations",
@@ -91,7 +91,7 @@ def test_registration_still_succeeds_when_sms_fails(client, app, make_boat, make
     def fake_send_sms(number, message):
         return SmsResult(success=False, status="failed", error="simulated network error")
 
-    monkeypatch.setattr("app.services.semaphore_service.send_sms", fake_send_sms)
+    monkeypatch.setattr("app.services.unisms_service.send_sms", fake_send_sms)
 
     response = client.post("/api/passenger/registrations", json=_valid_payload(trip_id))
 
@@ -111,7 +111,7 @@ def test_registration_still_succeeds_when_sms_raises_unexpectedly(client, app, m
     def fake_send_sms(number, message):
         raise RuntimeError("boom — should never propagate to the caller")
 
-    monkeypatch.setattr("app.services.semaphore_service.send_sms", fake_send_sms)
+    monkeypatch.setattr("app.services.unisms_service.send_sms", fake_send_sms)
 
     boat_id = make_boat(capacity=5)
     trip_id = make_trip(boat_id=boat_id)
@@ -142,7 +142,7 @@ def test_registration_via_html_form_also_sends_sms(client, app, make_boat, make_
         calls.append((number, message))
         return SmsResult(success=True, status="sent")
 
-    monkeypatch.setattr("app.services.semaphore_service.send_sms", fake_send_sms)
+    monkeypatch.setattr("app.services.unisms_service.send_sms", fake_send_sms)
 
     response = client.post(
         f"/passenger/trips/{trip_id}/register",

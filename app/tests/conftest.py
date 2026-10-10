@@ -66,7 +66,7 @@ from app.models.boat import Boat  # noqa: E402
 from app.models.trip import Trip  # noqa: E402
 from app.models.pending_registration import PendingRegistration  # noqa: E402
 from app.models.manifest_entry import ManifestEntry  # noqa: E402
-from app.services import announcement_service  # noqa: E402
+from app.services import announcement_service, weather_collector  # noqa: E402
 
 
 @pytest.fixture()
@@ -82,7 +82,7 @@ def app():
     # against this app (e.g. to test automatic publishing without any
     # page load/refresh). Stop it here too, in case a test fails before
     # reaching its own cleanup, so a stray thread never outlives its app.
-    announcement_service.stop_background_scheduler()
+    weather_collector.stop_weather_collector()
 
 
 @pytest.fixture()
