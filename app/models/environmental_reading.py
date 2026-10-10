@@ -12,7 +12,6 @@ class EnvironmentalReading(db.Model):
     location_label = db.Column(db.String(100), nullable=False, default="Central Bay, Cardona, Rizal")
 
     water_level_m = db.Column(db.Float, nullable=True)
-    wave_height_m = db.Column(db.Float, nullable=True)
     wind_speed_kmh = db.Column(db.Float, nullable=True)
     wind_direction = db.Column(db.String(10), nullable=True)
     weather_condition = db.Column(db.String(50), nullable=True)

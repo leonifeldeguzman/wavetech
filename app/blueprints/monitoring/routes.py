@@ -191,7 +191,6 @@ def index():
 def add_reading():
     # Get values from manual entry form
     water_level = request.form.get("water_level_m")
-    wave_height = request.form.get("wave_height_m")
     wind_speed = request.form.get("wind_speed_kmh")
     wind_direction = request.form.get("wind_direction")
     weather_condition = request.form.get("weather_condition")
@@ -214,12 +213,6 @@ def add_reading():
         ),
 
         water_level_m=float(water_level),
-
-        wave_height_m=(
-            float(wave_height)
-            if wave_height
-            else None
-        ),
 
         wind_speed_kmh=(
             float(wind_speed)

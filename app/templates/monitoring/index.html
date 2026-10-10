@@ -116,50 +116,6 @@
         </div>
 
 
-        <!-- WAVE ACTIVITY -->
-        <div class="monitoring-summary-card">
-
-            <div class="monitoring-summary-icon">
-                <i class="bi bi-water"></i>
-            </div>
-
-            <div class="monitoring-summary-content">
-
-                <div class="monitoring-summary-label">
-                    Wave Activity
-                </div>
-
-                {% if latest and latest.wave_height_m is not none %}
-
-                    <div class="monitoring-summary-value">
-                        {{ latest.wave_height_m }} m
-                    </div>
-
-                    <div class="monitoring-summary-subvalue">
-                        Wave height
-                    </div>
-
-                    <div class="monitoring-summary-source">
-                        Source: {{ latest.source|capitalize if latest and latest.source else "Unavailable" }}
-                    </div>
-
-                {% else %}
-
-                    <div class="monitoring-summary-value">
-                        No Data
-                    </div>
-
-                    <div class="monitoring-summary-subvalue">
-                        Not yet recorded
-                    </div>
-
-                {% endif %}
-
-            </div>
-
-        </div>
-
-
         <!-- WATER LEVEL -->
         <div class="monitoring-summary-card">
 
@@ -696,23 +652,6 @@
 
             <div class="monitoring-latest-item">
 
-                <span>Wave Height</span>
-
-                <strong>
-                    {{ latest.wave_height_m
-                        if latest.wave_height_m is not none
-                        else "Not yet recorded" }}
-
-                    {% if latest.wave_height_m is not none %}
-                        m
-                    {% endif %}
-                </strong>
-
-            </div>
-
-
-            <div class="monitoring-latest-item">
-
                 <span>Wind Speed</span>
 
                 <strong>
@@ -965,22 +904,6 @@
                         class="form-control"
                         name="water_level_m"
                         required
-                    >
-
-                </div>
-
-
-                <div class="monitoring-form-field">
-
-                    <label>
-                        Wave Height (m)
-                    </label>
-
-                    <input
-                        type="number"
-                        step="0.01"
-                        class="form-control"
-                        name="wave_height_m"
                     >
 
                 </div>

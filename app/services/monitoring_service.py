@@ -280,8 +280,7 @@ def no_data_blocks_recommendation(*conditions: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 def get_latest_reading():
-    """Newest reading of any visible source. Admin's "Wave Activity" card
-    reads wave_height_m from this row. Rows from the per-station weather
+    """Newest reading of any visible source. Rows from the per-station weather
     proxy (open_meteo) and old Windy test rows are not shown."""
     hidden_sources = (SOURCE_OPEN_METEO, "windy")
     return (

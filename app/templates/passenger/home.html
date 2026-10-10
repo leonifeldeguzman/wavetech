@@ -153,45 +153,6 @@
         </div>
 
 
-        <!-- WAVE -->
-
-        <div class="home-environment-item">
-
-            <div class="home-environment-icon">
-                <i class="bi bi-water"></i>
-            </div>
-
-            <div>
-                <div class="home-environment-label">
-                    Wave Height
-                </div>
-
-                {% if latest_reading and latest_reading.wave_height_m is not none %}
-
-                    <div class="home-environment-value">
-                        {{ latest_reading.wave_height_m }} m
-                    </div>
-
-                    <div class="home-environment-subvalue">
-                        Current reading
-                    </div>
-
-                {% else %}
-
-                    <div class="home-environment-value">
-                        No Data
-                    </div>
-
-                    <div class="home-environment-subvalue">
-                        Not yet recorded
-                    </div>
-
-                {% endif %}
-            </div>
-
-        </div>
-
-
         <!-- WATER -->
 
         <div class="home-environment-item">
