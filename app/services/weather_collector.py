@@ -27,6 +27,8 @@ def start_weather_collector(app, interval_seconds: int | None = None) -> bool:
         interval_seconds = app.config.get(
             "WEATHER_COLLECTOR_INTERVAL_SECONDS",
             DEFAULT_COLLECTOR_INTERVAL_SECONDS,
+            # Never hammer Open-Meteo: wait at least 5 minutes between runs.
+            interval_seconds = max(300, int(interval_seconds))
         )
 
     with _collector_lock:
@@ -37,10 +39,9 @@ def start_weather_collector(app, interval_seconds: int | None = None) -> bool:
 
         stop_event = threading.Event()
 
+
         def _run():
             app.logger.warning("Weather collector thread started")
-            # Collect once at startup, then once per interval.
-            # wait() returns True as soon as stop_event is set.
             while True:
                 try:
                     with app.app_context():
@@ -51,6 +52,11 @@ def start_weather_collector(app, interval_seconds: int | None = None) -> bool:
                         )
                 except Exception:
                     app.logger.exception("Background weather collection failed")
+                # Sleep until the next run; returns True if asked to stop.
+                if stop_event.wait(interval_seconds):
+                    break
+
+       
 
         thread = threading.Thread(
             target=_run, name="weather-collector", daemon=True

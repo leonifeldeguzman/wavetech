@@ -114,5 +114,5 @@ class Config:
         os.environ.get("WEATHER_COLLECTOR_ENABLED", "true").lower() != "false"
     )
 
-        # Neon closes idle connections; test each one before use.
+    # Neon closes idle connections; test each one before use.
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 300}

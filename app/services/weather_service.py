@@ -68,6 +68,7 @@ def _request(stations: list) -> list[dict]:
     }
     attempts = max(1, cfg["OPEN_METEO_MAX_ATTEMPTS"])
     last_exc = None
+    last_detail = ""
     for _ in range(attempts):
         try:
             response = requests.get(
@@ -80,10 +81,13 @@ def _request(stations: list) -> list[dict]:
             break
         except (requests.exceptions.RequestException, ValueError) as exc:
             last_exc = exc
+            resp = getattr(exc, "response", None)
+            if resp is not None:
+                last_detail = f" (HTTP {resp.status_code}: {resp.text[:150]})"
     else:
         raise WeatherServiceError(
             f"Open-Meteo request failed after {attempts} attempt(s): "
-            f"{type(last_exc).__name__}"
+            f"{type(last_exc).__name__}{last_detail}"
         ) from last_exc
 
     if isinstance(data, dict):      # a single location comes back as an object
