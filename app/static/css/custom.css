@@ -215,6 +215,38 @@ body {
 /* =========================
    Sidebar
    ========================= */
+.sidebar-brand {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 10px 20px !important;
+    margin: 0 !important;
+    height: auto;
+}
+
+.sidebar-brand img {
+    width: 135px;
+    height: auto;
+    display: block;
+    margin-left: -30px !important;
+}
+
+.mobile-sidebar-brand {
+    display: flex;
+    align-items: center;
+}
+
+.mobile-sidebar-brand img {
+    width: 120px;
+    height: auto;
+    display: block;
+}
+
+#mobileSidebar .sidebar-nav,
+#mobileSidebar .sidebar-nav a,
+#mobileSidebar .sidebar-nav span {
+    color: var(--navy) !important;
+}
 
 @media (min-width: 992px) {
     nav.d-lg-flex {

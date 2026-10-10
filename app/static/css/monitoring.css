@@ -956,3 +956,86 @@
     font-size: 0.86rem;
     line-height: 1.5;
 }
+
+/* =========================================================
+   STATION WEATHER CARDS
+   Grid sizes itself from the space actually available beside
+   the sidebar (not the browser width), so cards never get
+   squeezed together. Equal gaps both ways; equal-height cards.
+   ========================================================= */
+
+.monitoring-stations-card {
+    margin-bottom: 30px;
+}
+
+
+.monitoring-stations-card .monitoring-section-heading {
+    gap: 16px;
+
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+
+.monitoring-stations-card .monitoring-section-heading > div {
+    min-width: 0;
+}
+
+
+.monitoring-stations-card .monitoring-section-heading .badge {
+    flex-shrink: 0;
+}
+
+
+.monitoring-stations-body {
+    padding: 24px 38px 28px;
+}
+
+
+.monitoring-stations-note {
+    margin-bottom: 20px;
+}
+
+
+.monitoring-station-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+
+    gap: 20px;
+}
+
+
+.monitoring-station-item {
+    min-width: 0;
+}
+
+
+.monitoring-station-card {
+    height: 100%;
+
+    padding: 16px 18px;
+
+    line-height: 1.45;
+
+    overflow-wrap: anywhere;
+}
+
+
+.monitoring-station-name {
+    line-height: 1.3;
+}
+
+
+@media (max-width: 576px) {
+
+    .monitoring-stations-body {
+        padding: 18px 20px 22px;
+    }
+
+    .monitoring-station-grid {
+        gap: 14px;
+    }
+
+}

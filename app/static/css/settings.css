@@ -1242,6 +1242,10 @@ RESPONSIVE
         padding-top: 10px;
     }
 
+    #settings-page .settings-layout::before {
+    display: none;
+    }   
+
     #settings-page .settings-navigation {
         position: static;
 

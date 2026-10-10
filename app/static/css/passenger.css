@@ -57,7 +57,7 @@ body {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: -1px;
     height: 3px;
     background-color: var(--navy);
     border-radius: 2px 2px 0 0;
@@ -2007,6 +2007,12 @@ body {
 /* =========================================
    TABLET / NAVBAR
 ========================================= */
+.navbar-brand img {
+    width: 160px;
+    height: auto;
+    display: block;
+    padding: 8px 10px 10px;
+}
 
 @media (max-width: 991px) {
 

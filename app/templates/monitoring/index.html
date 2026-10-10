@@ -379,8 +379,8 @@
             {% endif %}
 
         </div>
-        <div class="px-3 pb-3"> 
-        <p class="small text-muted">
+        <div class="monitoring-stations-body">
+        <p class="small text-muted monitoring-stations-note">
             Weather-model values for a grid cell of about 15 km, not
             measurements taken on the lake. Stations in the same grid cell
             show identical values. Water level is lake-wide (LLDA keeps one
@@ -395,14 +395,14 @@
 
         {% if station_cards %}
 
-        <div class="row g-3">
+        <div class="monitoring-station-grid">
 
             {% for card in station_cards %}
-            <div class="col-12 col-md-6 col-xl-4">
+            <div class="monitoring-station-item">
 
-                <div class="border rounded p-3 h-100">
+                <div class="border rounded monitoring-station-card">
 
-                    <div class="fw-bold">{{ card.station.name }}</div>
+                    <div class="fw-bold monitoring-station-name">{{ card.station.name }}</div>
                     <div class="small text-muted mb-2">
                         Station {{ card.station.station_no }}
                     </div>
