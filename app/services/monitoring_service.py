@@ -322,18 +322,42 @@ def build_water_level_card(reading):
     return card
 
 
+def classify_water_safety(water_level_m, thresholds=None):
+    """Classify a water level against the Safety Thresholds saved in Admin
+    Settings. Returns (safety_status, safety_label).
+
+    Uses all four saved water-level values (settings_service
+    .get_safety_thresholds()), with the same inclusive boundaries as
+    Scheduling Decision-Support:
+        safe_min <= level <= safe_max          -> "safe"
+        caution_min <= level <= caution_max    -> "caution"
+        anything outside the caution range     -> "unsafe"
+    Nothing is hardcoded: change the values in Settings and this follows.
+    """
+    if thresholds is None:
+        thresholds = settings_service.get_safety_thresholds()
+    safe_min = float(thresholds["water_safe_min_m"])
+    safe_max = float(thresholds["water_safe_max_m"])
+    caution_min = float(thresholds["water_caution_min_m"])
+    caution_max = float(thresholds["water_caution_max_m"])
+
+    level = float(water_level_m)
+    if safe_min <= level <= safe_max:
+        return "safe", "SAFE"
+    if caution_min <= level <= caution_max:
+        return "caution", "CAUTION"
+    return "unsafe", "UNSAFE"
+
+
 def get_current_safety():
     """Safety Status shown on Admin dashboard and Passenger home.
 
-    The low/high water-level limits are the Water Level safe range saved in
-    Admin Settings (settings_service.get_safety_thresholds()), the same
-    values Scheduling Decision-Support reads, so a change saved in Settings
-    applies here immediately. Nothing is hardcoded.
+    The latest water level is classified against the Water Level safe and
+    caution ranges saved in Admin Settings (the single source of truth, also
+    used by Scheduling Decision-Support), so a change saved in Settings
+    applies here immediately. Nothing is hardcoded. Advisory only: the
+    Coast Guard remains the final authority.
     Returns (safety_status, safety_label, latest_reading)."""
-    thresholds = settings_service.get_safety_thresholds()
-    water_low = float(thresholds["water_safe_min_m"])
-    water_high = float(thresholds["water_safe_max_m"])
-
     latest_reading = (
         EnvironmentalReading.query
         .filter(EnvironmentalReading.water_level_m.isnot(None))
@@ -342,16 +366,9 @@ def get_current_safety():
     )
 
     if latest_reading is None:
-        safety_status = "pending"
-        safety_label = "Pending Setup"
-    elif latest_reading.water_level_m < water_low:
-        safety_status = "critical-low"
-        safety_label = "CRITICAL LOW"
-    elif latest_reading.water_level_m > water_high:
-        safety_status = "critical-high"
-        safety_label = "CRITICAL HIGH"
-    else:
-        safety_status = "clear"
-        safety_label = "CLEAR"
+        return "pending", "Pending Setup", None
 
+    safety_status, safety_label = classify_water_safety(
+        latest_reading.water_level_m
+    )
     return safety_status, safety_label, latest_reading

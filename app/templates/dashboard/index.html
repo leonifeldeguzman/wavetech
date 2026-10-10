@@ -86,11 +86,11 @@
                 </div>
 
                 <div class="dashboard-kpi-value
-                    {% if safety_status == 'clear' %}
+                    {% if safety_status == 'safe' %}
                         dashboard-safety-clear
-                    {% elif safety_status in ['critical-low', 'critical-high'] %}
+                    {% elif safety_status == 'unsafe' %}
                         dashboard-safety-unsafe
-                    {% elif safety_status in ['caution', 'warning'] %}
+                    {% elif safety_status == 'caution' %}
                         dashboard-safety-caution
                     {% else %}
                         dashboard-kpi-muted

@@ -414,16 +414,15 @@ def get_environmental_condition(windy_reading) -> dict[str, str]:
 # Passenger-facing Overall Condition (presentation only).
 # Combines two EXISTING outputs, without recalculating either:
 #   * safety_status from monitoring_service.get_current_safety()
-#     ("clear", "critical-low", "critical-high", "pending"; the template also
-#     recognises "caution"/"warning", which the current logic never emits)
+#     ("safe", "caution", "unsafe", "pending")
 #   * get_environmental_condition()["status"]
 #     (Safe / Caution / Unsafe / Unavailable)
 # Conservative precedence: Poor > Unavailable > Caution > Good. A good
 # weather reading can never override an unsafe water level.
 # ---------------------------------------------------------------------------
 
-_SAFETY_POOR = ("critical-low", "critical-high")
-_SAFETY_CAUTION = ("caution", "warning")
+_SAFETY_POOR = ("unsafe",)
+_SAFETY_CAUTION = ("caution",)
 
 
 def get_overall_condition(safety_status, environmental_condition) -> dict[str, str]:
@@ -437,7 +436,7 @@ def get_overall_condition(safety_status, environmental_condition) -> dict[str, s
 
     water_poor = safety_status in _SAFETY_POOR
     water_caution = safety_status in _SAFETY_CAUTION
-    water_unknown = not (safety_status == "clear" or water_caution or water_poor)
+    water_unknown = not (safety_status == "safe" or water_caution or water_poor)
 
     env_poor = env_status == STATUS_UNSAFE
     env_caution = env_status == STATUS_CAUTION

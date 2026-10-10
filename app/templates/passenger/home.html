@@ -221,20 +221,20 @@
                 </div>
 
                 <div class="home-safety-value
-                    {% if safety_status == 'clear' %}safe
-                    {% elif safety_status in ['critical-low', 'critical-high'] %}unsafe
-                    {% elif safety_status in ['caution', 'warning'] %}caution
+                    {% if safety_status == 'safe' %}safe
+                    {% elif safety_status == 'unsafe' %}unsafe
+                    {% elif safety_status == 'caution' %}caution
                     {% else %}unavailable
                     {% endif %}">
                     {{ safety_label }}
                 </div>
 
                 <div class="home-environment-subvalue">
-                    {% if safety_status == "clear" %}
+                    {% if safety_status == "safe" %}
                         All clear
-                    {% elif safety_status in ["caution", "warning"] %}
+                    {% elif safety_status == "caution" %}
                         Exercise caution
-                    {% elif safety_status in ["critical-low", "critical-high"] %}
+                    {% elif safety_status == "unsafe" %}
                         Travel not recommended
                     {% else %}
                         Manual verification
