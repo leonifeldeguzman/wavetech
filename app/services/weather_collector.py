@@ -43,6 +43,9 @@ def start_weather_collector(app, interval_seconds: int | None = None) -> bool:
 
         def _run():
             app.logger.warning("Weather collector thread started")
+            # Wait before the first fetch so it never overlaps the worker fork.
+            if stop_event.wait(60):
+                return
             while True:
                 try:
                     with app.app_context():
