@@ -858,6 +858,77 @@
 
     </section>
 
+        <!-- =====================================================
+         WATER LEVEL TREND (lake-wide; historical reference + recorded)
+         ===================================================== -->
+
+    <section class="monitoring-card monitoring-trends-card">
+
+        <div class="monitoring-section-heading">
+
+            <div>
+                <h2>Water Level Trend</h2>
+                <p>Lake-wide daily water level over time</p>
+            </div>
+
+                <span class="badge text-bg-secondary">
+                Lake-wide &middot; not per station
+            </span>
+
+        </div>
+
+        <div class="monitoring-trends-body">
+
+        {% if trend %}
+
+        <form method="GET" id="trend-form" class="monitoring-trend-form"
+              action="{{ url_for('monitoring.index') }}">
+            <label>
+                From
+                <input type="date" name="trend_start" class="form-control"
+                       value="{{ trend.start.isoformat() }}">
+            </label>
+            <label>
+                To
+                <input type="date" name="trend_end" class="form-control"
+                       value="{{ trend.end.isoformat() }}">
+            </label>
+            <button type="submit" class="monitoring-add-btn">Apply</button>
+            <a href="{{ url_for('monitoring.index') }}" class="small">Reset</a>
+        </form>
+                <p class="small text-muted">
+            {{ trend.label }}
+            Showing {{ trend.n_historical }} historical days and
+            {{ trend.n_recorded }} recorded readings.
+        </p>
+
+        <div class="monitoring-trend-chart">
+            <canvas
+                id="water-level-chart"
+                data-labels='{{ trend.labels|tojson }}'
+                data-historical='{{ trend.historical|tojson }}'
+                data-recorded='{{ trend.recorded|tojson }}'
+            ></canvas>
+        </div>
+
+        <div class="small text-muted mt-2">
+            The line is LLDA historical data (ends
+            {{ trend.last.strftime("%B %d, %Y") }}). The diamonds are manual or
+            LLDA readings recorded in WaveTech, newest per day. Days with no
+            data are left blank; nothing is estimated. Advisory context only.
+        </div>
+
+        {% else %}
+
+        <div class="monitoring-empty-state">
+            <i class="bi bi-inbox"></i>
+            <div>Water level history unavailable.</div>
+            <small>No historical data has been imported yet.</small>
+        </div>
+
+        {% endif %}
+        </div>
+    </section>
 
 
     <!-- =====================================================
@@ -1124,6 +1195,7 @@
 />
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script>
 
@@ -1205,19 +1277,14 @@
         Number("{{ refresh_interval_seconds }}");
 
 
-    function isEditingManualForm() {
+        function isEditingManualForm() {
 
         const active = document.activeElement;
 
-        const form =
-            document.querySelector(
-                'form[action*="add-reading"]'
-            );
-
         return !!(
-            form &&
             active &&
-            form.contains(active)
+            active.closest &&
+            active.closest('form[action*="add-reading"], #trend-form')
         );
     }
 
@@ -1241,6 +1308,74 @@
         }, refreshIntervalMs);
 
     }
+
+        // =========================================================
+    // WATER LEVEL TREND (lake-wide; two separate series)
+    // =========================================================
+
+    function initWaterLevelChart() {
+
+        const el = document.getElementById('water-level-chart');
+
+        if (!el || typeof Chart === 'undefined') {
+            return;
+        }
+
+        const labels = JSON.parse(el.dataset.labels || '[]');
+        const historical = JSON.parse(el.dataset.historical || '[]');
+        const recorded = JSON.parse(el.dataset.recorded || '[]');
+
+        new Chart(el, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'LLDA historical daily level (lake-wide, reference)',
+                        data: historical,
+                        borderColor: '#0f1b3c',
+                        backgroundColor: '#0f1b3c',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        spanGaps: false
+                    },
+                    {
+                        label: 'Recorded in WaveTech (manual/LLDA, lake-wide)',
+                        data: recorded,
+                        showLine: false,
+                        borderColor: '#d9480f',
+                        backgroundColor: '#d9480f',
+                        pointStyle: 'rectRot',
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+                scales: {
+                    y: { title: { display: true, text: 'Water level (m)' } },
+                    x: { ticks: { maxTicksLimit: 10, autoSkip: true } }
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' +
+                                    ctx.parsed.y.toFixed(2) + ' m';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    initWaterLevelChart();
 
 </script>
 

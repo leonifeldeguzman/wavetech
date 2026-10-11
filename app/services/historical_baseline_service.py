@@ -14,7 +14,7 @@ from app.models.historical_water_level import HistoricalWaterLevel as H
 from datetime import datetime, timedelta, timezone
 
 from app.models.environmental_reading import EnvironmentalReading
-from app.utils.ph_clock import ph_today 
+from app.utils.ph_clock import PH_OFFSET, ph_today
 
 # Days either side of the calendar day, pooled across every year in the data.
 BASELINE_WINDOW_DAYS = 7
@@ -130,3 +130,72 @@ def get_level_context():
 
     context = classify_level(reading.water_level_m, baseline)  # ADAPT if the signature differs
     return {"state": "ok", "baseline": baseline, "reading": reading, "context": context}
+
+# ---------------------------------------------------------------------------
+# Water-level history for the Trends chart (lake-wide, display only)
+# ---------------------------------------------------------------------------
+
+RECORDED_SOURCES = ("manual", "llda")
+MAX_HISTORY_SPAN_DAYS = 2000
+
+
+def get_water_level_history(start=None, end=None):
+    """Daily lake-wide series for the chart, start..end inclusive.
+
+    Two SEPARATE series, never merged:
+      historical: LLDA 2023-2025 daily data (reference, not current)
+      recorded:   real manual/LLDA readings, newest per PH day
+    A day with no value is None, so the chart shows a gap. Nothing is
+    filled in or estimated. Water level is lake-wide, never per station.
+    Returns None if no historical data has been imported.
+    """
+    first, last = db.session.query(func.min(H.date), func.max(H.date)).one()
+    if first is None:
+        return None
+
+    end = ph_today() if end is None else min(end, ph_today())
+    start = first if start is None else max(start, first)
+    if start > end:
+        start = end
+    if (end - start).days > MAX_HISTORY_SPAN_DAYS:
+        start = end - timedelta(days=MAX_HISTORY_SPAN_DAYS)
+
+    historical = {
+        d: level
+        for d, level in db.session.query(H.date, H.level_m).filter(
+            H.date >= start, H.date <= end
+        )
+    }
+
+    # retrieved_at is naive UTC; a PH day is [00:00 PH, next 00:00 PH).
+    lo = datetime.combine(start, datetime.min.time()) - PH_OFFSET
+    hi = datetime.combine(end + timedelta(days=1), datetime.min.time()) - PH_OFFSET
+    rows = (
+        EnvironmentalReading.query
+        .filter(
+            EnvironmentalReading.water_level_m.isnot(None),
+            EnvironmentalReading.source.in_(RECORDED_SOURCES),
+            EnvironmentalReading.retrieved_at >= lo,
+            EnvironmentalReading.retrieved_at < hi,
+        )
+        .order_by(EnvironmentalReading.retrieved_at)
+        .all()
+    )
+    recorded = {}
+    for r in rows:
+        recorded[(r.retrieved_at + PH_OFFSET).date()] = r.water_level_m  # newest wins
+
+    days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+    return {
+        "start": start,
+        "end": end,
+        "first": first,
+        "last": last,
+        "labels": [d.isoformat() for d in days],
+        "historical": [historical.get(d) for d in days],
+        "recorded": [recorded.get(d) for d in days],
+        "n_historical": len(historical),
+        "n_recorded": len(recorded),
+        "label": (f"LLDA historical data, {first.year}-{last.year}, lake-wide. "
+                  f"Not a current reading."),
+    }
