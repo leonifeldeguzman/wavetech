@@ -34,7 +34,7 @@ from app.services import llda_service, settings_service, weather_service, windy_
 from app.services.weather_service import WeatherServiceError
 from app.services.llda_service import LLDAServiceError
 from app.services.windy_service import WindyServiceError
-from app.utils.ph_clock import ph_today
+from app.utils.ph_clock import PH_OFFSET, ph_today
 from app.utils.timezone import to_naive_utc
 from datetime import datetime, timedelta, timezone
 
@@ -372,3 +372,147 @@ def get_current_safety():
         latest_reading.water_level_m
     )
     return safety_status, safety_label, latest_reading
+
+# ---------------------------------------------------------------------------
+# Station weather history for the Trends chart (Open-Meteo model data)
+# ---------------------------------------------------------------------------
+
+HISTORY_DEFAULT_DAYS = 7
+HISTORY_MAX_DAYS = 31
+GAP_HOURS = 3  # a longer silence between stored points is drawn as a gap
+
+
+def _chart_ms(utc_naive):
+    """Naive UTC datetime -> milliseconds of the PH wall-clock time, read as
+    if it were UTC. The chart prints it back with UTC formatting, so the
+    axis shows Philippine time."""
+    return int((utc_naive + PH_OFFSET).replace(tzinfo=timezone.utc).timestamp() * 1000)
+
+
+def get_station_history(station_no=None, start=None, end=None):
+    """Stored Open-Meteo weather for ONE station over a PH date range.
+
+    Only rows WaveTech actually stored are returned. A silence longer than
+    GAP_HOURS becomes a break in the line (a None point); nothing is
+    interpolated or filled in. Values are weather-MODEL data for a grid
+    cell, not lake measurements.
+    Returns None if no stations are configured.
+    """
+    stations = LakeStation.query.order_by(LakeStation.id).all()
+    if not stations:
+        return None
+    by_no = {s.station_no: s for s in stations}
+    by_id = {s.id: s for s in stations}
+    station = by_no.get(station_no) or by_no.get(DSS_STATION_NO) or stations[0]
+
+    today = ph_today()
+    end = today if end is None else min(end, today)
+    start = end - timedelta(days=HISTORY_DEFAULT_DAYS - 1) if start is None else start
+    if start > end:
+        start = end
+    if (end - start).days >= HISTORY_MAX_DAYS:
+        start = end - timedelta(days=HISTORY_MAX_DAYS - 1)
+
+    # A PH day is [00:00 PH, next 00:00 PH); stored times are naive UTC.
+    lo = datetime.combine(start, datetime.min.time()) - PH_OFFSET
+    hi = datetime.combine(end + timedelta(days=1), datetime.min.time()) - PH_OFFSET
+
+    rows = (
+        EnvironmentalReading.query
+        .filter(
+            EnvironmentalReading.source == SOURCE_OPEN_METEO,
+            EnvironmentalReading.station_id == station.id,
+            EnvironmentalReading.recorded_at.isnot(None),
+            EnvironmentalReading.recorded_at >= lo,
+            EnvironmentalReading.recorded_at < hi,
+        )
+        .order_by(EnvironmentalReading.recorded_at, EnvironmentalReading.retrieved_at)
+        .all()
+    )
+
+    # Several fetches can return the same model time; keep one point each.
+    by_time = {}
+    for r in rows:
+        by_time[r.recorded_at] = r
+    times = sorted(by_time)
+
+    wind, temp = [], []
+    gaps = 0
+    prev = None
+    for t in times:
+        r = by_time[t]
+        if prev is not None and (t - prev) > timedelta(hours=GAP_HOURS):
+            mid = _chart_ms(prev + (t - prev) / 2)
+            wind.append({"x": mid, "y": None})
+            temp.append({"x": mid, "y": None})
+            gaps += 1
+        wind.append({"x": _chart_ms(t), "y": r.wind_speed_kmh})
+        temp.append({"x": _chart_ms(t), "y": r.temperature_c})
+        prev = t
+
+    # Which other stations show identical values right now (same model
+    # cell). Same rule the station cards use.
+    shared_with = []
+    batch = _latest_station_batch()
+    mine = next((r for r in batch if r.station_id == station.id), None)
+    if mine is not None:
+        def _key(r):
+            return (r.wind_speed_kmh, r.wind_direction,
+                    r.temperature_c, r.weather_condition)
+        shared_with = [
+            by_id[r.station_id].name for r in batch
+            if r.station_id != station.id
+            and r.station_id in by_id
+            and _key(r) == _key(mine)
+        ]
+
+    # Strongest model wind at any station in the last 24 hours. Ties (stations
+    # in one cell share a value) are all named, never one picked as winner.
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    top = (
+        EnvironmentalReading.query
+        .filter(
+            EnvironmentalReading.source == SOURCE_OPEN_METEO,
+            EnvironmentalReading.station_id.isnot(None),
+            EnvironmentalReading.wind_speed_kmh.isnot(None),
+            EnvironmentalReading.recorded_at >= now_utc - timedelta(hours=24),
+        )
+        .order_by(EnvironmentalReading.wind_speed_kmh.desc(),
+                  EnvironmentalReading.recorded_at.desc())
+        .first()
+    )
+    strongest_wind = None
+    if top is not None:
+        tied = (
+            EnvironmentalReading.query
+            .filter(
+                EnvironmentalReading.source == SOURCE_OPEN_METEO,
+                EnvironmentalReading.station_id.isnot(None),
+                EnvironmentalReading.wind_speed_kmh == top.wind_speed_kmh,
+                EnvironmentalReading.recorded_at == top.recorded_at,
+            )
+            .all()
+        )
+        strongest_wind = {
+            "speed": top.wind_speed_kmh,
+            "direction": top.wind_direction,
+            "at": top.recorded_at + PH_OFFSET,
+            "stations": sorted({by_id[r.station_id].name
+                                for r in tied if r.station_id in by_id}),
+        }
+
+    return {
+        "stations": stations,
+        "station": station,
+        "start": start,
+        "end": end,
+        "x_min": _chart_ms(lo),
+        "x_max": _chart_ms(hi),
+        "wind": wind,
+        "temp": temp,
+        "n_points": len(times),
+        "n_gaps": gaps,
+        "first_point": (times[0] + PH_OFFSET) if times else None,
+        "shared_with": shared_with,
+        "strongest_wind": strongest_wind,
+    }

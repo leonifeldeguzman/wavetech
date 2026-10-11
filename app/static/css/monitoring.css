@@ -1068,3 +1068,14 @@
     position: relative;
     height: 320px;
 }
+
+
+.monitoring-trend-chart-sm {
+    position: relative;
+    height: 220px;
+    margin-bottom: 1rem;
+}
+
+.monitoring-trend-form select {
+    min-width: 220px;
+}

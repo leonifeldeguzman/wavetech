@@ -151,6 +151,13 @@ def index():
             _parse_date(request.args.get("trend_start")),
             _parse_date(request.args.get("trend_end")),
     )
+
+    # Per-station weather history for the Station Weather Trend (model data).
+    station_trend = monitoring_service.get_station_history(
+        request.args.get("station"),
+        _parse_date(request.args.get("wx_start")),
+        _parse_date(request.args.get("wx_end")),
+    )
     
     return render_template(
         "monitoring/index.html",
@@ -196,6 +203,7 @@ def index():
 
         baseline=baseline,
         trend=trend,
+        station_trend=station_trend,
         baseline_water_reading=baseline_water_reading,
         baseline_context=baseline_context,
         water_level_card=water_level_card,
