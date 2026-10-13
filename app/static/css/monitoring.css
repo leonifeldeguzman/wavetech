@@ -1041,6 +1041,13 @@
 }
 
 
+/* Trend cards (Water Level Trend, Station Weather Trend):
+   same vertical rhythm as every other monitoring card */
+.monitoring-trends-card {
+    margin-bottom: 30px;
+}
+
+
 .monitoring-trends-body {
     padding: 1rem 1.5rem 1.5rem;
 }

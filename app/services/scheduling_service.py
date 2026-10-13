@@ -251,23 +251,6 @@ def get_assessment() -> SchedulingAssessment:
 
     return evaluate_conditions(windy_reading, llda_reading)
 
-_SAFETY_STATUS_PRESENTATION = {
-    STATUS_SAFE: ("safe", "SAFE"),
-    STATUS_CAUTION: ("caution", "CAUTION"),
-    STATUS_UNSAFE: ("unsafe", "UNSAFE"),
-}
-
-
-def get_safety_status(assessment: SchedulingAssessment) -> tuple[str, str]:
-    """(safety_status, safety_label) for the dashboard / passenger Safety
-    Status card, taken straight from the DSS assessment's overall_status.
-    Anything that is not Safe/Caution/Unsafe is "unavailable". No separate
-    thresholds or rules live here."""
-    return _SAFETY_STATUS_PRESENTATION.get(
-        assessment.overall_status, ("unavailable", "UNAVAILABLE")
-    )
-
-
 def format_timestamp(dt: datetime | None) -> str:
     if dt is None:
         return "—"
@@ -431,7 +414,7 @@ def get_environmental_condition(windy_reading) -> dict[str, str]:
 # Passenger-facing Overall Condition (presentation only).
 # Combines two EXISTING outputs, without recalculating either:
 #   * safety_status from monitoring_service.get_current_safety()
-#     ("safe", "caution", "unsafe", "unavailable")
+#     ("safe", "caution", "unsafe", "pending")
 #   * get_environmental_condition()["status"]
 #     (Safe / Caution / Unsafe / Unavailable)
 # Conservative precedence: Poor > Unavailable > Caution > Good. A good
