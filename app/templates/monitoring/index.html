@@ -858,6 +858,213 @@
 
     </section>
 
+        <!-- =====================================================
+         WATER LEVEL TREND (lake-wide; historical reference + recorded)
+         ===================================================== -->
+
+    <section class="monitoring-card monitoring-trends-card">
+
+        <div class="monitoring-section-heading">
+
+            <div>
+                <h2>Water Level Trend</h2>
+                <p>Lake-wide daily water level over time</p>
+            </div>
+
+                <span class="badge text-bg-secondary">
+                Lake-wide &middot; not per station
+            </span>
+
+        </div>
+
+        <div class="monitoring-trends-body">
+
+        {% if trend %}
+
+        <form method="GET" id="trend-form" class="monitoring-trend-form"
+              action="{{ url_for('monitoring.index') }}">
+            <label>
+                From
+                <input type="date" name="trend_start" class="form-control"
+                       value="{{ trend.start.isoformat() }}">
+            </label>
+            <label>
+                To
+                <input type="date" name="trend_end" class="form-control"
+                       value="{{ trend.end.isoformat() }}">
+            </label>
+            <button type="submit" class="monitoring-add-btn">Apply</button>
+            <a href="{{ url_for('monitoring.index') }}" class="small">Reset</a>
+        </form>
+                <p class="small text-muted">
+            {{ trend.label }}
+            Showing {{ trend.n_historical }} historical days and
+            {{ trend.n_recorded }} recorded readings.
+        </p>
+
+        <div class="monitoring-trend-chart">
+            <canvas
+                id="water-level-chart"
+                data-labels='{{ trend.labels|tojson }}'
+                data-historical='{{ trend.historical|tojson }}'
+                data-recorded='{{ trend.recorded|tojson }}'
+            ></canvas>
+        </div>
+
+        <div class="small text-muted mt-2">
+            The line is LLDA historical data (ends
+            {{ trend.last.strftime("%B %d, %Y") }}). The diamonds are manual or
+            LLDA readings recorded in WaveTech, newest per day. Days with no
+            data are left blank; nothing is estimated. Advisory context only.
+        </div>
+
+        {% else %}
+
+        <div class="monitoring-empty-state">
+            <i class="bi bi-inbox"></i>
+            <div>Water level history unavailable.</div>
+            <small>No historical data has been imported yet.</small>
+        </div>
+
+        {% endif %}
+        </div>
+    </section>
+
+        <!-- =====================================================
+         STATION WEATHER TREND (Open-Meteo model values, per station)
+         ===================================================== -->
+
+    <section class="monitoring-card monitoring-trends-card">
+
+        <div class="monitoring-section-heading">
+
+            <div>
+                <h2>Station Weather Trend</h2>
+                <p>Stored weather-model readings for one station over time</p>
+            </div>
+
+            <span class="badge text-bg-secondary">
+                Weather model &middot; per station
+            </span>
+
+        </div>
+
+        <div class="monitoring-trends-body">
+
+        {% if station_trend %}
+
+        <form method="GET" id="weather-trend-form" class="monitoring-trend-form"
+              action="{{ url_for('monitoring.index') }}">
+            <label>
+                Station
+                <select name="station" class="form-select">
+                    {% for s in station_trend.stations %}
+                    <option value="{{ s.station_no }}"
+                        {% if s.station_no == station_trend.station.station_no %}selected{% endif %}>
+                        {{ s.name }} (Station {{ s.station_no }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                From
+                <input type="date" name="wx_start" class="form-control"
+                       value="{{ station_trend.start.isoformat() }}">
+            </label>
+            <label>
+                To
+                <input type="date" name="wx_end" class="form-control"
+                       value="{{ station_trend.end.isoformat() }}">
+            </label>
+            <button type="submit" class="monitoring-add-btn">Apply</button>
+            <a href="{{ url_for('monitoring.index') }}" class="small">Reset</a>
+        </form>
+
+        {% if station_trend.n_points %}
+
+        <div class="monitoring-trend-chart-sm">
+            <canvas
+                id="station-wind-chart"
+                data-points='{{ station_trend.wind|tojson }}'
+                data-xmin='{{ station_trend.x_min }}'
+                data-xmax='{{ station_trend.x_max }}'
+            ></canvas>
+        </div>
+
+        <div class="monitoring-trend-chart-sm">
+            <canvas
+                id="station-temp-chart"
+                data-points='{{ station_trend.temp|tojson }}'
+                data-xmin='{{ station_trend.x_min }}'
+                data-xmax='{{ station_trend.x_max }}'
+            ></canvas>
+        </div>
+
+        <p class="small text-muted">
+            {{ station_trend.n_points }} stored model readings for
+            {{ station_trend.station.name }},
+            {{ station_trend.start.strftime("%b %d, %Y") }} to
+            {{ station_trend.end.strftime("%b %d, %Y") }}.
+            {% if station_trend.n_gaps %}
+                {{ station_trend.n_gaps }} gap(s) with no stored data are left
+                as breaks in the line; nothing is filled in.
+            {% endif %}
+            {% if station_trend.first_point %}
+                Stored history starts
+                {{ station_trend.first_point.strftime("%b %d, %Y %I:%M %p") }} PH.
+            {% endif %}
+        </p>
+
+        {% else %}
+
+        <div class="monitoring-empty-state">
+            <i class="bi bi-inbox"></i>
+            <div>No stored readings for this station in this range.</div>
+            <small>History is collected only while the system is running.</small>
+        </div>
+
+        {% endif %}
+
+        {% if station_trend.shared_with %}
+        <p class="small text-muted">
+            {{ station_trend.station.name }} falls in the same weather-model
+            grid cell as {{ station_trend.shared_with|join(", ") }}, so their
+            values are identical. They are not independent measurements.
+        </p>
+        {% endif %}
+
+        {% if station_trend.strongest_wind %}
+        {% set sw = station_trend.strongest_wind %}
+        <p class="small">
+            <strong>Strongest model wind at any station in the last 24 hours:</strong>
+            {{ sw.speed }} km/h {{ sw.direction or "" }} at
+            {{ sw.at.strftime("%b %d, %I:%M %p") }} PH
+            ({{ sw.stations|join(", ") }}).
+        </p>
+        {% endif %}
+
+        <div class="small text-muted">
+            Weather data by
+            <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>.
+            Weather model for a grid cell of about 15 km, not a lake
+            measurement. History started at deployment and has gaps whenever
+            the host was asleep or the data service refused requests.
+            Advisory only.
+        </div>
+
+        {% else %}
+
+        <div class="monitoring-empty-state">
+            <i class="bi bi-inbox"></i>
+            <div>Station weather history unavailable.</div>
+            <small>No stations are configured.</small>
+        </div>
+
+        {% endif %}
+
+        </div>
+
+    </section>
 
 
     <!-- =====================================================
@@ -1124,6 +1331,7 @@
 />
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script>
 
@@ -1205,19 +1413,14 @@
         Number("{{ refresh_interval_seconds }}");
 
 
-    function isEditingManualForm() {
+        function isEditingManualForm() {
 
         const active = document.activeElement;
 
-        const form =
-            document.querySelector(
-                'form[action*="add-reading"]'
-            );
-
         return !!(
-            form &&
             active &&
-            form.contains(active)
+            active.closest &&
+            active.closest('form[action*="add-reading"], #trend-form, #weather-trend-form')
         );
     }
 
@@ -1241,6 +1444,157 @@
         }, refreshIntervalMs);
 
     }
+
+        // =========================================================
+    // WATER LEVEL TREND (lake-wide; two separate series)
+    // =========================================================
+
+    function initWaterLevelChart() {
+
+        const el = document.getElementById('water-level-chart');
+
+        if (!el || typeof Chart === 'undefined') {
+            return;
+        }
+
+        const labels = JSON.parse(el.dataset.labels || '[]');
+        const historical = JSON.parse(el.dataset.historical || '[]');
+        const recorded = JSON.parse(el.dataset.recorded || '[]');
+
+        new Chart(el, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'LLDA historical daily level (lake-wide, reference)',
+                        data: historical,
+                        borderColor: '#0f1b3c',
+                        backgroundColor: '#0f1b3c',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        spanGaps: false
+                    },
+                    {
+                        label: 'Recorded in WaveTech (manual/LLDA, lake-wide)',
+                        data: recorded,
+                        showLine: false,
+                        borderColor: '#d9480f',
+                        backgroundColor: '#d9480f',
+                        pointStyle: 'rectRot',
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+                scales: {
+                    y: { title: { display: true, text: 'Water level (m)' } },
+                    x: { ticks: { maxTicksLimit: 10, autoSkip: true } }
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' +
+                                    ctx.parsed.y.toFixed(2) + ' m';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+        // =========================================================
+    // STATION WEATHER TREND (weather model; gaps stay gaps)
+    // =========================================================
+
+    function buildStationChart(canvasId, label, unit, color, fromZero) {
+
+        const el = document.getElementById(canvasId);
+
+        if (!el || typeof Chart === 'undefined') {
+            return;
+        }
+
+        const points = JSON.parse(el.dataset.points || '[]');
+        const xmin = Number(el.dataset.xmin);
+        const xmax = Number(el.dataset.xmax);
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const pad = function (n) { return String(n).padStart(2, '0'); };
+        // Values are PH wall-clock time stored as if UTC, so read with UTC.
+        const day = function (ms) {
+            const d = new Date(ms);
+            return months[d.getUTCMonth()] + ' ' + d.getUTCDate();
+        };
+        const full = function (ms) {
+            const d = new Date(ms);
+            return day(ms) + ', ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ' PH';
+        };
+
+        const dayMs = 86400000;
+        const days = Math.max(1, Math.round((xmax - xmin) / dayMs));
+        const step = dayMs * Math.ceil(days / 7);
+
+        new Chart(el, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: label,
+                    data: points,
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 1.5,
+                    pointRadius: 2,
+                    spanGaps: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        min: xmin,
+                        max: xmax,
+                        ticks: { stepSize: step, callback: day }
+                    },
+                    y: {
+                        beginAtZero: fromZero,
+                        title: { display: true, text: unit }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            title: function (items) { return full(items[0].parsed.x); },
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' + ctx.parsed.y + ' ' + unit;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    buildStationChart('station-wind-chart',
+        'Wind speed (weather model)', 'km/h', '#0f1b3c', true);
+    buildStationChart('station-temp-chart',
+        'Temperature (weather model)', '\u00b0C', '#d9480f', false);
+
+    initWaterLevelChart();
 
 </script>
 

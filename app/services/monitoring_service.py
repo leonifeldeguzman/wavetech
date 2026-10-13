@@ -34,7 +34,7 @@ from app.services import llda_service, settings_service, weather_service, windy_
 from app.services.weather_service import WeatherServiceError
 from app.services.llda_service import LLDAServiceError
 from app.services.windy_service import WindyServiceError
-from app.utils.ph_clock import ph_today
+from app.utils.ph_clock import PH_OFFSET, ph_today
 from app.utils.timezone import to_naive_utc
 from datetime import datetime, timedelta, timezone
 

@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import datetime, timedelta
+from app.utils.ph_clock import ph_now, ph_today
 from flask import current_app, render_template, request
 from app.blueprints.dashboard import dashboard_bp
 from app.utils.decorators import login_required
@@ -12,14 +13,17 @@ from app.services import historical_baseline_service, monitoring_service, schedu
 @dashboard_bp.route("/dashboard")
 @login_required
 def index():
-    today = date.today()
+    today = ph_today()
+    day_start = datetime.combine(today, datetime.min.time())
+    day_end = day_start + timedelta(days=1)
 
     all_trips_today = Trip.query.filter(
-        db.func.date(Trip.departure_time) == today
+        Trip.departure_time >= day_start,
+        Trip.departure_time < day_end,
     ).order_by(Trip.departure_time).all()
 
     scheduled_trips = Trip.query.filter(
-        Trip.departure_time >= datetime.now(),
+        Trip.departure_time >= ph_now(),
         Trip.status.notin_(["Cancelled", "Departed"]),
     ).order_by(Trip.departure_time).all()
 

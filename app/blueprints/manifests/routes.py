@@ -12,6 +12,7 @@ from app.models.pending_registration import PendingRegistration
 from app.models.trip import Trip
 from app.services import activity_log_service
 from app.utils.decorators import login_required
+from app.utils.ph_clock import ph_today
 
 
 def _apply_search(query, term, *columns):
@@ -30,6 +31,14 @@ def _apply_search(query, term, *columns):
     like = f"%{term}%"
     return query.filter(db.or_(*[column.ilike(like) for column in columns]))
 
+def _block_if_departed(trip):
+    """Return a redirect if the trip has already departed, else None.
+    A departed trip's manifest is a record and must not change."""
+    if trip.status == "Departed":
+        flash("This trip has already departed. Its manifest can no longer be changed.")
+        return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+    return None
+
 
 @manifests_bp.route("/manifests")
 @login_required
@@ -40,12 +49,16 @@ def list_slots():
         try:
             selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
-            selected_date = date.today()
+            selected_date = ph_today()
     else:
-        selected_date = date.today()
+        selected_date = ph_today()
+
+    day_start = datetime.combine(selected_date, datetime.min.time())
+    day_end = day_start + timedelta(days=1)
 
     slots = Trip.query.filter(
-        db.func.date(Trip.departure_time) == selected_date
+        Trip.departure_time >= day_start,
+        Trip.departure_time < day_end,
     ).order_by(Trip.departure_time).all()
 
     prev_date = selected_date - timedelta(days=1)
@@ -84,6 +97,7 @@ def add_slot():
 @login_required
 def trip_detail(trip_id):
     trip = Trip.query.get_or_404(trip_id)
+    
 
     # Search terms are independent per section and travel via query
     # params only — they never change which trip/rows are in scope,
@@ -153,6 +167,9 @@ def assign_boat(trip_id):
 @login_required
 def add_walkin(trip_id):
     trip = Trip.query.get_or_404(trip_id)
+    blocked = _block_if_departed(trip)
+    if blocked:
+            return blocked
 
     if not trip.boat:
         flash("Cannot register passengers — no boat assigned to this trip yet.")
@@ -200,6 +217,9 @@ def edit_manifest_entry(trip_id, entry_id):
     new row is ever created here.
     """
     trip = Trip.query.get_or_404(trip_id)
+    blocked = _block_if_departed(trip)
+    if blocked:
+            return blocked
     entry = ManifestEntry.query.get_or_404(entry_id)
     if entry.trip_id != trip.id:
         # Guards against editing an entry that belongs to a different
@@ -242,6 +262,9 @@ def delete_manifest_entry(trip_id, entry_id):
     deletion immediately with no separate bookkeeping needed here.
     """
     trip = Trip.query.get_or_404(trip_id)
+    blocked = _block_if_departed(trip)
+    if blocked:
+            return blocked
     entry = ManifestEntry.query.get_or_404(entry_id)
     if entry.trip_id != trip.id:
         abort(404)
@@ -309,6 +332,9 @@ def cancel_trip(trip_id):
 @login_required
 def approve_registration(trip_id, reg_id):
     trip = Trip.query.get_or_404(trip_id)
+    blocked = _block_if_departed(trip)
+    if blocked:
+            return blocked
     registration = PendingRegistration.query.get_or_404(reg_id)
 
     if not trip.boat:

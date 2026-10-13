@@ -14,10 +14,17 @@ from app.models.environmental_reading import EnvironmentalReading
 from app.services import historical_baseline_service, monitoring_service, settings_service
 from app.utils.ph_clock import ph_today
 from app.utils.decorators import login_required
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 # A recorded water level older than this is not compared with the baseline.
 BASELINE_COMPARE_MAX_AGE = timedelta(hours=24)
+
+def _parse_date(value):
+    """A YYYY-MM-DD query value as a date, or None if missing/invalid."""
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
 
 
 @monitoring_bp.route("/monitoring")
@@ -135,8 +142,23 @@ def index():
             "dir": c["reading"].wind_direction if c["reading"] else None,
         }
         for c in station_cards
+
+        
     ]
 
+    # Lake-wide water-level history for the Trends chart (display only).
+    trend = historical_baseline_service.get_water_level_history(
+            _parse_date(request.args.get("trend_start")),
+            _parse_date(request.args.get("trend_end")),
+    )
+
+    # Per-station weather history for the Station Weather Trend (model data).
+    station_trend = monitoring_service.get_station_history(
+        request.args.get("station"),
+        _parse_date(request.args.get("wx_start")),
+        _parse_date(request.args.get("wx_end")),
+    )
+    
     return render_template(
         "monitoring/index.html",
 
@@ -180,6 +202,8 @@ def index():
         active_page="monitoring",
 
         baseline=baseline,
+        trend=trend,
+        station_trend=station_trend,
         baseline_water_reading=baseline_water_reading,
         baseline_context=baseline_context,
         water_level_card=water_level_card,

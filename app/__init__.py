@@ -87,7 +87,12 @@ def create_app():
     def index():
         return redirect(url_for("passenger.home"))
 
-    # Announcement Management: automatically publish Scheduled
+    # Configure all model relationships now, in the main thread, so the
+    # background threads below don't race the first web request to do it.
+    from sqlalchemy.orm import configure_mappers
+    configure_mappers()
+
+       # Announcement Management: automatically publish Scheduled
     # announcements whose time has arrived, without requiring anyone to
     # open or refresh a page (see app/services/announcement_service.py).
     if _should_start_announcement_scheduler(app):
@@ -95,4 +100,18 @@ def create_app():
 
         announcement_service.start_background_scheduler(app)
 
+        # Weather history: fetch Open-Meteo on a timer so per-station
+        # records accumulate even when nobody opens a page
+        # (see app/services/weather_collector.py).
+        if app.config.get("WEATHER_COLLECTOR_ENABLED", True):
+            from app.services import weather_collector
+
+            weather_collector.start_weather_collector(app)
+
+    @app.route("/healthz")
+    def healthz():
+        # Lightweight URL for uptime pingers. Touches no database.
+        return "ok", 200
+
     return app
+
