@@ -291,6 +291,59 @@
 }
 
 
+/* Water Level Status row: reading + condition are the primary line,
+   the data-source message sits below as supporting text. Condition
+   colours match the passenger home Safety card. */
+
+.monitoring-status-note {
+    margin-top: 3px;
+
+    color: #6b7280;
+
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+
+.monitoring-waterlevel-main {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+
+    gap: 6px;
+
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+
+.monitoring-waterlevel-sep {
+    color: #9ca3af;
+
+    font-weight: 400;
+}
+
+
+.monitoring-waterlevel-condition.safe {
+    color: #0c9f47;
+}
+
+
+.monitoring-waterlevel-condition.caution {
+    color: #b77900;
+}
+
+
+.monitoring-waterlevel-condition.unsafe {
+    color: #d92d20;
+}
+
+
+.monitoring-waterlevel-unavailable {
+    color: #777777;
+}
+
+
 /* =========================================================
    SECTION HEADING
    ========================================================= */

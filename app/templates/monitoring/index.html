@@ -255,28 +255,38 @@
                         Water Level Status
                     </div>
 
-                                        {% if llda_status == "live" %}
+                                        {% if water_level_card.reading %}
 
-                        <div class="monitoring-status-value">
-                            Live monitoring active
+                        {# Primary: the latest reading and its condition. #}
+                        <div class="monitoring-status-value monitoring-waterlevel-main">
+                            <span class="monitoring-waterlevel-reading">
+                                {{ "%.2f"|format(water_level_card.reading.water_level_m) }} m
+                            </span>
+                            <span class="monitoring-waterlevel-sep">&mdash;</span>
+                            <span class="monitoring-waterlevel-condition {{ water_safety_status }}">
+                                {{ water_safety_label }}
+                            </span>
                         </div>
 
-                    {% elif llda_status == "cached" %}
-
-                        <div class="monitoring-status-value">
-                            Using cached data
-                        </div>
-
-                    {% elif water_level_card.reading %}
-
-                        <div class="monitoring-status-value">
-                            LLDA feed not connected. Using manual entry.
+                        {# Secondary: where the reading comes from. #}
+                        <div class="monitoring-status-note">
+                            {% if llda_status == "live" %}
+                                Live monitoring active
+                            {% elif llda_status == "cached" %}
+                                Using cached data
+                            {% else %}
+                                LLDA feed not connected. Using manual entry.
+                            {% endif %}
                         </div>
 
                     {% else %}
 
-                        <div class="monitoring-status-value">
-                            Monitoring unavailable
+                        <div class="monitoring-status-value monitoring-waterlevel-main monitoring-waterlevel-unavailable">
+                            Unavailable
+                        </div>
+
+                        <div class="monitoring-status-note">
+                            No water-level reading recorded.
                         </div>
 
                     {% endif %}

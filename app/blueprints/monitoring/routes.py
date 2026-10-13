@@ -71,6 +71,19 @@ def index():
         baseline_water_reading
     )
 
+    # Condition for that same reading, from the existing classifier that
+    # reads the Safety Thresholds saved in Admin Settings (shared with the
+    # dashboard, passenger home and decision-support). With no reading
+    # there is no condition: it is never guessed.
+    water_safety_status = None
+    water_safety_label = None
+    if water_level_card["reading"] is not None:
+        water_safety_status, water_safety_label = (
+            monitoring_service.classify_water_safety(
+                water_level_card["reading"].water_level_m
+            )
+        )
+
         # Per-station weather cards. Stations with identical model values fall
     # in the same grid cell, so we tell the operator which ones share one.
     def _values(reading):
@@ -207,6 +220,8 @@ def index():
         baseline_water_reading=baseline_water_reading,
         baseline_context=baseline_context,
         water_level_card=water_level_card,
+        water_safety_status=water_safety_status,
+        water_safety_label=water_safety_label,
     )
 
 
