@@ -43,9 +43,10 @@
                     </div>
 
                     <div class="monitoring-summary-subvalue">
-                        at {{ weather_summary.count }} of {{ weather_summary.total }} stations
-                        {% if weather_summary.temp_min is not none %}
-                            &middot; {{ weather_summary.temp_min }}&ndash;{{ weather_summary.temp_max }}&deg;C
+                        {{ weather_summary.station_name }}
+                        (Station {{ weather_summary.station_no }})
+                        {% if weather_summary.temperature_c is not none %}
+                            &middot; {{ weather_summary.temperature_c }}&deg;C
                         {% endif %}
                     </div>
 

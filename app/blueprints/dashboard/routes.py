@@ -45,7 +45,12 @@ def index():
         boarding_now_count = ManifestEntry.query.filter_by(trip_id=boarding_trip.id).count()
         boarding_now_boat = boarding_trip.boat.name if boarding_trip.boat else None
 
-    safety_status, safety_label, latest_reading = monitoring_service.get_current_safety()
+    # One assessment feeds both the Safety Status card and Decision-Support
+    # below, so the two always show the same condition.
+    assessment = scheduling_service.get_assessment()
+    safety_status, safety_label, latest_reading = monitoring_service.get_current_safety(
+        assessment=assessment
+    )
 
     # Scheduling Decision-Support is read-only. The selected trip is used
     # only as context for the operator; no Trip or manifest row is changed.
@@ -57,7 +62,7 @@ def index():
     if trip_id is not None:
         selected_trip = db.session.get(Trip, trip_id)
         if selected_trip is not None:
-            scheduling_assessment = scheduling_service.get_assessment()
+            scheduling_assessment = assessment
             # Only offered for CAUTION/DELAY and UNSAFE results — see
             # scheduling_service.build_safety_alert(). This never creates
             # an Announcement itself; it only supplies the text used to

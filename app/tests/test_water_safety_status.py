@@ -1,10 +1,33 @@
 """Water-level Safety Status (Admin dashboard + Passenger home) must follow
-the Safety Thresholds saved in Admin Settings -- no hardcoded limits."""
+the Safety Thresholds saved in Admin Settings -- no hardcoded limits.
+
+get_current_safety() is the overall Decision-Support condition (water, wind
+and weather; see test_safety_status_dss_consistency.py). These tests isolate
+the WATER part by giving it a live, safe weather reading, so the water level
+is the only thing that can change the result."""
+from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import patch
+
 import pytest
 
 from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
 from app.services import monitoring_service, scheduling_service, settings_service
+
+
+@pytest.fixture(autouse=True)
+def _safe_live_weather():
+    now = datetime.now(timezone.utc)
+    reading = SimpleNamespace(
+        wind_speed_kmh=10.0, wind_direction="NE", weather_condition="Sunny",
+        temperature_c=28.0, recorded_at=now, retrieved_at=now,
+    )
+    with patch(
+        "app.services.scheduling_service.monitoring_service.get_dss_weather_conditions",
+        return_value={"status": "live", "reading": reading, "message": None},
+    ):
+        yield
 
 
 def _save(**water):
@@ -50,10 +73,11 @@ def test_changing_settings_changes_status_without_code_change(app):
         assert monitoring_service.get_current_safety()[0] == "unsafe"
 
 
-def test_no_reading_is_pending(app):
+def test_no_reading_is_unavailable(app):
+    # No water level recorded: never guessed as safe or caution.
     with app.app_context():
         status, label, reading = monitoring_service.get_current_safety()
-        assert (status, reading) == ("pending", None)
+        assert (status, label, reading) == ("unavailable", "UNAVAILABLE", None)
 
 
 def test_matches_decision_support_water_classification(app):

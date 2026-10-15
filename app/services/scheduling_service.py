@@ -99,12 +99,27 @@ def _classify_water(value: Any, thresholds: dict[str, float]) -> ConditionResult
     return ConditionResult("Water Level", value, STATUS_UNSAFE, "Water level exceeds the temporary unsafe range.")
 
 
+# Finer weather labels -> the broader label whose Settings category applies
+# when the Admin has not listed the finer one. Matches how these skies were
+# classified before the finer labels existed (cloudy -> Cloudy, storm -> Rainy).
+_WEATHER_RULE_FALLBACK = {
+    "partly cloudy": "cloudy",
+    "thunderstorm": "rainy",
+}
+
+
 def _classify_weather(value: Any) -> ConditionResult:
     if not isinstance(value, str) or not value.strip():
         return ConditionResult("Weather", value, STATUS_UNAVAILABLE, "Weather condition is missing.")
 
     normalized = value.strip().lower()
     categories = settings_service.get_weather_categories()
+
+    # A label an Admin has not listed in any category is judged like the
+    # broader label it refines (so the existing rules keep working), unless
+    # the Admin lists it explicitly.
+    if not any(normalized in cat for cat in categories.values()):
+        normalized = _WEATHER_RULE_FALLBACK.get(normalized, normalized)
 
     if normalized in categories["safe"]:
         return ConditionResult("Weather", value, STATUS_SAFE, "Weather condition is classified as temporarily safe.")
@@ -388,23 +403,17 @@ _ENV_CONDITION_PRESENTATION = {
 
 def get_environmental_condition(windy_reading) -> dict[str, str]:
     """Return {"status", "label", "css_class"} for an Open-Meteo reading
-    (None when no usable reading exists). Same precedence as
-    evaluate_conditions(): Unavailable > Unsafe > Caution > Safe."""
+    (None when no usable reading exists).
+
+    Based on the WEATHER condition only, using the Weather Conditions saved
+    in Admin Settings. Wind is deliberately not part of this status (it is
+    still shown separately, and still counts in evaluate_conditions())."""
     if windy_reading is None:
         status = STATUS_UNAVAILABLE
     else:
-        statuses = {
-            _classify_wind(getattr(windy_reading, "wind_speed_kmh", None), _thresholds()).status,
-            _classify_weather(getattr(windy_reading, "weather_condition", None)).status,
-        }
-        if STATUS_UNAVAILABLE in statuses:
-            status = STATUS_UNAVAILABLE
-        elif STATUS_UNSAFE in statuses:
-            status = STATUS_UNSAFE
-        elif STATUS_CAUTION in statuses:
-            status = STATUS_CAUTION
-        else:
-            status = STATUS_SAFE
+        status = _classify_weather(
+            getattr(windy_reading, "weather_condition", None)
+        ).status
 
     label, css_class = _ENV_CONDITION_PRESENTATION[status]
     return {"status": status, "label": label, "css_class": css_class}
@@ -414,7 +423,7 @@ def get_environmental_condition(windy_reading) -> dict[str, str]:
 # Passenger-facing Overall Condition (presentation only).
 # Combines two EXISTING outputs, without recalculating either:
 #   * safety_status from monitoring_service.get_current_safety()
-#     ("safe", "caution", "unsafe", "pending")
+#     ("safe", "caution", "unsafe", "unavailable")
 #   * get_environmental_condition()["status"]
 #     (Safe / Caution / Unsafe / Unavailable)
 # Conservative precedence: Poor > Unavailable > Caution > Good. A good

@@ -36,25 +36,65 @@ class StationWeather:
 
 
 _CURRENT_FIELDS = (
-    "temperature_2m,wind_speed_10m,wind_direction_10m,cloud_cover,precipitation"
+    "temperature_2m,wind_speed_10m,wind_direction_10m,weather_code"
 )
 _COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
-# Simple, explainable rule (not an official formula).
-RAIN_THRESHOLD_MM = 0.1
-SUNNY_MAX_CLOUD_PCT = 30
+# ---------------------------------------------------------------------------
+# Weather condition: ONE normalized label per observation.
+#
+# Open-Meteo returns a WMO weather interpretation code (`weather_code`).
+# This table is the single place that turns a code into a WaveTech label;
+# Admin and Passenger both read the stored label, so neither side can
+# interpret the same observation differently.
+#
+# Labels are the ones the Safety rules in Admin Settings already know
+# ("Sunny", "Cloudy", "Rainy") plus two finer ones ("Partly Cloudy",
+# "Thunderstorm"). The safety rule for the finer ones lives in
+# scheduling_service._classify_weather(); this module never decides
+# Safe/Caution/Unsafe.
+# ---------------------------------------------------------------------------
+CONDITION_SUNNY = "Sunny"
+CONDITION_PARTLY_CLOUDY = "Partly Cloudy"
+CONDITION_CLOUDY = "Cloudy"
+CONDITION_RAINY = "Rainy"
+CONDITION_THUNDERSTORM = "Thunderstorm"
+
+# WMO codes as documented by Open-Meteo (https://open-meteo.com/en/docs).
+WMO_CODE_TO_CONDITION = {
+    0: CONDITION_SUNNY,            # clear sky
+    1: CONDITION_SUNNY,            # mainly clear
+    2: CONDITION_PARTLY_CLOUDY,    # partly cloudy
+    3: CONDITION_CLOUDY,           # overcast
+    45: CONDITION_CLOUDY,          # fog (sky obscured; no separate label)
+    48: CONDITION_CLOUDY,          # depositing rime fog
+    51: CONDITION_RAINY, 53: CONDITION_RAINY, 55: CONDITION_RAINY,   # drizzle
+    56: CONDITION_RAINY, 57: CONDITION_RAINY,                        # freezing drizzle
+    61: CONDITION_RAINY, 63: CONDITION_RAINY, 65: CONDITION_RAINY,   # rain
+    66: CONDITION_RAINY, 67: CONDITION_RAINY,                        # freezing rain
+    80: CONDITION_RAINY, 81: CONDITION_RAINY, 82: CONDITION_RAINY,   # rain showers
+    95: CONDITION_THUNDERSTORM,    # thunderstorm
+    96: CONDITION_THUNDERSTORM,    # thunderstorm with slight hail
+    99: CONDITION_THUNDERSTORM,    # thunderstorm with heavy hail
+}
+
+
+def normalize_weather_code(code) -> str | None:
+    """WMO weather code -> WaveTech weather condition label.
+
+    Returns None (shown as "Unavailable") when the code is missing or is
+    not in the table. It never guesses a condition.
+    """
+    if code is None or isinstance(code, bool):
+        return None
+    try:
+        return WMO_CODE_TO_CONDITION.get(int(code))
+    except (TypeError, ValueError):
+        return None
 
 
 def _degrees_to_compass(deg: float) -> str:
     return _COMPASS[round(deg / 45) % 8]
-
-
-def _derive_weather_condition(cloud_pct: float, precip_mm: float) -> str:
-    if precip_mm > RAIN_THRESHOLD_MM:
-        return "Rainy"
-    if cloud_pct <= SUNNY_MAX_CLOUD_PCT:
-        return "Sunny"
-    return "Cloudy"
 
 
 def _request(stations: list) -> list[dict]:
@@ -124,17 +164,13 @@ def fetch_station_weather(stations) -> list[StationWeather]:
 
         speed = cur.get("wind_speed_10m")
         deg = cur.get("wind_direction_10m")
-        cloud = cur.get("cloud_cover")
-        precip = cur.get("precipitation") or 0
         temp = cur.get("temperature_2m")
 
         out.append(StationWeather(
             station_no=station.station_no,
             wind_speed_kmh=None if speed is None else round(speed, 1),
             wind_direction=None if deg is None else _degrees_to_compass(deg),
-            weather_condition=(
-                None if cloud is None else _derive_weather_condition(cloud, precip)
-            ),
+            weather_condition=normalize_weather_code(cur.get("weather_code")),
             temperature_c=None if temp is None else round(temp, 1),
             recorded_at=recorded_at,
             retrieved_at=retrieved_at,

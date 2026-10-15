@@ -232,18 +232,23 @@ def get_station_weather() -> dict:
 DSS_STATION_NO = "XXI"
 
 
+def pick_reference_reading(station_weather: dict):
+    """The reading for the reference station (DSS_STATION_NO) out of a
+    get_station_weather() result, or None. Admin and Passenger both use
+    this, so the headline weather is always the same observation."""
+    for item in station_weather["stations"]:
+        if item["station"].station_no == DSS_STATION_NO:
+            return item["reading"]
+    return None
+
+
 def get_dss_weather_conditions() -> dict:
     """Open-Meteo weather for the representative station, for
     decision-support. Same shape as get_windy_conditions():
     {"status", "reading", "message"}. Weather-model data, not a lake
     measurement."""
     result = get_station_weather()
-
-    reading = None
-    for item in result["stations"]:
-        if item["station"].station_no == DSS_STATION_NO:
-            reading = item["reading"]
-            break
+    reading = pick_reference_reading(result)
 
     if reading is None:
         return {
@@ -349,29 +354,40 @@ def classify_water_safety(water_level_m, thresholds=None):
     return "unsafe", "UNSAFE"
 
 
-def get_current_safety():
-    """Safety Status shown on Admin dashboard and Passenger home.
+def get_current_safety(assessment=None):
+    """Overall Safety Status shown on the Admin dashboard and Passenger home.
 
-    The latest water level is classified against the Water Level safe and
-    caution ranges saved in Admin Settings (the single source of truth, also
-    used by Scheduling Decision-Support), so a change saved in Settings
-    applies here immediately. Nothing is hardcoded. Advisory only: the
-    Coast Guard remains the final authority.
-    Returns (safety_status, safety_label, latest_reading)."""
+    This is the Scheduling Decision-Support overall condition, normalized to
+    ("safe" | "caution" | "unsafe" | "unavailable", "SAFE" | ... ), so the
+    dashboard, Passenger home and DSS can never disagree for the same data.
+    There is no second calculation here: water level (current day only),
+    wind and weather are all judged in scheduling_service.evaluate_conditions()
+    against the Safety Thresholds saved in Admin Settings, and missing,
+    stale or unrecognised required data is "unavailable", never "caution".
+    Advisory only: the Coast Guard remains the final authority.
+
+    Pass the `assessment` you already computed (the dashboard does) to
+    reuse it; otherwise the current one is evaluated.
+    Returns (safety_status, safety_label, latest_water_reading); the reading
+    is the newest stored water level, kept only for the "Last check" time.
+    """
+    # Imported here: scheduling_service imports this module.
+    from app.services import scheduling_service
+
+    if assessment is None:
+        assessment = scheduling_service.get_assessment()
+
+    safety_status = assessment.overall_status.lower()
+    safety_label = assessment.overall_status.upper()
+
     latest_reading = (
         EnvironmentalReading.query
         .filter(EnvironmentalReading.water_level_m.isnot(None))
         .order_by(EnvironmentalReading.retrieved_at.desc())
         .first()
     )
-
-    if latest_reading is None:
-        return "pending", "Pending Setup", None
-
-    safety_status, safety_label = classify_water_safety(
-        latest_reading.water_level_m
-    )
     return safety_status, safety_label, latest_reading
+
 
 # ---------------------------------------------------------------------------
 # Station weather history for the Trends chart (Open-Meteo model data)

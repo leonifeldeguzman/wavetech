@@ -115,23 +115,28 @@ def index():
         None,
     )
     
-    _severity = {"Rainy": 3, "Cloudy": 2, "Sunny": 1}
     with_data = [c for c in station_cards if c["reading"] is not None]
     weather_summary = None
     wind_summary = None
-    if with_data:
-        worst = max((c["reading"].weather_condition for c in with_data),
-                    key=lambda w: _severity.get(w, 0))
-        temps = [c["reading"].temperature_c for c in with_data
-                 if c["reading"].temperature_c is not None]
+
+    # Headline Weather = the reference station's observation, the same
+    # reading the Passenger home page and the Dashboard assessment use.
+    # (It used to be the "worst" condition across all stations, which can
+    # differ from the reference station.) Other stations stay visible in
+    # the station cards and on the map.
+    ref = monitoring_service.pick_reference_reading(station_weather)
+    if ref is not None:
+        ref_station = next(
+            c["station"] for c in station_cards
+            if c["station"].station_no == monitoring_service.DSS_STATION_NO
+        )
         weather_summary = {
-            "condition": worst,
-            "count": sum(1 for c in with_data
-                         if c["reading"].weather_condition == worst),
-            "total": len(with_data),
-            "temp_min": min(temps) if temps else None,
-            "temp_max": max(temps) if temps else None,
+            "condition": ref.weather_condition,
+            "station_name": ref_station.name,
+            "station_no": ref_station.station_no,
+            "temperature_c": ref.temperature_c,
         }
+    if with_data:
         winds = [c for c in with_data if c["reading"].wind_speed_kmh is not None]
         if winds:
             top = max(winds, key=lambda c: c["reading"].wind_speed_kmh)
