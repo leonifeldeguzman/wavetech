@@ -32,6 +32,8 @@ from app.services import semaphore_service, unisms_service
 from app.services.activity_log_service import log_action, ACTION_REGISTRATION_SMS_SENT
 from app.models.environmental_reading import EnvironmentalReading
 from app.services import monitoring_service, scheduling_service
+from sqlalchemy import func
+from app.utils.ph_clock import ph_now
 # ---------------------------------------------------------------------------
 # Business rules (documented here since they are not fully explicit in the
 # existing manifests blueprint — see ASSUMPTIONS in the final report).
@@ -93,6 +95,26 @@ def _trip_capacity_info(trip):
     return capacity, reserved, remaining
 
 
+def _has_departure_time_passed(trip):
+    """A delayed trip leaves at new_departure_time, so that time decides.
+    Both times are naive PH wall-clock, so compare against ph_now()."""
+    effective = trip.new_departure_time or trip.departure_time
+    return effective < ph_now()
+
+
+def _upcoming_trips_query():
+    """Listable trips that have not yet left, soonest first. Done in the
+    query (not by changing trip status), so old trips stay untouched for
+    Reports, Analytics and manifest PDFs."""
+    effective = func.coalesce(Trip.new_departure_time, Trip.departure_time)
+    return (
+        Trip.query
+        .filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
+        .filter(effective >= ph_now())
+        .order_by(effective)
+    )
+
+
 def _accepts_registration(trip):
     """Returns (can_register, error_code, message). error_code/message
     are only meaningful when can_register is False. Returning an
@@ -102,6 +124,8 @@ def _accepts_registration(trip):
         return False, "TRIP_FULL", "This trip is already full."
     if trip.status in STATUS_BLOCKS_REGISTRATION:
         return False, "TRIP_NOT_AVAILABLE", "This trip is no longer accepting registrations."
+    if _has_departure_time_passed(trip):
+        return False, "TRIP_NOT_AVAILABLE", "This trip's departure time has already passed."
     if not trip.boat:
         return False, "TRIP_NOT_AVAILABLE", "This trip does not have a boat assigned yet."
     capacity, reserved, remaining = _trip_capacity_info(trip)
@@ -171,12 +195,9 @@ def _serialize_trip_detail(trip):
 
 @passenger_bp.route("/api/trips", methods=["GET"])
 def list_trips():
-    trips = (
-        Trip.query.filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
-        .order_by(Trip.departure_time)
-        .all()
-    )
+    trips = _upcoming_trips_query().all()
     return success_response(data=[_serialize_trip_summary(t) for t in trips])
+
 
 
 # ---------------------------------------------------------------------------
@@ -481,8 +502,10 @@ def home():
     )
 
     # Recently updated upcoming trip
+    effective_departure = func.coalesce(Trip.new_departure_time, Trip.departure_time)
     current_trip = (
         Trip.query
+        .filter(effective_departure >= ph_now())
         .order_by(Trip.updated_at.desc())
         .first()
     )
@@ -542,11 +565,7 @@ def announcements():
 
 @passenger_bp.route("/passenger/schedule", methods=["GET"])
 def schedule():
-    trips = (
-        Trip.query.filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
-        .order_by(Trip.departure_time)
-        .all()
-    )
+    trips = _upcoming_trips_query().all()
 
     trip_rows = [_serialize_trip_summary(t) for t in trips]
 
@@ -565,12 +584,7 @@ def trip_detail_page(trip_id):
 
 @passenger_bp.route("/passenger/register", methods=["GET"])
 def register_page():
-    trips = (
-        Trip.query
-        .filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
-        .order_by(Trip.departure_time)
-        .all()
-    )
+    trips = _upcoming_trips_query().all()
 
     trip_rows = [_serialize_trip_summary(t) for t in trips]
 

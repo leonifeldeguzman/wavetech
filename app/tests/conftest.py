@@ -67,6 +67,7 @@ from app.models.trip import Trip  # noqa: E402
 from app.models.pending_registration import PendingRegistration  # noqa: E402
 from app.models.manifest_entry import ManifestEntry  # noqa: E402
 from app.services import announcement_service, weather_collector  # noqa: E402
+from app.utils.ph_clock import ph_now
 
 
 @pytest.fixture()
@@ -125,7 +126,7 @@ def make_trip(app):
         with app.app_context():
             trip = Trip(
                 boat_id=boat_id,
-                departure_time=kwargs.pop("departure_time", datetime.now(timezone.utc) + timedelta(hours=2)),
+                departure_time=kwargs.pop("departure_time", ph_now() + timedelta(hours=2)),
                 status=status,
                 **kwargs,
             )
