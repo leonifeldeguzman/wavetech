@@ -2,6 +2,7 @@ from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 from datetime import datetime
+from app.services import monitoring_service
 
 from app.blueprints.passenger import routes as passenger_routes
 
@@ -101,3 +102,38 @@ def test_detail_of_past_trip_does_not_accept_registration(client, make_boat, mak
 
     data = resp.get_json()["data"]  # ADAPT if the detail response is shaped differently
     assert data["accepts_registration"] is False
+
+
+UNAVAILABLE_WEATHER = {"status": "unavailable", "reading": None, "message": None}
+
+
+def _load_home(client):
+    with patch(PATCH_TARGET, return_value=FIXED_NOW), \
+         patch.object(monitoring_service, "get_dss_weather_conditions",
+                      return_value=UNAVAILABLE_WEATHER):
+        return client.get("/passenger/").get_data(as_text=True)
+
+
+def test_home_card_shows_new_time_for_delayed_trip(client, make_boat, make_trip):
+    boat_id = make_boat(capacity=5)
+    make_trip(
+        boat_id=boat_id,
+        status="Delayed",
+        departure_time=datetime(2026, 10, 20, 9, 0),       # original, already passed
+        new_departure_time=datetime(2026, 10, 20, 14, 0),  # still ahead
+    )
+
+    html = _load_home(client)
+
+    assert "2:00PM" in html
+    assert "9:00AM" not in html
+
+
+def test_home_card_shows_original_time_when_not_delayed(client, make_boat, make_trip):
+    boat_id = make_boat(capacity=5)
+    make_trip(boat_id=boat_id, status="Open",
+              departure_time=datetime(2026, 10, 20, 15, 0))
+
+    html = _load_home(client)
+
+    assert "3:00PM" in html
