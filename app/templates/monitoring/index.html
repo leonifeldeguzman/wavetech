@@ -623,133 +623,119 @@
     <section class="monitoring-card monitoring-latest-card">
 
         <div class="monitoring-section-heading">
-
             <div>
-
-                <h2>
-                    Latest Reading
-                </h2>
-
-                <p>
-                    Most recent environmental observation
-                </p>
-
+                <h2>Latest Reading</h2>
+                <p>Latest water level and latest weather</p>
             </div>
-
         </div>
 
 
-        {% if latest %}
+        {# ---------- WATER LEVEL (lake-wide) ---------- #}
+        <h3 class="h6 fw-semibold mb-2 mt-3">Water Level</h3>
+
+        {% if baseline_water_reading %}
 
         <div class="monitoring-latest-grid">
 
-
             <div class="monitoring-latest-item">
-
                 <span>Water Level</span>
-
-                <strong>
-                    {{ latest.water_level_m
-                        if latest.water_level_m is not none
-                        else "Not yet recorded" }}
-
-                    {% if latest.water_level_m is not none %}
-                        m
-                    {% endif %}
-                </strong>
-
+                <strong>{{ baseline_water_reading.water_level_m }} m</strong>
             </div>
 
-
             <div class="monitoring-latest-item">
-
-                <span>Wind Speed</span>
-
+                <span>Operator Observation</span>
                 <strong>
-                    {{ latest.wind_speed_kmh
-                        if latest.wind_speed_kmh is not none
-                        else "Not yet recorded" }}
-
-                    {% if latest.wind_speed_kmh is not none %}
-                        km/h
-                    {% endif %}
+                    {{ baseline_water_reading.observed_condition|capitalize
+                        if baseline_water_reading.observed_condition
+                        else "Not observed" }}
                 </strong>
-
             </div>
 
-
             <div class="monitoring-latest-item">
-
-                <span>Wind Direction</span>
-
-                <strong>
-                    {{ latest.wind_direction
-                        if latest.wind_direction
-                        else "Not yet recorded" }}
-                </strong>
-
-            </div>
-
-
-            <div class="monitoring-latest-item">
-
-                <span>Weather</span>
-
-                <strong>
-                    {{ latest.weather_condition
-                        if latest.weather_condition
-                        else "Not yet recorded" }}
-                </strong>
-
-            </div>
-
-
-            <div class="monitoring-latest-item">
-
-                <span>Temperature</span>
-
-                <strong>
-                    {{ latest.temperature_c
-                        if latest.temperature_c is not none
-                        else "Not yet recorded" }}
-
-                    {% if latest.temperature_c is not none %}
-                        &deg;C
-                    {% endif %}
-                </strong>
-
+                <span>Comment</span>
+                <strong>{{ baseline_water_reading.observer_comment or "None" }}</strong>
             </div>
 
         </div>
 
-
         <div class="monitoring-latest-footer">
-
             <span>
-                Source: {{ latest.source|capitalize }}
+                Source:
+                {{ "LLDA daily average" if baseline_water_reading.source == "llda"
+                   else "Manual observation" }}
             </span>
-
-            <span>
-                Recorded: {{ latest.retrieved_at | ph_time }}
-            </span>
-
+            <span>Recorded: {{ baseline_water_reading.retrieved_at | ph_time }}</span>
         </div>
 
         {% else %}
 
         <div class="monitoring-empty-state">
-
             <i class="bi bi-inbox"></i>
+            <div>No water level recorded yet.</div>
+            <small>Use the Water Level &amp; Observation form below.</small>
+        </div>
 
-            <div>
-                No readings yet.
+        {% endif %}
+
+
+        {# ---------- WEATHER (reference station) ---------- #}
+        <h3 class="h6 fw-semibold mb-2 mt-4">Weather</h3>
+
+        {% set wx = latest_weather.reading %}
+
+        {% if wx %}
+
+        <div class="monitoring-latest-grid">
+
+            <div class="monitoring-latest-item">
+                <span>Wind Speed</span>
+                <strong>
+                    {% if wx.wind_speed_kmh is not none %}{{ wx.wind_speed_kmh }} km/h{% else %}Not yet recorded{% endif %}
+                </strong>
             </div>
 
-            <small>
-                Use the manual entry form below to add the first reading.
-            </small>
+            <div class="monitoring-latest-item">
+                <span>Wind Direction</span>
+                <strong>{{ wx.wind_direction or "Not yet recorded" }}</strong>
+            </div>
+
+            <div class="monitoring-latest-item">
+                <span>Weather</span>
+                <strong>{{ wx.weather_condition or "Not yet recorded" }}</strong>
+            </div>
+
+            <div class="monitoring-latest-item">
+                <span>Temperature</span>
+                <strong>
+                    {% if wx.temperature_c is not none %}{{ wx.temperature_c }} &deg;C{% else %}Not yet recorded{% endif %}
+                </strong>
+            </div>
 
         </div>
+
+        <div class="monitoring-latest-footer">
+            <span>
+                {{ wx.location_label }} &middot;
+                {% if latest_weather.status == "manual" %}
+                    Source: Manual observation
+                {% else %}
+                    Source: Weather model, not a lake measurement
+                    {% if latest_weather.status == "cached" %}(cached){% endif %}
+                    &middot;
+                    <a href="https://open-meteo.com/" target="_blank" rel="noopener">Weather data by Open-Meteo.com</a>
+                {% endif %}
+            </span>
+            <span>Recorded: {{ wx.retrieved_at | ph_time }}</span>
+        </div>
+
+        {% else %}
+
+        <div class="monitoring-empty-state">
+            <i class="bi bi-cloud-slash"></i>
+            <div>Weather data is unavailable.</div>
+            <small>Add a manual weather entry below, or wait for the next model fetch.</small>
+        </div>
+
 
         {% endif %}
 
@@ -1089,11 +1075,11 @@
             <div>
 
                 <h2>
-                    Add Manual Reading
-                </h2>
+                    Water Level &amp; Observation
+                    </h2>
 
                 <p>
-                    Enter environmental data manually when needed
+                    Lake-wide water level and operator observation
                 </p>
 
             </div>
@@ -1127,18 +1113,18 @@
                 </div>
 
 
-                <div class="monitoring-form-field">
+                    <div class="monitoring-form-field">
 
                     <label>
-                        Wind Speed (km/h)
+                        Operator Observation (water surface)
                     </label>
 
-                    <input
-                        type="number"
-                        step="0.01"
-                        class="form-control"
-                        name="wind_speed_kmh"
-                    >
+                    <select class="form-select" name="observed_condition">
+                        <option value="" selected>Not observed</option>
+                        <option value="calm">Calm</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="rough">Rough</option>
+                    </select>
 
                 </div>
 
@@ -1146,62 +1132,15 @@
                 <div class="monitoring-form-field">
 
                     <label>
-                        Wind Direction
+                        Observer Comment (optional)
                     </label>
 
                     <input
                         type="text"
                         class="form-control"
-                        name="wind_direction"
-                        placeholder="e.g. NE"
-                    >
-
-                </div>
-
-
-                <div class="monitoring-form-field">
-
-                    <label>
-                        Weather Condition
-                    </label>
-
-                    <input
-                        type="text"
-                        class="form-control"
-                        name="weather_condition"
-                        placeholder="e.g. Sunny"
-                    >
-
-                </div>
-
-
-                <div class="monitoring-form-field">
-
-                    <label>
-                        Temperature (&deg;C)
-                    </label>
-
-                    <input
-                        type="number"
-                        step="0.1"
-                        class="form-control"
-                        name="temperature_c"
-                    >
-
-                </div>
-
-
-                <div class="monitoring-form-field">
-
-                    <label>
-                        Location Label
-                    </label>
-
-                    <input
-                        type="text"
-                        class="form-control"
-                        name="location_label"
-                        placeholder="e.g. Cabuyao Terminal"
+                        name="observer_comment"
+                        maxlength="300"
+                        placeholder="e.g. Choppy near the pier"
                     >
 
                 </div>
@@ -1221,6 +1160,59 @@
 
             </div>
 
+        </form>
+
+    </section>
+
+        <section class="monitoring-card monitoring-manual-card">
+
+        <div class="monitoring-section-heading">
+            <div>
+                <h2>Manual Weather</h2>
+                <p>
+                    For {{ dss_station.name if dss_station else "the reference station" }}
+                    only. Used by decision-support for 3 hours, and only when
+                    the weather model is unavailable.
+                </p>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('monitoring.add_weather_reading') }}">
+            <div class="monitoring-form-grid">
+
+                <div class="monitoring-form-field">
+                    <label>Wind Speed (km/h) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" min="0" class="form-control" name="wind_speed_kmh" required>
+                </div>
+
+                <div class="monitoring-form-field">
+                    <label>Wind Direction</label>
+                    <input type="text" class="form-control" name="wind_direction" maxlength="10" placeholder="e.g. NE">
+                </div>
+
+                <div class="monitoring-form-field">
+                    <label>Weather Condition <span class="text-danger">*</span></label>
+                    <select class="form-select" name="weather_condition" required>
+                        <option value="" selected disabled>Select condition</option>
+                        {% for option in weather_options %}
+                        <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="monitoring-form-field">
+                    <label>Temperature (&deg;C)</label>
+                    <input type="number" step="0.1" class="form-control" name="temperature_c">
+                </div>
+
+                <div class="monitoring-form-field monitoring-form-submit">
+                    <button type="submit" class="monitoring-add-btn">
+                        <i class="bi bi-plus-lg"></i>
+                        Add Weather
+                    </button>
+                </div>
+
+            </div>
         </form>
 
     </section>

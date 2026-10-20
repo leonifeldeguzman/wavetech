@@ -15,6 +15,7 @@ from app.services import historical_baseline_service, monitoring_service, settin
 from app.utils.ph_clock import ph_today
 from app.utils.decorators import login_required
 from datetime import date, datetime, timedelta, timezone
+from app.models.lake_station import LakeStation
 
 # A recorded water level older than this is not compared with the baseline.
 BASELINE_COMPARE_MAX_AGE = timedelta(hours=24)
@@ -176,6 +177,21 @@ def index():
         _parse_date(request.args.get("wx_start")),
         _parse_date(request.args.get("wx_end")),
     )
+
+        # Latest Weather block: the same reference-station reading decision-support
+    # uses, built from the weather already fetched above (no second API call).
+    latest_weather = monitoring_service.get_dss_weather_conditions(station_weather)
+
+    # Manual weather form: the dropdown lists exactly the conditions saved in
+    # Admin Settings, so every choice can be classified by the rules.
+    weather_options = sorted({
+        label.title()
+        for category in settings_service.get_weather_categories().values()
+        for label in category
+    })
+    dss_station = LakeStation.query.filter_by(
+        station_no=monitoring_service.DSS_STATION_NO
+    ).first()
     
     return render_template(
         "monitoring/index.html",
@@ -227,6 +243,9 @@ def index():
         water_level_card=water_level_card,
         water_safety_status=water_safety_status,
         water_safety_label=water_safety_label,
+        weather_options=weather_options,
+        dss_station=dss_station,
+        latest_weather=latest_weather,
     )
 
 
@@ -240,6 +259,13 @@ def add_reading():
     weather_condition = request.form.get("weather_condition")
     temperature = request.form.get("temperature_c")
     location_label = request.form.get("location_label")
+    observed_condition = (request.form.get("observed_condition") or "").strip().lower()
+    observer_comment = (request.form.get("observer_comment") or "").strip()
+
+    # Only the three known values are accepted ("" means not observed).
+    if observed_condition and observed_condition not in EnvironmentalReading.OBSERVED_CONDITIONS:
+        flash("Invalid water condition selected.")
+        return redirect(url_for("monitoring.index"))
 
     # Water level is required
     if not water_level:
@@ -275,11 +301,72 @@ def add_reading():
         ),
 
         entered_by_user_id=session.get("user_id"),
+        observed_condition=observed_condition or None,
+        observer_comment=observer_comment[:300] or None,
     )
+
+    
 
     db.session.add(new_reading)
     db.session.commit()
 
     flash("Environmental reading recorded successfully.")
 
+    return redirect(url_for("monitoring.index"))
+
+@monitoring_bp.route("/monitoring/add-weather", methods=["POST"])
+@login_required
+def add_weather_reading():
+    """Manual weather for the reference station only (Cardona, XXI). Saved
+    as a NEW manual row; Open-Meteo rows are never edited. It stands in for
+    the weather model only while that is cached or unavailable."""
+    station = LakeStation.query.filter_by(
+        station_no=monitoring_service.DSS_STATION_NO
+    ).first()
+    if station is None:
+        flash("The reference station is not configured.")
+        return redirect(url_for("monitoring.index"))
+
+    wind_speed = (request.form.get("wind_speed_kmh") or "").strip()
+    condition = (request.form.get("weather_condition") or "").strip()
+    direction = (request.form.get("wind_direction") or "").strip()
+    temperature = (request.form.get("temperature_c") or "").strip()
+
+    if not wind_speed or not condition:
+        flash("Wind speed and weather condition are required.")
+        return redirect(url_for("monitoring.index"))
+
+    # Only conditions saved in Admin Settings are accepted.
+    allowed = {
+        label
+        for category in settings_service.get_weather_categories().values()
+        for label in category
+    }
+    if condition.lower() not in allowed:
+        flash("Invalid weather condition selected.")
+        return redirect(url_for("monitoring.index"))
+
+    try:
+        wind_value = float(wind_speed)
+        temp_value = float(temperature) if temperature else None
+    except ValueError:
+        flash("Wind speed and temperature must be numbers.")
+        return redirect(url_for("monitoring.index"))
+    if wind_value < 0:
+        flash("Wind speed cannot be negative.")
+        return redirect(url_for("monitoring.index"))
+
+    db.session.add(EnvironmentalReading(
+        source="manual",
+        station_id=station.id,
+        location_label=f"{station.name} (Station {station.station_no})",
+        wind_speed_kmh=wind_value,
+        wind_direction=direction[:10] or None,
+        weather_condition=condition.title(),
+        temperature_c=temp_value,
+        entered_by_user_id=session.get("user_id"),
+    ))
+    db.session.commit()
+
+    flash("Manual weather recorded for the reference station.")
     return redirect(url_for("monitoring.index"))

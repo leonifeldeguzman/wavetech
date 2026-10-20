@@ -689,7 +689,28 @@
 
                                             </td>
                                         </tr>
+                                                                                {% if scheduling_assessment.observed_condition %}
+                                        <!-- Operator Observation -->
+                                        <tr>
+                                            <td class="scheduling-condition-label">
+                                                Operator Observation
+                                            </td>
 
+                                            <td colspan="2"
+                                                class="scheduling-condition-value">
+                                                {{ scheduling_assessment.observed_condition|capitalize }}
+                                                {% if scheduling_assessment.observer_comment %}
+                                                    &mdash; {{ scheduling_assessment.observer_comment }}
+                                                {% endif %}
+                                                <div class="small text-muted">
+                                                    Operator observation, not a measurement.
+                                                    {% if scheduling_assessment.observation_recorded_at %}
+                                                        Recorded {{ scheduling_assessment.observation_recorded_at | ph_time }}.
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
                                     </tbody>
 
                                 </table>
@@ -769,12 +790,17 @@
                                                         <!-- Data sources -->
                             <div class="scheduling-retrieved">
 
-                                <div>
+                                                                <div>
                                     <strong>Weather and wind:</strong>
-                                    Open-Meteo weather model, Cardona (Station XXI).
-                                    Not a lake measurement.
+                                    {% if scheduling_assessment.weather_is_manual %}
+                                        Manual observation, Cardona (Station XXI).
+                                    {% else %}
+                                        Open-Meteo weather model, Cardona (Station XXI).
+                                        Not a lake measurement.
+                                    {% endif %}
                                     {% if scheduling_assessment.windy_retrieved_at %}
-                                        Retrieved {{ scheduling_assessment.windy_retrieved_at | ph_time }}.
+                                        {{ "Recorded" if scheduling_assessment.weather_is_manual else "Retrieved" }}
+                                        {{ scheduling_assessment.windy_retrieved_at | ph_time }}.
                                     {% endif %}
                                 </div>
 
@@ -786,10 +812,12 @@
                                     {%- endif %}
                                 </div>
 
+                                {% if not scheduling_assessment.weather_is_manual %}
                                 <div class="small text-muted mt-1">
                                     <a href="https://open-meteo.com/"
                                        target="_blank" rel="noopener">Weather data by Open-Meteo.com</a>
                                 </div>
+                                {% endif %}
                             </div>
 
                         </div>

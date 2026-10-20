@@ -476,7 +476,7 @@ def home():
     # reading shown above. Separate from Safety Status (water level) on purpose.
     environmental_condition = scheduling_service.get_environmental_condition(
         windy_conditions["reading"]
-        if windy_conditions["status"] in ("live", "cached")
+        if windy_conditions["status"] in ("live", "cached", "manual")
         else None
     )
 

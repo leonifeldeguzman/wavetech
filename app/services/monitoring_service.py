@@ -41,6 +41,7 @@ from datetime import datetime, timedelta, timezone
 STATUS_LIVE = "live"
 STATUS_CACHED = "cached"
 STATUS_UNAVAILABLE = "unavailable"
+STATUS_MANUAL = "manual"
 
 
 def _fresh_reading(source: str):
@@ -136,6 +137,11 @@ def get_windy_conditions() -> dict:
     return {"status": STATUS_LIVE, "reading": reading, "message": None}
 
 SOURCE_OPEN_METEO = "open_meteo"
+SOURCE_MANUAL = "manual"
+
+# How long a manually entered weather observation may stand in for the
+# weather model when Open-Meteo is cached or unavailable. ADVISER: confirm.
+MANUAL_WEATHER_MAX_AGE = timedelta(hours=3)
 
 
 def _is_fresh(retrieved_at) -> bool:
@@ -241,14 +247,53 @@ def pick_reference_reading(station_weather: dict):
             return item["reading"]
     return None
 
+def get_recent_manual_weather():
+    """Newest manual weather entry for the reference station (DSS_STATION_NO),
+    or None if there is none or it is older than MANUAL_WEATHER_MAX_AGE.
+    Needs both wind speed and condition, so it can be classified."""
+    station = LakeStation.query.filter_by(station_no=DSS_STATION_NO).first()
+    if station is None:
+        return None
+    reading = (
+        EnvironmentalReading.query
+        .filter(
+            EnvironmentalReading.source == SOURCE_MANUAL,
+            EnvironmentalReading.station_id == station.id,
+            EnvironmentalReading.wind_speed_kmh.isnot(None),
+            EnvironmentalReading.weather_condition.isnot(None),
+        )
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+    if reading is None or reading.retrieved_at is None:
+        return None
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    age = now_utc - reading.retrieved_at
+    # Reject a negative age, like _is_fresh().
+    if timedelta(0) <= age <= MANUAL_WEATHER_MAX_AGE:
+        return reading
+    return None
 
-def get_dss_weather_conditions() -> dict:
+
+def get_dss_weather_conditions(station_weather: dict | None = None) -> dict:
     """Open-Meteo weather for the representative station, for
     decision-support. Same shape as get_windy_conditions():
     {"status", "reading", "message"}. Weather-model data, not a lake
     measurement."""
-    result = get_station_weather()
+    result = station_weather if station_weather is not None else get_station_weather()
     reading = pick_reference_reading(result)
+
+    # Open-Meteo wins whenever it is live. Otherwise a recent manual entry
+    # may stand in, and it keeps its own "manual" status so it is never
+    # shown as weather-model data.
+    if result["status"] != STATUS_LIVE:
+        manual = get_recent_manual_weather()
+        if manual is not None:
+            return {
+                "status": STATUS_MANUAL,
+                "reading": manual,
+                "message": "Weather entered manually by the operator.",
+            }
 
     if reading is None:
         return {
@@ -309,6 +354,26 @@ def get_latest_water_reading():
         .order_by(EnvironmentalReading.retrieved_at.desc())
         .first()
     )
+
+def get_todays_observation():
+    """Newest manual row carrying an operator observation, accepted only if
+    recorded today (PH calendar day). Older or missing means None."""
+    reading = (
+        EnvironmentalReading.query
+        .filter(
+            EnvironmentalReading.source == SOURCE_MANUAL,
+            EnvironmentalReading.observed_condition.isnot(None),
+        )
+        .order_by(EnvironmentalReading.retrieved_at.desc())
+        .first()
+    )
+    if reading is None or reading.retrieved_at is None:
+        return None
+    # retrieved_at is naive UTC; convert to the PH calendar day.
+    taken_ph = reading.retrieved_at + timedelta(hours=8)
+    if taken_ph.date() != ph_today():
+        return None
+    return reading
 
 
 def build_water_level_card(reading):

@@ -16,9 +16,20 @@ class EnvironmentalReading(db.Model):
     wind_direction = db.Column(db.String(10), nullable=True)
     weather_condition = db.Column(db.String(50), nullable=True)
     temperature_c = db.Column(db.Float, nullable=True)
+    observed_condition = db.Column(db.String(20), nullable=True)
+    # Operator's structured water-surface observation (calm / moderate / rough).
+    # NULL means "not observed". Manual rows only.
+
+    observer_comment = db.Column(db.String(300), nullable=True)
+    # Optional free-text note from the operator. Displayed only; never read by rules.
 
     entered_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     # Only set when source == "manual" — who encoded it
+
+    OBS_CALM = "calm"
+    OBS_MODERATE = "moderate"
+    OBS_ROUGH = "rough"
+    OBSERVED_CONDITIONS = (OBS_CALM, OBS_MODERATE, OBS_ROUGH)
 
     station_id = db.Column(
         db.Integer,

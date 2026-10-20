@@ -16,6 +16,7 @@ from app.models.environmental_reading import EnvironmentalReading
 from app.services import monitoring_service, settings_service
 from app.utils.ph_clock import ph_today
 from app.utils.timezone import to_ph_time
+import dataclasses
 
 RECOMMENDATION_PROCEED = "PROCEED"
 RECOMMENDATION_CAUTION = "CAUTION / DELAY"
@@ -50,6 +51,10 @@ class SchedulingAssessment:
     llda_recorded_at: datetime | None
     last_updated_at: datetime | None
     llda_source_label: str
+    observed_condition: str | None = None
+    observer_comment: str | None = None
+    observation_recorded_at: datetime | None = None
+    weather_is_manual: bool = False
 
 
 def _thresholds() -> dict[str, float]:
@@ -243,6 +248,38 @@ def _water_source_label(reading) -> str:
         return "LLDA daily average"
     return "Source unknown"
 
+def apply_operator_observation(assessment, observation):
+    """Fold today's operator observation into an assessment.
+
+    Rough water raises a Safe result to Caution and adds a reason. It never
+    lowers a result and never turns UNAVAILABLE into a recommendation.
+    Calm and Moderate have no effect on the result. The observation is always
+    attached so it can be displayed. No database access."""
+    if observation is None:
+        return assessment
+
+    condition = getattr(observation, "observed_condition", None)
+    changes = {
+        "observed_condition": condition,
+        "observer_comment": getattr(observation, "observer_comment", None),
+        "observation_recorded_at": getattr(observation, "retrieved_at", None),
+    }
+
+    if condition == EnvironmentalReading.OBS_ROUGH:
+        if assessment.overall_status == STATUS_SAFE:
+            changes["overall_status"] = STATUS_CAUTION
+            changes["recommendation"] = RECOMMENDATION_CAUTION
+            changes["reason"] = (
+                "Caution: the operator observed rough water. "
+                "Consider delaying after operator review."
+            )
+        elif assessment.overall_status in (STATUS_CAUTION, STATUS_UNSAFE):
+            changes["reason"] = (
+                assessment.reason + " The operator also observed rough water."
+            )
+
+    return dataclasses.replace(assessment, **changes)
+
 def get_assessment() -> SchedulingAssessment:
     """Assess the latest/current environmental conditions.
 
@@ -255,7 +292,10 @@ def get_assessment() -> SchedulingAssessment:
     weather = monitoring_service.get_dss_weather_conditions()
     windy_reading = (
         weather.get("reading")
-        if weather.get("status") == monitoring_service.STATUS_LIVE
+        if weather.get("status") in (
+            monitoring_service.STATUS_LIVE,
+            monitoring_service.STATUS_MANUAL,
+        )
         else None
     )
     
@@ -264,7 +304,17 @@ def get_assessment() -> SchedulingAssessment:
     except (TypeError, ValueError):
         llda_reading = None
 
-    return evaluate_conditions(windy_reading, llda_reading)
+    assessment = evaluate_conditions(windy_reading, llda_reading)
+    assessment = dataclasses.replace(
+        assessment,
+        weather_is_manual=(
+            windy_reading is not None
+            and weather.get("status") == monitoring_service.STATUS_MANUAL
+        ),
+    )
+    return apply_operator_observation(
+        assessment, monitoring_service.get_todays_observation()
+    )
 
 def format_timestamp(dt: datetime | None) -> str:
     if dt is None:
@@ -332,9 +382,22 @@ def _safety_alert_driving_conditions(assessment: SchedulingAssessment) -> list[C
 def _safety_alert_reason_phrase(assessment: SchedulingAssessment) -> str:
     """A short phrase describing why the trip was flagged, based on the
     condition(s) that actually drove the result. Only attributes the
-    warning to "weather" when weather is the sole driving condition."""
+    warning to "weather" when weather is the sole driving condition.
+    A rough-water operator observation is named when it applies to a
+    Caution result."""
     driving = _safety_alert_driving_conditions(assessment)
     weather = assessment.weather
+    rough = (
+        getattr(assessment, "observed_condition", None)
+        == EnvironmentalReading.OBS_ROUGH
+    )
+    rough_phrase = "rough water observed by the operator"
+
+    if rough and assessment.overall_status == STATUS_CAUTION:
+        if not driving:
+            return rough_phrase
+        names = " and ".join(condition.name.lower() for condition in driving)
+        return f"{names} conditions and {rough_phrase}"
 
     if len(driving) == 1 and driving[0] is weather:
         normalized = str(weather.value).strip().lower() if weather.value else ""
@@ -368,6 +431,12 @@ def build_safety_alert(assessment: SchedulingAssessment | None, trip: Any) -> di
 
     weather_value = assessment.weather.value if assessment.weather.value else "—"
 
+    observation_line = ""
+    if getattr(assessment, "observed_condition", None):
+        observation_line = (
+            f"Operator Observation: {assessment.observed_condition.capitalize()}\n"
+        )
+
     content = (
         f"{_SAFETY_ALERT_HEADERS[status]}\n\n"
         f"The scheduled trip from {trip.route_origin} to {trip.route_destination} "
@@ -375,7 +444,8 @@ def build_safety_alert(assessment: SchedulingAssessment | None, trip: Any) -> di
         f"{_SAFETY_ALERT_RECOMMENDATION_LABELS[status]} due to {reason_phrase}.\n\n"
         f"Weather: {weather_value}\n"
         f"Wind Speed: {assessment.wind_speed.value} km/h\n"
-        f"Water Level: {assessment.water_level.value} m\n\n"
+        f"Water Level: {assessment.water_level.value} m\n"
+        f"{observation_line}\n"
         f"{_SAFETY_ALERT_CLOSINGS[status]}"
     )
 
