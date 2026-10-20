@@ -137,3 +137,35 @@ def test_home_card_shows_original_time_when_not_delayed(client, make_boat, make_
     html = _load_home(client)
 
     assert "3:00PM" in html
+
+def test_api_summary_shows_new_time_for_delayed_trip(client, make_boat, make_trip):
+    boat_id = make_boat(capacity=5)
+    trip_id = make_trip(
+        boat_id=boat_id,
+        status="Delayed",
+        departure_time=datetime(2026, 10, 20, 9, 0),
+        new_departure_time=datetime(2026, 10, 20, 14, 0),
+    )
+
+    with patch(PATCH_TARGET, return_value=FIXED_NOW):
+        data = client.get("/api/trips").get_json()["data"]
+
+    row = next(t for t in data if t["trip_id"] == trip_id)
+    assert row["display_time"] == "2:00 PM"
+    assert row["departure_time"] == "9:00 AM"   # the API field is unchanged
+
+
+def test_schedule_page_shows_new_time_for_delayed_trip(client, make_boat, make_trip):
+    boat_id = make_boat(capacity=5)
+    make_trip(
+        boat_id=boat_id,
+        status="Delayed",
+        departure_time=datetime(2026, 10, 20, 9, 0),
+        new_departure_time=datetime(2026, 10, 20, 14, 0),
+    )
+
+    with patch(PATCH_TARGET, return_value=FIXED_NOW):
+        html = client.get("/passenger/schedule").get_data(as_text=True)
+
+    assert "2:00 PM" in html
+    assert "9:00 AM" not in html

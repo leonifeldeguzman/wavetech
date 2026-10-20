@@ -141,6 +141,7 @@ def _accepts_registration(trip):
 def _serialize_trip_summary(trip):
     capacity, reserved, remaining = _trip_capacity_info(trip)
     can_register, _error_code, block_reason = _accepts_registration(trip)
+    shown_departure = trip.new_departure_time or trip.departure_time
 
     return {
         "trip_id": trip.id,
@@ -151,6 +152,14 @@ def _serialize_trip_summary(trip):
         "departure_date": (
             trip.departure_time.strftime("%B %d, %Y")
             if trip.departure_time else None
+        ),
+        "display_time": (
+            shown_departure.strftime("%I:%M %p").lstrip("0")
+            if shown_departure else None
+        ),
+        "display_date": (
+            shown_departure.strftime("%B %d, %Y")
+            if shown_departure else None
         ),
         "route_origin": trip.route_origin,
         "route_destination": trip.route_destination,
