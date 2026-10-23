@@ -37,6 +37,9 @@ class ConditionResult:
     value: Any
     status: str
     reason: str
+    # Specific range label (e.g. "Low Water Level"). Only set for Water Level;
+    # `status` stays Safe/Caution/Unsafe so every consumer keeps working.
+    label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -82,28 +85,112 @@ def _valid_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and math.isfinite(float(value))
 
 
+WIND_LABEL_SAFE = "SAFE"
+WIND_LABEL_CAUTION = "CAUTION"
+
+
 def _classify_wind(value: Any, thresholds: dict[str, float]) -> ConditionResult:
+    """Wind-speed status: SAFE or CAUTION only (or Unavailable for bad data).
+
+    The limit is the Admin Settings -> Safety Thresholds "Wind Speed safe
+    limit (max)" (`wind_safe_max`):
+        wind <= safe max  -> SAFE
+        wind >  safe max  -> CAUTION
+    There is no lower wind threshold in Admin Settings, so a reading below
+    the reference 10 km/h is not classified separately: it is SAFE, as before.
+    `status` stays on the existing Safe / Caution tier so Overall Condition,
+    Decision-Support and the Safety Alerts are unaffected.
+    """
     if not _valid_number(value) or float(value) < 0:
         return ConditionResult("Wind Speed", value, STATUS_UNAVAILABLE, "Wind speed is missing or invalid.")
 
     value = float(value)
     if value <= thresholds["wind_safe_max"]:
-        return ConditionResult("Wind Speed", value, STATUS_SAFE, "Wind speed is within the temporary safe range.")
-    if value <= thresholds["wind_caution_max"]:
-        return ConditionResult("Wind Speed", value, STATUS_CAUTION, "Wind speed is within the temporary caution range.")
-    return ConditionResult("Wind Speed", value, STATUS_UNSAFE, "Wind speed exceeds the temporary unsafe threshold.")
+        return ConditionResult("Wind Speed", value, STATUS_SAFE,
+                               "Wind speed is within the temporary safe range.", WIND_LABEL_SAFE)
+    return ConditionResult("Wind Speed", value, STATUS_CAUTION,
+                           "Wind speed is above the configured safe limit.", WIND_LABEL_CAUTION)
+
+
+# Water-level ranges. The numeric limits are NEVER defined here: they are the
+# Admin Settings -> Safety Thresholds values passed in via `thresholds`:
+#   water_safe_min      -> low threshold        (below it: LOW WATER LEVEL)
+#   water_safe_max      -> normal upper limit   (above it: HIGH WATER LEVEL)
+#   water_caution_max   -> critical-high limit  (at or above: CRITICAL HIGH)
+#
+# The system STATUS is the condition only (SAFE / LOW WATER LEVEL /
+# HIGH WATER LEVEL / CRITICAL HIGH). There is no water-specific recommendation:
+# the only recommendation is the existing combined one from
+# evaluate_conditions(), which follows the severity tier (`status`) below:
+#   SAFE             -> Safe    -> PROCEED
+#   LOW WATER LEVEL  -> Caution -> CAUTION / DELAY
+#   HIGH WATER LEVEL -> Caution -> CAUTION / DELAY
+#   CRITICAL HIGH    -> Unsafe  -> UNSAFE / DO NOT DEPART
+WATER_RANGE_LOW = "low"
+WATER_RANGE_NORMAL = "normal"
+WATER_RANGE_HIGH = "high"
+WATER_RANGE_CRITICAL = "critical"
+
+WATER_LABEL_SAFE = "SAFE"
+WATER_LABEL_LOW = "LOW WATER LEVEL"
+WATER_LABEL_HIGH = "HIGH WATER LEVEL"
+WATER_LABEL_CRITICAL = "CRITICAL HIGH"
+
+
+@dataclass(frozen=True)
+class WaterClassification:
+    range: str            # WATER_RANGE_*
+    label: str            # system status: the condition only
+    status: str           # existing severity tier (Safe / Caution / Unsafe)
+    reason: str
+
+
+_WATER_RANGES = {
+    WATER_RANGE_LOW: WaterClassification(
+        WATER_RANGE_LOW, WATER_LABEL_LOW, STATUS_CAUTION,
+        "Low water level: the water level is below the configured normal range."),
+    WATER_RANGE_NORMAL: WaterClassification(
+        WATER_RANGE_NORMAL, WATER_LABEL_SAFE, STATUS_SAFE,
+        "Water level is within the temporary safe range."),
+    WATER_RANGE_HIGH: WaterClassification(
+        WATER_RANGE_HIGH, WATER_LABEL_HIGH, STATUS_CAUTION,
+        "High water level: the water level is above the configured normal range."),
+    WATER_RANGE_CRITICAL: WaterClassification(
+        WATER_RANGE_CRITICAL, WATER_LABEL_CRITICAL, STATUS_UNSAFE,
+        "Critical high water level: the water level has reached the configured critical-high limit."),
+}
+
+
+def classify_water_level(value: Any, thresholds: dict[str, float]) -> WaterClassification:
+    """Single water-level classifier (the only one in the project).
+
+    `value` must already be a valid number. Boundaries:
+        level <  low threshold                       -> LOW WATER LEVEL
+        low <= level <= normal upper                 -> SAFE
+        normal upper < level < critical-high         -> HIGH WATER LEVEL
+        level >= critical-high                       -> CRITICAL HIGH
+    Critical is checked first so that, if an Admin sets the normal upper limit
+    equal to the critical-high limit, a reading at that limit is CRITICAL HIGH
+    (the conservative choice).
+    """
+    level = float(value)
+    if level >= thresholds["water_caution_max"]:
+        return _WATER_RANGES[WATER_RANGE_CRITICAL]
+    if level < thresholds["water_safe_min"]:
+        return _WATER_RANGES[WATER_RANGE_LOW]
+    if level <= thresholds["water_safe_max"]:
+        return _WATER_RANGES[WATER_RANGE_NORMAL]
+    return _WATER_RANGES[WATER_RANGE_HIGH]
 
 
 def _classify_water(value: Any, thresholds: dict[str, float]) -> ConditionResult:
     if not _valid_number(value) or float(value) < 0:
         return ConditionResult("Water Level", value, STATUS_UNAVAILABLE, "Water level is missing or invalid.")
 
-    value = float(value)
-    if thresholds["water_safe_min"] <= value <= thresholds["water_safe_max"]:
-        return ConditionResult("Water Level", value, STATUS_SAFE, "Water level is within the temporary safe range.")
-    if thresholds["water_caution_min"] <= value <= thresholds["water_caution_max"]:
-        return ConditionResult("Water Level", value, STATUS_CAUTION, "Water level is within the temporary caution range.")
-    return ConditionResult("Water Level", value, STATUS_UNSAFE, "Water level exceeds the temporary unsafe range.")
+    result = classify_water_level(value, thresholds)
+    return ConditionResult(
+        "Water Level", float(value), result.status, result.reason, result.label,
+    )
 
 
 # Finer weather labels -> the broader label whose Settings category applies

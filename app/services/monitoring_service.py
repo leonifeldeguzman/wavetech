@@ -396,27 +396,29 @@ def classify_water_safety(water_level_m, thresholds=None):
     """Classify a water level against the Safety Thresholds saved in Admin
     Settings. Returns (safety_status, safety_label).
 
-    Uses all four saved water-level values (settings_service
-    .get_safety_thresholds()), with the same inclusive boundaries as
-    Scheduling Decision-Support:
-        safe_min <= level <= safe_max          -> "safe"
-        caution_min <= level <= caution_max    -> "caution"
-        anything outside the caution range     -> "unsafe"
-    Nothing is hardcoded: change the values in Settings and this follows.
+    This does NOT classify on its own: it calls the one shared water-level
+    classifier, scheduling_service.classify_water_level(), so the Monitoring
+    card, Dashboard and Decision-Support cannot disagree. The limits come only
+    from settings_service.get_safety_thresholds():
+        water_safe_min_m     low threshold
+        water_safe_max_m     normal upper limit
+        water_caution_max_m  critical-high limit
+    safety_status is "safe" | "caution" | "unsafe" (existing CSS classes);
+    safety_label is the condition only: SAFE / LOW WATER LEVEL /
+    HIGH WATER LEVEL / CRITICAL HIGH.
     """
+    # Imported here: scheduling_service imports this module.
+    from app.services import scheduling_service
+
     if thresholds is None:
         thresholds = settings_service.get_safety_thresholds()
-    safe_min = float(thresholds["water_safe_min_m"])
-    safe_max = float(thresholds["water_safe_max_m"])
-    caution_min = float(thresholds["water_caution_min_m"])
-    caution_max = float(thresholds["water_caution_max_m"])
-
-    level = float(water_level_m)
-    if safe_min <= level <= safe_max:
-        return "safe", "SAFE"
-    if caution_min <= level <= caution_max:
-        return "caution", "CAUTION"
-    return "unsafe", "UNSAFE"
+    limits = {
+        "water_safe_min": float(thresholds["water_safe_min_m"]),
+        "water_safe_max": float(thresholds["water_safe_max_m"]),
+        "water_caution_max": float(thresholds["water_caution_max_m"]),
+    }
+    result = scheduling_service.classify_water_level(float(water_level_m), limits)
+    return result.status.lower(), result.label
 
 
 def get_current_safety(assessment=None):

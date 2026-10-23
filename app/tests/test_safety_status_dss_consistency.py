@@ -51,7 +51,7 @@ CASES = [
     ("caution wind",       11.5, _weather(wind=25),             "Caution",     "CAUTION / DELAY"),
     ("caution weather",    11.5, _weather(condition="Cloudy"),  "Caution",     "CAUTION / DELAY"),
     ("unsafe water",       13.5, _weather(),                    "Unsafe",      "UNSAFE / DO NOT DEPART"),
-    ("unsafe wind",        11.5, _weather(wind=45),             "Unsafe",      "UNSAFE / DO NOT DEPART"),
+    ("high wind",          11.5, _weather(wind=45),             "Caution",     "CAUTION / DELAY"),
     ("unsafe weather",     11.5, _weather(condition="Rainy"),   "Unsafe",      "UNSAFE / DO NOT DEPART"),
     ("no water reading",   None, _weather(),                    "Unavailable", "UNAVAILABLE"),
     ("no weather",         11.5, NO_WEATHER,                    "Unavailable", "UNAVAILABLE"),

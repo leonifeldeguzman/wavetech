@@ -10,7 +10,7 @@ from unittest.mock import patch
 from app.extensions import db
 from app.models.manifest_entry import ManifestEntry
 from app.models.trip import Trip
-from app.services import llda_mock_service, scheduling_service
+from app.services import llda_mock_service, scheduling_service, settings_service
 
 
 def _wind(wind=10.0, weather="Sunny", direction="NE", temperature=28.0):
@@ -49,11 +49,13 @@ def test_caution_conditions_return_caution_delay(app):
         assert result.wind_speed.status == scheduling_service.STATUS_CAUTION
 
 
-def test_unsafe_wind_returns_unsafe(app):
+def test_wind_above_safe_limit_is_caution_never_unsafe(app):
+    # Wind has only two statuses: SAFE or CAUTION (no Unsafe tier).
     with app.app_context():
         result = scheduling_service.evaluate_conditions(_wind(wind=35), _water())
-        assert result.recommendation == scheduling_service.RECOMMENDATION_UNSAFE
-        assert result.wind_speed.status == scheduling_service.STATUS_UNSAFE
+        assert result.recommendation == scheduling_service.RECOMMENDATION_CAUTION
+        assert result.wind_speed.status == scheduling_service.STATUS_CAUTION
+        assert result.wind_speed.label == "CAUTION"
 
 
 def test_unsafe_water_level_returns_unsafe(app):
@@ -67,7 +69,7 @@ def test_multiple_unsafe_conditions_return_unsafe(app):
     with app.app_context():
         result = scheduling_service.evaluate_conditions(_wind(wind=35, weather="Rainy"), _water(level=14.0))
         assert result.recommendation == scheduling_service.RECOMMENDATION_UNSAFE
-        assert result.wind_speed.status == scheduling_service.STATUS_UNSAFE
+        assert result.wind_speed.status == scheduling_service.STATUS_CAUTION
         assert result.weather.status == scheduling_service.STATUS_UNSAFE
         assert result.water_level.status == scheduling_service.STATUS_UNSAFE
 
@@ -261,19 +263,19 @@ def test_build_safety_alert_returns_none_without_a_trip(app):
         assert scheduling_service.build_safety_alert(assessment, None) is None
 
 
-def test_build_safety_alert_states_actual_reason_for_unsafe_wind(app):
-    """Weather is Sunny (safe); wind alone is unsafe. The alert must not
+def test_build_safety_alert_states_actual_reason_for_caution_wind(app):
+    """Weather is Sunny (safe); wind alone is Caution. The alert must not
     claim this was caused by weather."""
     with app.app_context():
         assessment = scheduling_service.evaluate_conditions(
             _wind(wind=35, weather="Sunny"), _water(level=12.1)
         )
-        assert assessment.recommendation == scheduling_service.RECOMMENDATION_UNSAFE
+        assert assessment.recommendation == scheduling_service.RECOMMENDATION_CAUTION
         assert assessment.weather.status == scheduling_service.STATUS_SAFE
 
         alert = scheduling_service.build_safety_alert(assessment, _trip())
 
-        assert "UNSAFE due to wind speed conditions" in alert["content"]
+        assert "CAUTION/DELAY due to wind speed conditions" in alert["content"]
         assert "Weather: Sunny" in alert["content"]
 
 
@@ -308,3 +310,67 @@ def test_build_safety_alert_uses_actual_trip_and_environmental_values(app):
         assert "December 01, 2026 03:45 PM" in alert["content"]
         assert "Wind Speed: 40.0 km/h" in alert["content"]
         assert "Water Level: 9.0 m" in alert["content"]
+
+
+# ---------------------------------------------------------------------------
+# Wind-speed status: SAFE or CAUTION only. The limit is the Admin Settings
+# "Wind Speed safe limit (max)"; it is SAVED through the settings service here,
+# never read from a constant in app code.
+# ---------------------------------------------------------------------------
+import pytest
+
+
+def _save_wind(safe_max, caution_max):
+    t = settings_service.get_safety_thresholds()
+    t.update(wind_safe_max_kmh=safe_max, wind_caution_max_kmh=caution_max)
+    settings_service.update_safety_thresholds(**t)
+
+
+def _wind_label(value):
+    result = scheduling_service._classify_wind(value, scheduling_service._thresholds())
+    return result.label, result.status
+
+
+@pytest.mark.parametrize("speed, label, status", [
+    (10.00, "SAFE", "Safe"), (35.00, "SAFE", "Safe"),
+    (35.01, "CAUTION", "Caution"), (40.00, "CAUTION", "Caution"),
+])
+def test_wind_status_boundaries_follow_admin_safe_limit(app, speed, label, status):
+    with app.app_context():
+        _save_wind(35, 45)
+        assert _wind_label(speed) == (label, status)
+
+
+def test_wind_never_returns_unsafe_even_above_the_caution_limit(app):
+    with app.app_context():
+        _save_wind(35, 45)
+        for speed in (45.0, 45.01, 100.0):
+            assert _wind_label(speed) == ("CAUTION", "Caution")
+
+
+def test_changing_admin_safe_limit_moves_the_wind_boundary(app):
+    with app.app_context():
+        _save_wind(35, 45)
+        assert _wind_label(40.00) == ("CAUTION", "Caution")
+
+        _save_wind(40, 50)
+        assert _wind_label(40.00) == ("SAFE", "Safe")
+        assert _wind_label(40.01) == ("CAUTION", "Caution")
+
+
+def test_wind_below_reference_lower_value_keeps_existing_behavior(app):
+    # No lower wind threshold exists in Admin Settings, so nothing is
+    # classified separately below 10 km/h: it stays SAFE (existing behavior).
+    with app.app_context():
+        _save_wind(35, 45)
+        assert _wind_label(9.99) == ("SAFE", "Safe")
+        assert _wind_label(0.0) == ("SAFE", "Safe")
+
+
+def test_missing_or_invalid_wind_is_still_unavailable(app):
+    with app.app_context():
+        _save_wind(35, 45)
+        for bad in (None, "abc", float("nan"), -1):
+            result = scheduling_service._classify_wind(bad, scheduling_service._thresholds())
+            assert result.status == scheduling_service.STATUS_UNAVAILABLE
+            assert result.label is None
