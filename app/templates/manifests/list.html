@@ -127,9 +127,13 @@
             <!-- Status + Arrow -->
             <div class="manifest-slot-right">
 
+                {% if slot.id in expired_ids %}
+                <span class="manifest-slot-status status-expired">Expired</span>
+                {% else %}
                 <span class="manifest-slot-status status-{{ slot.status|lower|replace(' ', '-') }}">
                     {{ slot.status }}
                 </span>
+                {% endif %}
 
                 <i class="bi bi-chevron-right manifest-slot-arrow"></i>
 

@@ -871,3 +871,9 @@ nav.d-lg-flex .sidebar-brand {
         display: none !important;
     }
 }
+
+.manifest-slot-status.status-expired,
+.manifest-slot-status.status-closed {
+    background: #e9ecef;
+    color: #6c757d;
+}

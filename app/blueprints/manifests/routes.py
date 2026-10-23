@@ -61,12 +61,20 @@ def list_slots():
         Trip.departure_time < day_end,
     ).order_by(Trip.departure_time).all()
 
+    today_start = datetime.combine(ph_today(), datetime.min.time())
+    expired_ids = {
+        s.id for s in slots
+        if s.status in ("Open", "Boarding", "Full", "Delayed")
+        and s.departure_time < today_start
+    }
+
     prev_date = selected_date - timedelta(days=1)
     next_date = selected_date + timedelta(days=1)
 
     return render_template(
         "manifests/list.html",
         slots=slots,
+        expired_ids=expired_ids,
         selected_date=selected_date,
         prev_date=prev_date,
         next_date=next_date,

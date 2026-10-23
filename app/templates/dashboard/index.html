@@ -57,20 +57,20 @@
         </div>
 
 
-        <!-- Boarding Now -->
+        <!-- Departed Boats -->
         <div class="col-6 col-xl-3">
             <div class="dashboard-kpi h-100">
 
                 <div class="dashboard-kpi-label">
-                    Boarding Now
+                    Departed Boats
                 </div>
 
                 <div class="dashboard-kpi-value">
-                    {{ boarding_now_count }}
+                    {{ departed_trips_count }}
                 </div>
 
                 <div class="dashboard-kpi-sub dashboard-kpi-muted">
-                    {{ boarding_now_boat or 'No boat currently boarding' }}
+                    {% if departed_trips_count %}Departed today{% else %}No boat has departed yet{% endif %}
                 </div>
 
             </div>

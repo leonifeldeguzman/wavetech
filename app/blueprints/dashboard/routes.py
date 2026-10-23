@@ -28,7 +28,9 @@ def index():
     ).order_by(Trip.departure_time).all()
 
     active_trips_count = Trip.query.filter(
-        Trip.status.in_(["Open", "Boarding", "Delayed"])
+        Trip.departure_time >= day_start,
+        Trip.departure_time < day_end,
+        Trip.status.in_(["Open", "Boarding", "Full", "Delayed"]),
     ).count()
 
     trip_ids_today = [t.id for t in all_trips_today]
@@ -38,12 +40,12 @@ def index():
             ManifestEntry.trip_id.in_(trip_ids_today)
         ).count()
 
-    boarding_trip = Trip.query.filter_by(status="Boarding").first()
-    boarding_now_count = 0
-    boarding_now_boat = None
-    if boarding_trip:
-        boarding_now_count = ManifestEntry.query.filter_by(trip_id=boarding_trip.id).count()
-        boarding_now_boat = boarding_trip.boat.name if boarding_trip.boat else None
+    departed_trips_count = Trip.query.filter(
+        Trip.status == "Departed",
+        Trip.departure_time >= day_start,
+        Trip.departure_time < day_end,
+    ).count()
+    
 
     # One assessment feeds both the Safety Status card and Decision-Support
     # below, so the two always show the same condition.
@@ -81,8 +83,7 @@ def index():
         scheduled_trips=scheduled_trips,
         active_trips_count=active_trips_count,
         passengers_today=passengers_today,
-        boarding_now_count=boarding_now_count,
-        boarding_now_boat=boarding_now_boat,
+        departed_trips_count=departed_trips_count,
         safety_status=safety_status,
         safety_label=safety_label,
         latest_reading=latest_reading,
