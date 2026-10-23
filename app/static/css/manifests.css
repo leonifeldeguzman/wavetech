@@ -182,6 +182,8 @@
 .manifest-timetable-card {
     width: 100%;
 
+    min-height: calc(100vh - 230px);
+
     padding: 44px 58px;
 
     background-color: #ffffff;
@@ -190,6 +192,8 @@
 
     box-shadow:
         0 8px 25px rgba(15, 27, 60, 0.07);
+
+    border: 1px solid #e3e8ed;
 }
 
 .manifest-slot-list {
@@ -408,83 +412,6 @@
     font-size: 0.9rem;
 }
 
-
-/* =========================================================
-   EMPTY TRIP SELECTION PANEL
-   ========================================================= */
-
-.manifest-empty-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
-    min-height: 398px;
-
-    margin-top: 36px;
-
-    border: 1px dashed #b7cee4;
-    border-radius: 14px;
-
-    background-color: #ffffff;
-
-    text-align: center;
-
-    box-shadow:
-        0 5px 18px rgba(15, 27, 60, 0.025);
-}
-
-.manifest-empty-icon {
-    position: relative;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 76px;
-    height: 76px;
-
-    margin-bottom: 26px;
-
-    border-radius: 50%;
-
-    background-color: #f1f7fd;
-
-    color: #35658e;
-
-    font-size: 2rem;
-}
-
-.manifest-empty-search {
-    position: absolute;
-
-    right: 13px;
-    bottom: 11px;
-
-    font-size: 1rem;
-
-    background-color: #f1f7fd;
-}
-
-.manifest-empty-panel h5 {
-    margin-bottom: 13px;
-
-    color: #111111;
-
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-.manifest-empty-panel p {
-    margin: 0;
-
-    color: #6b7280;
-
-    font-size: 1rem;
-    line-height: 1.6;
-}
-
-
 /* =========================================================
    MODAL
    ========================================================= */
@@ -622,11 +549,6 @@
         font-size: 0.76rem;
     }
 
-    .manifest-empty-panel {
-        min-height: 320px;
-        margin-top: 24px;
-    }
-
 }
 
 
@@ -652,14 +574,6 @@
 
     .manifest-slot-status {
         min-width: 82px;
-    }
-
-    .manifest-empty-panel {
-        padding: 30px 20px;
-    }
-
-    .manifest-empty-panel p {
-        font-size: 0.88rem;
     }
 
 }
@@ -728,7 +642,7 @@
 
     background-color: #ffffff;
 
-    box-shadow: 0 2px 8px rgba(15, 27, 60, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
     font-size: 0.84rem;
 
@@ -938,9 +852,8 @@
 }
 
 /* =========================================================
-   CONDITION ALERT (non-blocking, inline banner; advisory only)
-   Sits in the page flow under the Overall Condition indicator,
-   so it never covers timetable or manifest controls.
+   CONDITION ALERT
+   Clean, compact inline advisory banner
    ========================================================= */
 
 .condition-alert {
@@ -948,110 +861,131 @@
     align-items: flex-start;
     gap: 12px;
     margin-bottom: 16px;
-    padding: 12px 16px;
-    border-radius: 8px;
+    padding: 14px 16px;
     border: 1px solid;
+    border-radius: 10px;
     max-width: 100%;
     min-width: 0;
     overflow-wrap: anywhere;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07);
 }
 
 .condition-alert[hidden] {
     display: none;
 }
 
+/* Icon */
 .condition-alert-icon {
-    flex: 0 0 auto;
-    font-size: 1.25rem;
-    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1rem;
+    line-height: 1;
 }
 
+/* Content */
 .condition-alert-body {
     flex: 1 1 auto;
     min-width: 0;
 }
 
 .condition-alert-title {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
+    line-height: 1.35;
 }
 
 .condition-alert-text {
-    margin-top: 2px;
-    font-size: 0.9rem;
+    margin-top: 3px;
+    font-size: 0.85rem;
+    line-height: 1.5;
 }
 
+/* Actions */
 .condition-alert-actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 8px 16px;
-    margin-top: 10px;
-}
-
-.condition-alert-link {
-    color: inherit;
-    font-weight: 600;
-    font-size: 0.88rem;
-    text-decoration: none;
+    gap: 12px;
+    margin-top: 9px;
 }
 
 .condition-alert-dismiss {
-    min-height: 34px;
-    padding: 0 14px;
+    flex: 0 0 auto;
+    align-self: center;
+    min-height: 32px;
+    padding: 0 12px;
     border: 1px solid currentColor;
     border-radius: 6px;
     background: transparent;
     color: inherit;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     font-weight: 600;
     cursor: pointer;
 }
 
 .condition-alert-dismiss:hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(0, 0, 0, 0.035);
 }
 
-.condition-alert-link:focus-visible,
 .condition-alert-dismiss:focus-visible {
-    outline: 3px solid currentColor;
+    outline: 2px solid currentColor;
     outline-offset: 2px;
 }
 
-/* CAUTION: light yellow */
+/* =========================================================
+   CAUTION
+   ========================================================= */
+
 .condition-alert-caution {
-    background: #fffdf5;
-    border-color: #ead9a7;
-    color: #735a14;
+    background: #fffdf7;
+    border-color: #eadfbc;
+    color: #6f5a20;
 }
 
-/* POOR: light red */
+.condition-alert-caution .condition-alert-icon {
+    background: #f7edc9;
+    color: #806718;
+}
+
+/* =========================================================
+   POOR / UNSAFE
+   ========================================================= */
+
 .condition-alert-unsafe {
     background: #fffafa;
-    border-color: #e5bcbc;
-    color: #8b2525;
-    box-shadow: 0 2px 8px rgba(180, 35, 24, 0.08);
+    border-color: #e8caca;
+    color: #842c2c;
 }
 
-.condition-alert-unsafe .condition-alert-title {
-    font-size: 1.02rem;
+.condition-alert-unsafe .condition-alert-icon {
+    background: #f5dada;
+    color: #982f2f;
 }
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
 
 @media (max-width: 575.98px) {
     .condition-alert {
-        padding: 10px 12px;
         gap: 10px;
+        padding: 12px;
     }
 
-    .condition-alert-actions {
-        flex-direction: column;
-        align-items: stretch;
+    .condition-alert-icon {
+        flex-basis: 30px;
+        width: 30px;
+        height: 30px;
     }
 
     .condition-alert-dismiss {
-        width: 100%;
-        min-height: 40px;
+        min-height: 32px;
+        padding: 0 10px;
     }
 }

@@ -6,106 +6,88 @@
 
 <div class="passenger-home">
 
-<main class="home-content announcements-page">
+    <main class="home-content announcements-page">
 
-    <a
-        href="{{ url_for('passenger.home') }}"
-        class="announcements-back-link"
-    >
-        <i class="bi bi-arrow-left"></i>
-        Back to Home
-    </a>
+        <a
+            href="{{ url_for('passenger.home') }}"
+            class="announcements-back-link"
+        >
+            <i class="bi bi-arrow-left"></i>
+            Back to Home
+        </a>
 
+        <div class="home-card announcements-card">
 
-    <div class="home-card announcements-card">
-
-        <div class="home-card-heading">
-
-            <div class="home-card-title">
-                <i class="bi bi-megaphone"></i>
-                <h2>All Announcements</h2>
+            <div class="home-card-heading">
+                <div class="home-card-title">
+                    <i class="bi bi-megaphone"></i>
+                    <h2>All Announcements</h2>
+                </div>
             </div>
 
-        </div>
+            <div class="home-announcements">
 
+                {% for announcement in announcements %}
 
-        <div class="home-announcements">
+                <div class="home-announcement{% if announcement.type == 'Safety Alert' %} safety{% endif %}">
 
-            {% for announcement in announcements %}
+                    <div class="home-announcement-icon">
+                        {% if announcement.type == 'Safety Alert' %}
+                            <i class="bi bi-exclamation-triangle"></i>
+                        {% else %}
+                            <i class="bi bi-bell"></i>
+                        {% endif %}
+                    </div>
 
-            <div class="home-announcement
-                {% if announcement.type == 'Safety Alert' %}
-                    safety
-                {% endif %}
-            ">
+                    <div class="home-announcement-content">
 
-                <div class="home-announcement-icon">
+                        <div class="home-announcement-header">
 
-                    {% if announcement.type == 'Safety Alert' %}
-                        <i class="bi bi-exclamation-triangle"></i>
-                    {% else %}
-                        <i class="bi bi-bell"></i>
-                    {% endif %}
+                            <div class="home-announcement-heading">
 
-                </div>
+                                <h3>{{ announcement.title }}</h3>
 
+                                {% if announcement.published_at %}
+                                    <span class="home-announcement-date">
+                                        {{ announcement.published_at | ph_time }}
+                                    </span>
+                                {% endif %}
 
-                <div class="home-announcement-content">
+                            </div>
 
-                    <div class="home-announcement-header">
-
-                        <div>
-
-                            <h3>
-                                {{ announcement.title }}
-                            </h3>
-
-                            {% if announcement.published_at %}
-                                <span>
-                                    Posted:
-                                    {{ announcement.published_at | ph_time }}
-                                </span>
-                            {% endif %}
+                            <span class="home-announcement-type{% if announcement.type == 'Safety Alert' %} safety{% endif %}">
+                                {{ announcement.type }}
+                            </span>
 
                         </div>
 
-
-                        <span class="home-announcement-type">
-                            {{ announcement.type }}
-                        </span>
+                        <p>{{ announcement.content }}</p>
 
                     </div>
 
+                </div>
+
+                {% else %}
+
+                <div class="home-announcement-empty">
+
+                    <i class="bi bi-megaphone"></i>
+
+                    <h3>No announcements</h3>
 
                     <p>
-                        {{ announcement.content }}
+                        There are currently no active announcements or safety alerts.
                     </p>
 
                 </div>
 
-            </div>
-
-            {% else %}
-
-            <div class="home-announcement-empty">
-
-                <i class="bi bi-megaphone"></i>
-
-                <h3>No announcements</h3>
-
-                <p>
-                    There are currently no active announcements or safety alerts.
-                </p>
+                {% endfor %}
 
             </div>
-
-            {% endfor %}
 
         </div>
 
-    </div>
-
-</main>
+    </main>
 
 </div>
 

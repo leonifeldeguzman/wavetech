@@ -11,96 +11,92 @@
 
 .announcement-page {
     width: 100%;
-    max-width: 100%;
-    margin: 0;
-    padding: 18px 0 40px;
-    color: #111111;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 22px 0 48px;
+    color: #111827;
 }
-
-
-/* =========================================================
-   MAIN PANELS
-   ========================================================= */
 
 .announcement-page .announcement-panel {
     width: 100%;
-    margin: 0 0 42px 0;
-    padding: 34px 38px;
-
+    margin: 0 0 24px;
+    padding: 28px 30px;
     background: #ffffff;
-
-    border: 0 !important;
+    border: 1px solid #e3e8ee !important;
     border-radius: 12px;
-
-    box-shadow: 0 8px 30px rgba(15, 27, 60, 0.14) !important;
+    box-shadow: 0 4px 16px rgba(15, 27, 60, 0.045) !important;
 }
-
-
-/* Last panel */
 
 .announcement-page .announcement-panel:last-child {
     margin-bottom: 0;
 }
 
-
-/* =========================================================
-   PANEL HEADER
-   ========================================================= */
-
 .announcement-page .announcement-panel-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-
     margin: 0;
     padding: 0;
 }
 
-.announcement-page .announcement-panel-header h2 {
-    margin: 0;
-
-    color: #111111;
-
-    font-size: 1.08rem;
-    font-weight: 700;
-
-    line-height: 1.3;
+.announcement-panel-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
 }
 
+.announcement-panel-title > i {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #315a7d;
+    font-size: 0.95rem;
+}
 
-/* =========================================================
-   DIVIDER
-   ========================================================= */
+.announcement-panel-header h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.announcement-panel-header p {
+    margin: 4px 0 0;
+    color: #7a8491;
+    font-size: 0.76rem;
+    line-height: 1.45;
+}
 
 .announcement-page .announcement-divider {
     width: 100%;
-
     height: 1px;
-
-    margin: 24px 0 34px;
-
-    background-color: #e7e7e7;
+    margin: 20px 0 24px;
+    background: #edf0f3;
 }
 
 
 /* =========================================================
-   CREATE FORM
+   CREATE ANNOUNCEMENT FORM
    ========================================================= */
 
 .announcement-page .announcement-form-grid {
     display: grid;
-
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.45fr);
     column-gap: 18px;
-    row-gap: 24px;
+    row-gap: 20px;
 }
-
 
 .announcement-page .announcement-field {
     min-width: 0;
 }
-
 
 .announcement-page .announcement-field-full {
     grid-column: 1 / -1;
@@ -111,144 +107,169 @@
    FORM LABELS
    ========================================================= */
 
-.announcement-page .announcement-field label {
+.announcement-page .announcement-field label,
+.announcement-modal-field label,
+.announcement-modal-body > label {
     display: block;
-
-    margin: 0 0 9px 0;
-
-    color: #555555;
-
-    font-size: 0.88rem;
-    font-weight: 400;
-
-    line-height: 1.3;
+    margin: 0 0 7px;
+    color: #344054;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.4;
 }
 
 
 /* =========================================================
-   FORM INPUTS
+   FORM FIELDS
    ========================================================= */
 
 .announcement-page .announcement-field input,
 .announcement-page .announcement-field select,
-.announcement-page .announcement-field textarea {
+.announcement-page .announcement-field textarea,
+.announcement-modal-field input,
+.announcement-modal-field select,
+.announcement-modal-field textarea,
+.announcement-modal-input {
     display: block;
-
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 
-    border: 1px solid #cbdff2 !important;
-    border-radius: 8px !important;
+    border: 1px solid #d0d5dd !important;
+    border-radius: 6px !important;
 
-    background-color: #ffffff !important;
-
-    color: #222222;
+    background: #ffffff !important;
+    color: #1d2939;
 
     font-family: inherit;
-    font-size: 0.94rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.45;
 
+    outline: none !important;
     box-shadow: none !important;
-
-    outline: none;
 
     transition:
         border-color 0.15s ease,
-        box-shadow 0.15s ease;
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
 }
 
 
-/* Text input */
+/* =========================================================
+   SINGLE-LINE INPUTS
+   ========================================================= */
 
 .announcement-page .announcement-field input,
-.announcement-page .announcement-field select {
-    height: 40px;
-
-    padding: 0 14px;
+.announcement-page .announcement-field select,
+.announcement-modal-field input,
+.announcement-modal-field select,
+.announcement-modal-input {
+    height: 42px;
+    padding: 0 12px;
 }
 
 
-/* Textarea */
+/* =========================================================
+   TEXTAREA
+   ========================================================= */
 
-.announcement-page .announcement-field textarea {
-    min-height: 114px;
-
-    padding: 13px 14px;
-
+.announcement-page .announcement-field textarea,
+.announcement-modal-field textarea {
+    min-height: 120px;
+    padding: 11px 12px;
+    line-height: 1.5;
     resize: vertical;
 }
 
 
-/* Placeholder */
+/* =========================================================
+   PLACEHOLDERS
+   ========================================================= */
 
 .announcement-page .announcement-field input::placeholder,
-.announcement-page .announcement-field textarea::placeholder {
-    color: #999999;
+.announcement-page .announcement-field textarea::placeholder,
+.announcement-modal-field input::placeholder,
+.announcement-modal-field textarea::placeholder {
+    color: #98a2b3;
+    opacity: 1;
 }
 
 
-/* Focus */
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.announcement-page .announcement-field input:hover,
+.announcement-page .announcement-field select:hover,
+.announcement-page .announcement-field textarea:hover,
+.announcement-modal-field input:hover,
+.announcement-modal-field select:hover,
+.announcement-modal-field textarea:hover,
+.announcement-modal-input:hover {
+    border-color: #98a2b3 !important;
+}
+
+
+/* =========================================================
+   FOCUS
+   ========================================================= */
 
 .announcement-page .announcement-field input:focus,
 .announcement-page .announcement-field select:focus,
-.announcement-page .announcement-field textarea:focus {
-    border-color: #9bbde0 !important;
-
-    box-shadow: 0 0 0 3px rgba(155, 189, 224, 0.12) !important;
+.announcement-page .announcement-field textarea:focus,
+.announcement-modal-field input:focus,
+.announcement-modal-field select:focus,
+.announcement-modal-field textarea:focus,
+.announcement-modal-input:focus {
+    border-color: #315a7d !important;
+    box-shadow: 0 0 0 3px rgba(49, 90, 125, 0.10) !important;
 }
 
 
-/* Select */
+/* =========================================================
+   SELECT
+   ========================================================= */
 
-.announcement-page .announcement-field select {
-    appearance: none !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-
-    padding-right: 40px !important;
-
-    background-color: #ffffff !important;
-
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' fill='none' stroke='%23666666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important;
-    background-position: right 14px center !important;
-    background-size: 12px 12px !important;
-
+.announcement-page .announcement-field select,
+.announcement-modal-field select {
+    appearance: auto;
     cursor: pointer;
 }
 
 
 /* =========================================================
-   CREATE BUTTONS
+   DATETIME INPUT
+   ========================================================= */
+
+.announcement-modal-input[type="datetime-local"] {
+    cursor: pointer;
+}
+
+/* =========================================================
+   FORM ACTIONS
    ========================================================= */
 
 .announcement-page .announcement-form-actions {
     display: flex;
-
-    justify-content: center;
+    justify-content: flex-end;
     align-items: center;
-
-    gap: 14px;
-
-    margin-top: 34px;
+    gap: 9px;
+    margin-top: 22px;
 }
-
 
 .announcement-page .announcement-btn {
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
+    min-height: 38px;
+    padding: 0 15px;
 
-    min-width: 148px;
-    height: 38px;
-
-    padding: 0 20px;
-
-    border-radius: 8px !important;
+    border-radius: 7px !important;
 
     font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 400;
-
+    font-size: 0.78rem;
+    font-weight: 600;
     line-height: 1;
 
     cursor: pointer;
@@ -259,49 +280,31 @@
         box-shadow 0.15s ease;
 }
 
-
-/* Primary */
+.announcement-page .announcement-btn i {
+    margin-right: 7px;
+    font-size: 0.82rem;
+}
 
 .announcement-page .announcement-btn-primary {
     border: 1px solid #0f1b3c !important;
-
-    background-color: #0f1b3c !important;
-
+    background: #0f1b3c !important;
     color: #ffffff !important;
 }
 
-
 .announcement-page .announcement-btn-primary:hover {
-    background-color: #0a1329 !important;
-
-    border-color: #0a1329 !important;
+    background: #09132f !important;
+    border-color: #09132f !important;
 }
-
-
-/* Outline */
 
 .announcement-page .announcement-btn-outline {
-    border: 1px solid #0f1b3c !important;
-
-    background-color: #ffffff !important;
-
-    color: #111111 !important;
+    border: 1px solid #cfd7e1 !important;
+    background: #ffffff !important;
+    color: #374151 !important;
 }
-
 
 .announcement-page .announcement-btn-outline:hover {
-    background-color: #f5f7fb !important;
-
-    border-color: #0f1b3c !important;
-}
-
-
-/* Button icon */
-
-.announcement-page .announcement-btn i {
-    margin-right: 7px;
-
-    font-size: 0.9rem;
+    background: #f7f9fb !important;
+    border-color: #b9c4d0 !important;
 }
 
 
@@ -311,258 +314,230 @@
 
 .announcement-page .announcement-list {
     display: flex;
-
     flex-direction: column;
-
-    gap: 18px;
+    gap: 10px;
 }
-
-
-/* =========================================================
-   ANNOUNCEMENT ITEM
-   ========================================================= */
 
 .announcement-page .announcement-item {
     display: flex;
-
+    align-items: flex-start;
     width: 100%;
-
-    min-height: 108px;
-
+    min-height: 0;
     margin: 0 !important;
-    padding: 19px 22px;
-
-    border: 1px solid #b8d0e8 !important;
-    border-radius: 14px !important;
-
-    background-color: #ffffff !important;
-
+    padding: 17px 18px;
+    border: 1px solid #e1e7ed !important;
+    border-radius: 9px !important;
+    background: #ffffff !important;
     box-shadow: none !important;
-
-    gap: 20px;
+    gap: 13px;
+    transition:
+        border-color 0.15s ease,
+        background-color 0.15s ease;
 }
 
-
-/* =========================================================
-   ANNOUNCEMENT ICON
-   ========================================================= */
+.announcement-page .announcement-item:hover {
+    border-color: #cbd7e3 !important;
+    background: #fcfdfe !important;
+}
 
 .announcement-page .announcement-item-icon {
     display: flex;
-
-    flex: 0 0 36px;
-
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-
-    padding-top: 1px;
-
-    font-size: 1.25rem;
-
-    line-height: 1;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    margin-top: 1px;
+    border-radius: 8px;
+    background: #f2f6fa;
+    color: #315a7d;
+    font-size: 0.9rem;
 }
 
-
-/* Information */
-
-.announcement-page .announcement-normal .announcement-item-icon {
-    color: #3b82f6;
+.announcement-page .announcement-safety {
+    border-color: #edd1d1 !important;
+    background: #fffdfd !important;
 }
-
-
-/* Safety */
 
 .announcement-page .announcement-safety .announcement-item-icon {
-    color: #ef4444;
+    background: #fff1f1;
+    color: #c43d3d;
 }
-
-
-/* Scheduled */
 
 .announcement-page .announcement-scheduled .announcement-item-icon {
-    color: #333333;
+    background: #f3f5f7;
+    color: #59636e;
 }
 
-
-/* Inactive */
+.announcement-page .announcement-inactive {
+    opacity: 0.72;
+}
 
 .announcement-page .announcement-inactive .announcement-item-icon {
-    color: #777777;
+    background: #f2f3f5;
+    color: #747c85;
 }
 
 
 /* =========================================================
-   ANNOUNCEMENT BODY
+   ANNOUNCEMENT CONTENT
    ========================================================= */
 
 .announcement-page .announcement-item-body {
     flex: 1;
-
     min-width: 0;
 }
 
-
-/* =========================================================
-   ANNOUNCEMENT TITLE
-   ========================================================= */
-
 .announcement-page .announcement-item-title {
     margin: 0;
-
-    color: #111111;
-
-    font-size: 0.98rem;
+    color: #111827;
+    font-size: 0.9rem;
     font-weight: 700;
-
-    line-height: 1.35;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
-
-
-/* =========================================================
-   ANNOUNCEMENT MESSAGE
-   ========================================================= */
 
 .announcement-page .announcement-item-message {
-    margin-top: 9px;
-
-    color: #222222;
-
-    font-size: 0.9rem;
+    margin-top: 6px;
+    color: #4b5563;
+    font-size: 0.82rem;
     font-weight: 400;
-
     line-height: 1.55;
-
-    word-break: break-word;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
 }
-
-
-/* =========================================================
-   ANNOUNCEMENT DATE
-   ========================================================= */
 
 .announcement-page .announcement-item-date {
     margin-top: 8px;
+    color: #89929d;
+    font-size: 0.71rem;
+    line-height: 1.4;
+}
 
-    color: #777777;
+.announcement-page .announcement-item-date i,
+.announcement-page .announcement-item-meta i {
+    margin-right: 4px;
+}
 
-    font-size: 0.78rem;
-    font-weight: 400;
-
+.announcement-page .announcement-item-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin-top: 9px;
+    color: #89929d;
+    font-size: 0.71rem;
     line-height: 1.4;
 }
 
 
 /* =========================================================
-   ITEM ACTIONS
-   Existing functionality preserved
+   TYPE BADGES
+   ========================================================= */
+
+.announcement-type-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 3px 8px;
+    border: 1px solid #dbe2e9;
+    border-radius: 999px;
+    background: #f7f9fb;
+    color: #5f6b78;
+    font-size: 0.67rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.announcement-type-safety {
+    border-color: #efc8c8;
+    background: #fff2f2;
+    color: #bd3b3b;
+}
+
+
+/* =========================================================
+   ANNOUNCEMENT ACTIONS
    ========================================================= */
 
 .announcement-page .announcement-item-actions {
     display: flex;
-
     align-items: center;
-
     flex-wrap: wrap;
-
-    gap: 8px;
-
-    margin-top: 14px;
+    gap: 7px;
+    margin-top: 12px;
 }
-
 
 .announcement-page .announcement-item-actions form {
     display: inline-flex;
-
     margin: 0;
 }
 
-
 .announcement-page .announcement-action-btn {
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
+    min-height: 29px;
+    padding: 5px 10px;
 
-    min-height: 30px;
-
-    padding: 5px 11px;
-
-    border: 1px solid #d3d9e2 !important;
+    border: 1px solid #d5dce4 !important;
     border-radius: 6px !important;
 
-    background-color: #ffffff !important;
-
-    color: #555555 !important;
+    background: #ffffff !important;
+    color: #59636e !important;
 
     font-family: inherit;
-    font-size: 0.74rem;
-    font-weight: 500;
-
+    font-size: 0.7rem;
+    font-weight: 600;
     line-height: 1;
 
     cursor: pointer;
-
     text-decoration: none !important;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
 }
-
-
-.announcement-page .announcement-action-btn:hover {
-    background-color: #f5f7fa !important;
-
-    color: #111111 !important;
-}
-
 
 .announcement-page .announcement-action-btn i {
     margin-right: 5px;
+    font-size: 0.72rem;
 }
 
-
-/* Warning */
+.announcement-page .announcement-action-btn:hover {
+    background: #f6f8fa !important;
+    color: #1f2937 !important;
+}
 
 .announcement-page .announcement-action-warning {
-    border-color: #e6c98d !important;
-
-    color: #a66a00 !important;
+    border-color: #ead7ad !important;
+    color: #986b13 !important;
 }
-
 
 .announcement-page .announcement-action-warning:hover {
-    background-color: #fff8e8 !important;
-
-    color: #8b5a00 !important;
+    background: #fffaf0 !important;
+    border-color: #dfc88f !important;
 }
-
-
-/* Danger */
 
 .announcement-page .announcement-action-danger {
-    border-color: #e7b4b4 !important;
-
-    color: #c33b3b !important;
+    border-color: #e7c5c5 !important;
+    color: #bd4141 !important;
 }
-
 
 .announcement-page .announcement-action-danger:hover {
-    background-color: #fff3f3 !important;
-
-    color: #b32929 !important;
+    background: #fff6f6 !important;
+    border-color: #dfabab !important;
 }
-
-
-/* Success */
 
 .announcement-page .announcement-action-success {
-    border-color: #acd8bc !important;
-
-    color: #21834a !important;
+    border-color: #bfddc9 !important;
+    color: #267746 !important;
 }
 
-
 .announcement-page .announcement-action-success:hover {
-    background-color: #f0fbf4 !important;
-
-    color: #176b3b !important;
+    background: #f4fbf6 !important;
+    border-color: #a7ceb5 !important;
 }
 
 
@@ -571,22 +546,10 @@
    ========================================================= */
 
 .announcement-page .announcement-empty {
-    padding: 28px 20px;
-
-    color: #777777;
-
-    font-size: 0.88rem;
-
+    padding: 34px 20px;
+    color: #8a929c;
+    font-size: 0.78rem;
     text-align: center;
-}
-
-
-/* =========================================================
-   INACTIVE
-   ========================================================= */
-
-.announcement-page .announcement-inactive {
-    opacity: 0.68;
 }
 
 
@@ -596,202 +559,122 @@
 
 .announcement-page ~ .modal .announcement-modal,
 .modal .announcement-modal {
-    border: 0 !important;
-
-    border-radius: 12px !important;
-
+    border: 1px solid #e1e6eb !important;
+    border-radius: 10px !important;
     overflow: hidden;
-
-    box-shadow: 0 15px 45px rgba(15, 27, 60, 0.18) !important;
+    box-shadow: 0 14px 38px rgba(15, 27, 60, 0.13) !important;
 }
-
-
-/* Modal header */
 
 .announcement-modal-header {
-    padding: 20px 24px;
-
-    border-bottom: 1px solid #e8e8e8 !important;
-
-    background-color: #ffffff;
+    padding: 18px 22px;
+    border-bottom: 1px solid #edf0f3 !important;
+    background: #ffffff;
 }
 
-
 .announcement-modal-header .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin: 0;
-
-    color: #111111;
-
-    font-size: 1rem;
+    color: #111827;
+    font-size: 0.94rem;
     font-weight: 700;
 }
 
-
 .announcement-modal-header .modal-title i {
-    color: #0f1b3c;
+    color: #315a7d;
+    font-size: 0.92rem;
 }
-
-
-/* Modal body */
 
 .announcement-modal-body {
-    padding: 24px !important;
-
-    background-color: #ffffff;
+    padding: 22px !important;
+    background: #ffffff;
 }
-
 
 .announcement-modal-body > p {
-    margin: 0 0 20px;
-
-    color: #777777;
-
-    font-size: 0.84rem;
+    margin: 0 0 18px;
+    color: #7a8491;
+    font-size: 0.78rem;
+    line-height: 1.5;
 }
-
-
-/* Modal fields */
 
 .announcement-modal-field {
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
-
 
 .announcement-modal-field:last-child {
     margin-bottom: 0;
 }
 
 
-.announcement-modal-field label,
-.announcement-modal-body > label {
-    display: block;
-
-    margin-bottom: 8px;
-
-    color: #555555;
-
-    font-size: 0.84rem;
-    font-weight: 500;
-}
-
-
-/* Modal inputs */
-
-.announcement-modal-field input,
-.announcement-modal-field select,
-.announcement-modal-field textarea,
-.announcement-modal-input {
-    display: block;
-
-    width: 100%;
-
-    border: 1px solid #cbdff2 !important;
-    border-radius: 7px !important;
-
-    background-color: #ffffff !important;
-
-    color: #222222;
-
-    font-family: inherit;
-    font-size: 0.9rem;
-
-    box-shadow: none !important;
-
-    outline: none;
-}
-
-
-.announcement-modal-field input,
-.announcement-modal-field select,
-.announcement-modal-input {
-    height: 40px;
-
-    padding: 0 12px;
-}
-
-
-.announcement-modal-field textarea {
-    min-height: 110px;
-
-    padding: 11px 12px;
-
-    resize: vertical;
-}
-
-
-.announcement-modal-field input:focus,
-.announcement-modal-field select:focus,
-.announcement-modal-field textarea:focus,
-.announcement-modal-input:focus {
-    border-color: #9bbde0 !important;
-
-    box-shadow: 0 0 0 3px rgba(155, 189, 224, 0.12) !important;
-}
-
-
-/* Modal footer */
+/* =========================================================
+   MODAL FOOTER
+   ========================================================= */
 
 .announcement-modal-footer {
     display: flex;
-
     justify-content: flex-end;
-
-    gap: 9px;
-
-    padding: 16px 24px;
-
-    border-top: 1px solid #e8e8e8 !important;
-
-    background-color: #ffffff;
+    gap: 8px;
+    padding: 14px 22px;
+    border-top: 1px solid #edf0f3 !important;
+    background: #ffffff;
 }
-
 
 .announcement-modal-cancel,
 .announcement-modal-confirm {
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
-
-    min-height: 36px;
-
-    padding: 0 16px;
-
-    border-radius: 7px !important;
-
+    min-height: 35px;
+    padding: 0 14px;
+    border-radius: 6px !important;
     font-family: inherit;
-    font-size: 0.84rem;
-    font-weight: 500;
-
+    font-size: 0.76rem;
+    font-weight: 600;
     cursor: pointer;
 }
 
+.announcement-modal-cancel i,
+.announcement-modal-confirm i {
+    margin-right: 6px;
+}
 
 .announcement-modal-cancel {
-    border: 1px solid #d4d8df !important;
-
-    background-color: #ffffff !important;
-
-    color: #555555 !important;
+    border: 1px solid #d4dbe3 !important;
+    background: #ffffff !important;
+    color: #59636e !important;
 }
-
 
 .announcement-modal-cancel:hover {
-    background-color: #f5f6f8 !important;
+    background: #f6f8fa !important;
 }
-
 
 .announcement-modal-confirm {
     border: 1px solid #0f1b3c !important;
-
-    background-color: #0f1b3c !important;
-
+    background: #0f1b3c !important;
     color: #ffffff !important;
 }
 
-
 .announcement-modal-confirm:hover {
-    background-color: #0a1329 !important;
+    background: #09132f !important;
+}
+
+
+/* =========================================================
+   ACCESSIBLE FOCUS
+   ========================================================= */
+
+.announcement-page button:focus-visible,
+.announcement-page a:focus-visible,
+.announcement-page input:focus-visible,
+.announcement-page select:focus-visible,
+.announcement-page textarea:focus-visible,
+.modal .announcement-modal button:focus-visible,
+.modal .announcement-modal input:focus-visible,
+.modal .announcement-modal select:focus-visible,
+.modal .announcement-modal textarea:focus-visible {
+    outline: 2px solid #4d9cff;
+    outline-offset: 2px;
 }
 
 
@@ -802,21 +685,28 @@
 @media (max-width: 767.98px) {
 
     .announcement-page {
-        padding: 8px 0 30px;
+        padding: 10px 0 30px;
     }
 
     .announcement-page .announcement-panel {
-        margin-bottom: 24px;
-
-        padding: 24px 20px;
-
+        margin-bottom: 18px;
+        padding: 22px 18px;
         border-radius: 10px;
+    }
+
+    .announcement-panel-title > i {
+        flex-basis: 32px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .announcement-panel-header h2 {
+        font-size: 0.95rem;
     }
 
     .announcement-page .announcement-form-grid {
         grid-template-columns: 1fr;
-
-        row-gap: 20px;
+        row-gap: 18px;
     }
 
     .announcement-page .announcement-field-full {
@@ -825,7 +715,7 @@
 
     .announcement-page .announcement-form-actions {
         flex-direction: column;
-
+        align-items: stretch;
         width: 100%;
     }
 
@@ -834,46 +724,58 @@
     }
 
     .announcement-page .announcement-item {
-        padding: 17px 16px;
-
-        gap: 13px;
+        padding: 15px;
+        gap: 11px;
     }
 
     .announcement-page .announcement-item-icon {
-        flex-basis: 28px;
-    }
-
-    .announcement-page .announcement-item-title {
-        font-size: 0.92rem;
-    }
-
-    .announcement-page .announcement-item-message {
-        font-size: 0.84rem;
+        flex-basis: 32px;
+        width: 32px;
+        height: 32px;
     }
 
     .announcement-page .announcement-item-actions {
-        gap: 6px;
+        width: 100%;
     }
 
-}
+    .announcement-page .announcement-action-btn {
+        min-height: 31px;
+    }
 
+    .announcement-page .announcement-item-meta {
+        align-items: flex-start;
+    }
+
+    .announcement-modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .announcement-modal-cancel,
+    .announcement-modal-confirm {
+        width: 100%;
+    }
+}
 
 @media (max-width: 480px) {
 
     .announcement-page .announcement-panel {
-        padding: 20px 16px;
-    }
-
-    .announcement-page .announcement-panel-header h2 {
-        font-size: 1rem;
+        padding: 20px 15px;
     }
 
     .announcement-page .announcement-divider {
-        margin: 19px 0 24px;
+        margin: 17px 0 20px;
+    }
+
+    .announcement-panel-title {
+        gap: 9px;
+    }
+
+    .announcement-panel-title > i {
+        display: none;
     }
 
     .announcement-page .announcement-item {
-        padding: 15px;
+        padding: 14px;
     }
-
 }
