@@ -1,0 +1,173 @@
+{# Compact Overall Condition indicator (summary only) + change-based advisory alert.
+   Expects: overall_condition (dict from scheduling_service.get_current_overall_condition),
+            refresh_interval_seconds.
+   Details stay on the Dashboard / Decision Support page. Advisory only: WaveTech
+   provides decision support; the Coast Guard remains the final authority. #}
+{% set decision_support_url = url_for('dashboard.index') ~ '#scheduling-decision-support' %}
+
+<div class="overall-condition overall-condition-{{ overall_condition.css_class }}"
+     id="overall-condition"
+     role="status"
+     aria-live="polite"
+     data-endpoint="{{ url_for('dashboard.overall_condition') }}"
+     data-refresh-interval="{{ refresh_interval_seconds }}"
+     data-initial-status="{{ overall_condition.status }}">
+
+    <div class="overall-condition-main">
+        <span class="overall-condition-title">Overall Condition:</span>
+        <span class="overall-condition-badge" id="overall-condition-badge">{{ overall_condition.badge }}</span>
+        <span class="overall-condition-summary" id="overall-condition-summary">{{ overall_condition.summary }}</span>
+    </div>
+
+    <a class="overall-condition-link" href="{{ decision_support_url }}">
+        View Details <i class="bi bi-arrow-right"></i>
+    </a>
+</div>
+
+{# One alert element, so only one condition alert can ever exist. It is never
+   shown on page load: the script shows it only when a later poll sees the
+   condition change to CAUTION or POOR. The wrapper is always present so
+   assistive technology announces the alert when it appears. #}
+<div class="condition-alert-region" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="condition-alert" id="condition-alert" hidden>
+        <i class="bi condition-alert-icon" id="condition-alert-icon" aria-hidden="true"></i>
+        <div class="condition-alert-body">
+            <div class="condition-alert-title" id="condition-alert-title"></div>
+            <div class="condition-alert-text" id="condition-alert-text"></div>
+            <div class="condition-alert-actions">
+                <a class="condition-alert-link" id="condition-alert-link"
+                   href="{{ decision_support_url }}"></a>
+                <button type="button" class="condition-alert-dismiss"
+                        id="condition-alert-dismiss">Dismiss</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var box = document.getElementById("overall-condition");
+    if (!box || !window.fetch) return;
+
+    var seconds = Number(box.dataset.refreshInterval);
+    // Interval 0 = auto-refresh off: the value rendered with the page stays
+    // on screen and no alert can appear (there is no later refresh).
+    if (!Number.isFinite(seconds) || seconds <= 0) return;
+
+    // Existing status -> css_class mapping (scheduling_service). A response
+    // that does not fit it is ignored rather than guessed at.
+    var KNOWN = { Safe: "safe", Caution: "caution", Unsafe: "unsafe", Unavailable: "unavailable" };
+    var CLASSES = ["safe", "caution", "unsafe", "unavailable"];
+
+    // Alert wording is advisory only. GOOD / UNAVAILABLE never get an alert.
+    var ALERTS = {
+        Caution: {
+            css: "caution", icon: "bi-exclamation-triangle-fill",
+            title: "CAUTION",
+            text: "Current environmental conditions require monitoring.",
+            action: "View Decision Support"
+        },
+        Unsafe: {
+            css: "unsafe", icon: "bi-exclamation-octagon-fill",
+            title: "POOR CONDITIONS",
+            text: "Current conditions may affect ferry operations.",
+            action: "Review Decision Support"
+        }
+    };
+
+    var alertBox = document.getElementById("condition-alert");
+    var alertIcon = document.getElementById("condition-alert-icon");
+    var alertTitle = document.getElementById("condition-alert-title");
+    var alertText = document.getElementById("condition-alert-text");
+    var alertLink = document.getElementById("condition-alert-link");
+    var dismissBtn = document.getElementById("condition-alert-dismiss");
+
+    // Last actionable condition (Safe / Caution / Unsafe) already accounted
+    // for. Initialised from the server-rendered page, so loading the page
+    // while CAUTION/POOR is not "a change" and shows no alert.
+    var lastKnown = (box.dataset.initialStatus in KNOWN && box.dataset.initialStatus !== "Unavailable")
+        ? box.dataset.initialStatus : null;
+    var inFlight = false;
+
+    function renderIndicator(data) {
+        CLASSES.forEach(function (c) { box.classList.remove("overall-condition-" + c); });
+        box.classList.add("overall-condition-" + data.css_class);
+        document.getElementById("overall-condition-badge").textContent = data.badge;
+        document.getElementById("overall-condition-summary").textContent = data.summary;
+    }
+
+    function hideAlert() {
+        if (!alertBox) return;
+        var hadFocus = alertBox.contains(document.activeElement);
+        alertBox.hidden = true;
+        alertBox.classList.remove("condition-alert-caution", "condition-alert-unsafe");
+        // Keep keyboard users in place instead of dropping focus to <body>.
+        if (hadFocus) {
+            var link = box.querySelector(".overall-condition-link");
+            if (link) link.focus();
+        }
+    }
+
+    function showAlert(status) {
+        var spec = ALERTS[status];
+        if (!alertBox || !spec) return;
+        // Same element is reused: CAUTION -> POOR upgrades it in place.
+        alertBox.classList.remove("condition-alert-caution", "condition-alert-unsafe");
+        alertBox.classList.add("condition-alert-" + spec.css);
+        alertIcon.className = "bi condition-alert-icon " + spec.icon;
+        alertTitle.textContent = spec.title;
+        alertText.textContent = spec.text;
+        alertLink.textContent = spec.action;
+        alertBox.hidden = false;
+    }
+
+    function valid(data) {
+        return !!data && typeof data.status === "string" &&
+            KNOWN[data.status] === data.css_class &&
+            typeof data.badge === "string" && typeof data.summary === "string";
+    }
+
+    function handle(data) {
+        renderIndicator(data);
+
+        // Data unavailable is not a condition change: keep the last known
+        // baseline (and any alert already shown) so a provider blip cannot
+        // cause a false or repeated warning when data returns.
+        if (data.status === "Unavailable") return;
+        if (data.status === lastKnown) return;      // no change -> no alert
+
+        lastKnown = data.status;
+        if (ALERTS[data.status]) {
+            showAlert(data.status);                 // GOOD -> CAUTION/POOR, CAUTION <-> POOR
+        } else {
+            hideAlert();                            // back to GOOD: indicator only
+        }
+    }
+
+    function poll() {
+        if (document.hidden) return;   // no requests from background tabs
+        if (inFlight) return;          // never overlap requests
+        inFlight = true;
+        fetch(box.dataset.endpoint, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            cache: "no-store",
+            credentials: "same-origin"
+        })
+            .then(function (r) {
+                var type = r.headers.get("content-type") || "";
+                if (!r.ok || r.redirected || type.indexOf("application/json") === -1) return null;
+                return r.json();
+            })
+            .then(function (data) { if (valid(data)) handle(data); })
+            .catch(function () { /* keep the last shown state; no false warning */ })
+            .then(function () { inFlight = false; });
+    }
+
+    if (dismissBtn) dismissBtn.addEventListener("click", hideAlert);
+
+    // The ONE poll for this page: same Settings interval as the Dashboard /
+    // Monitoring pages. The server answers from its stored reading until that
+    // interval expires, so polling here adds no provider requests.
+    setInterval(poll, seconds * 1000);
+})();
+</script>

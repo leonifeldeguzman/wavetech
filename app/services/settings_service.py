@@ -227,6 +227,21 @@ def get_refresh_interval_seconds() -> int:
     return get_settings().refresh_interval_seconds
 
 
+def get_data_cache_ttl_seconds() -> int:
+    """How long a stored LLDA/weather reading counts as fresh.
+
+    This is the Refresh Interval saved in Settings. A saved value of 0 means
+    "auto-refresh OFF" (browsers stop reloading pages); it must NOT mean
+    "never treat stored data as fresh", because then every page view or poll
+    would call the external weather provider. When auto-refresh is off, fall
+    back to the default interval from app.config (REFRESH_INTERVAL_SECONDS).
+    """
+    seconds = get_refresh_interval_seconds()
+    if seconds and seconds > 0:
+        return int(seconds)
+    return max(1, int(current_app.config["REFRESH_INTERVAL_SECONDS"]))
+
+
 def update_refresh_interval(raw_seconds) -> int:
     try:
         seconds = int(raw_seconds)

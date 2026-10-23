@@ -10,7 +10,7 @@ from app.models.environmental_reading import EnvironmentalReading
 from app.models.manifest_entry import ManifestEntry
 from app.models.pending_registration import PendingRegistration
 from app.models.trip import Trip
-from app.services import activity_log_service
+from app.services import activity_log_service, scheduling_service, settings_service
 from app.utils.decorators import login_required
 from app.utils.ph_clock import ph_today
 
@@ -70,6 +70,9 @@ def list_slots():
         selected_date=selected_date,
         prev_date=prev_date,
         next_date=next_date,
+        # Summary only; details live on the Dashboard (same assessment).
+        overall_condition=scheduling_service.get_current_overall_condition(),
+        refresh_interval_seconds=settings_service.get_refresh_interval_seconds(),
         active_page="manifests"
     )
 

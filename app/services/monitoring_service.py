@@ -57,7 +57,7 @@ def _fresh_reading(source: str):
         cached_time = cached_time.astimezone(timezone.utc)
 
     delta = datetime.now(timezone.utc) - cached_time
-    refresh_interval = timedelta(seconds=settings_service.get_refresh_interval_seconds())
+    refresh_interval = timedelta(seconds=settings_service.get_data_cache_ttl_seconds())
     if timedelta(0) <= delta < refresh_interval:
         return cached
     return None
@@ -151,7 +151,7 @@ def _is_fresh(retrieved_at) -> bool:
         return False
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     delta = now_utc - retrieved_at
-    interval = timedelta(seconds=settings_service.get_refresh_interval_seconds())
+    interval = timedelta(seconds=settings_service.get_data_cache_ttl_seconds())
     return timedelta(0) <= delta < interval
 
 

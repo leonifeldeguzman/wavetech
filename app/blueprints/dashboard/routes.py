@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from app.utils.ph_clock import ph_now, ph_today
-from flask import current_app, render_template, request
+from flask import current_app, jsonify, render_template, request
 from app.blueprints.dashboard import dashboard_bp
 from app.utils.decorators import login_required
 from app.extensions import db
@@ -93,3 +93,24 @@ def index():
         refresh_interval_seconds=settings_service.get_refresh_interval_seconds(),
         active_page="dashboard"
     )
+
+
+@dashboard_bp.route("/dashboard/overall-condition")
+@login_required
+def overall_condition():
+    """Overall Condition summary as JSON, for the Manifesting page indicator.
+
+    Same evaluation as the Dashboard (scheduling_service.get_assessment()),
+    so the two cannot disagree. Read-only; no-store so a browser never shows
+    a cached condition.
+    """
+    condition = scheduling_service.get_current_overall_condition()
+    response = jsonify({
+        "status": condition["status"],
+        "label": condition["label"],
+        "css_class": condition["css_class"],
+        "badge": condition["badge"],
+        "summary": condition["summary"],
+    })
+    response.headers["Cache-Control"] = "no-store"
+    return response

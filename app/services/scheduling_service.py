@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
+from flask import current_app
+
 from app.models.announcement import Announcement
 from app.models.environmental_reading import EnvironmentalReading
 from app.services import monitoring_service, settings_service
@@ -552,3 +554,55 @@ def get_overall_condition(safety_status, environmental_condition) -> dict[str, s
 
     label, css_class = _ENV_CONDITION_PRESENTATION[status]
     return {"status": status, "label": label, "css_class": css_class, "reason": reason}
+
+
+# ---------------------------------------------------------------------------
+# Overall Condition indicator (Manifesting page).
+# Presentation only. The classification is NOT recalculated here: it is the
+# Dashboard's own assessment.overall_status (get_assessment()), mapped with
+# the same _ENV_CONDITION_PRESENTATION labels. Detail stays on the Dashboard.
+# Advisory only: the Coast Guard remains the final authority.
+# ---------------------------------------------------------------------------
+
+_OVERALL_SUMMARY_TEXT = {
+    STATUS_SAFE: "Conditions are within the acceptable range.",
+    STATUS_CAUTION: "Environmental conditions require attention.",
+    STATUS_UNSAFE: "Conditions are unfavorable. Operator review is required.",
+    STATUS_UNAVAILABLE: "Required data is unavailable. Manual verification is required.",
+}
+
+_OVERALL_BADGE_LABEL = {
+    STATUS_SAFE: "GOOD",
+    STATUS_CAUTION: "CAUTION",
+    STATUS_UNSAFE: "POOR",
+    STATUS_UNAVAILABLE: "UNAVAILABLE",
+}
+
+
+def get_current_overall_condition(assessment: SchedulingAssessment | None = None) -> dict[str, str]:
+    """Return {"status", "label", "css_class", "badge", "summary"} for the
+    current assessment (the same one the Dashboard shows).
+
+    Pass an `assessment` you already computed to reuse it; otherwise the
+    current one is evaluated with get_assessment(). Anything that is not a
+    known status is reported as Unavailable, never guessed.
+    """
+    status = STATUS_UNAVAILABLE
+    try:
+        if assessment is None:
+            assessment = get_assessment()
+        status = assessment.overall_status
+    except Exception:  # indicator must never break the page it sits on
+        current_app.logger.exception("Overall Condition could not be evaluated")
+
+    if status not in _ENV_CONDITION_PRESENTATION:
+        status = STATUS_UNAVAILABLE
+
+    label, css_class = _ENV_CONDITION_PRESENTATION[status]
+    return {
+        "status": status,
+        "label": label,
+        "css_class": css_class,
+        "badge": _OVERALL_BADGE_LABEL[status],
+        "summary": _OVERALL_SUMMARY_TEXT[status],
+    }
