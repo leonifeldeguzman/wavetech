@@ -1001,3 +1001,139 @@
         padding: 0 10px;
     }
 }
+
+/* =========================================================
+   ASSESS CONDITION (opens the shared Dashboard DSS card)
+   ========================================================= */
+
+.manifest-slot-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+}
+
+.manifest-open-link {
+    color: #1f3a5f;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.manifest-open-link:hover {
+    text-decoration: underline;
+}
+
+.manifest-assess-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    min-height: 38px;
+    padding: 6px 14px;
+
+    border: 1px solid #b8cfe5;
+    border-radius: 7px;
+
+    background-color: #ffffff;
+    color: #1f3a5f;
+
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.18s ease,
+        background-color 0.18s ease;
+}
+
+.manifest-assess-btn:hover:not(:disabled) {
+    border-color: #7897b7;
+    background-color: #f2f7fc;
+}
+
+.manifest-assess-btn:focus-visible {
+    outline: 2px solid #1f6feb;
+    outline-offset: 2px;
+}
+
+.manifest-assess-btn:disabled {
+    cursor: progress;
+    opacity: 0.7;
+}
+
+.manifest-assess-error {
+    color: #b42318;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 575.98px) {
+    .manifest-slot-actions {
+        justify-content: stretch;
+    }
+
+    .manifest-assess-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+
+/* Expandable manifest slot (header is a button; keeps the old link look) */
+
+.manifest-slot-toggle {
+    width: 100%;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.manifest-slot-toggle:focus-visible {
+    outline: 2px solid #1f6feb;
+    outline-offset: 2px;
+}
+
+.manifest-slot-toggle.is-expanded {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.manifest-slot-toggle.is-expanded .manifest-slot-arrow {
+    transform: rotate(90deg);
+}
+
+.manifest-slot-details {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    padding: 16px 30px;
+
+    border: 1px solid #b8cfe5;
+    border-top: 0;
+    border-radius: 0 0 9px 9px;
+
+    background-color: #f8fbfe;
+}
+
+.manifest-slot-details[hidden] {
+    display: none;
+}
+
+.manifest-slot-details-summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 767.98px) {
+    .manifest-slot-details {
+        padding: 14px 15px;
+    }
+}

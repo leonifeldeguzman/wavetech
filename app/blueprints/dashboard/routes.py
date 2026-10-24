@@ -115,3 +115,40 @@ def overall_condition():
     })
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@dashboard_bp.route("/dashboard/dss-details/<int:trip_id>")
+@login_required
+def dss_details(trip_id):
+    """The Dashboard's Decision-Support details card, as an HTML fragment.
+
+    Used by the Manifesting "Assess Condition" button. It runs the same
+    scheduling_service.get_assessment() and renders the same
+    partials/dss_details_modal.html the Dashboard "View Details" uses, so
+    there is one assessment and one result card. Read-only: no Trip or
+    manifest row is changed.
+    """
+    trip = db.session.get(Trip, trip_id)
+    if trip is None:
+        response = jsonify({"error": "Trip not found."})
+        response.status_code = 404
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    try:
+        assessment = scheduling_service.get_assessment()
+        html = render_template(
+            "partials/dss_details_modal.html",
+            selected_trip=trip,
+            scheduling_assessment=assessment,
+        )
+    except Exception:
+        current_app.logger.exception("DSS details failed for trip %s", trip_id)
+        response = jsonify({"error": "The assessment could not be retrieved."})
+        response.status_code = 503
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    response = current_app.response_class(html, mimetype="text/html")
+    response.headers["Cache-Control"] = "no-store"
+    return response

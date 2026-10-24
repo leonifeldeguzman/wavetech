@@ -84,15 +84,32 @@
                 Trip Information
             </h6>
 
+            <div class="manifest-section-actions">
+
+                <span class="manifest-assess-error" role="alert" hidden></span>
+
+                <!-- Opens the shared Dashboard DSS result card (no navigation) -->
+                <button
+                    type="button"
+                    class="manifest-assess-btn"
+                    id="assessConditionBtn"
+                    data-endpoint="{{ url_for('dashboard.dss_details', trip_id=trip.id) }}"
+                >
+                    <i class="bi bi-activity" aria-hidden="true"></i>
+                    <span class="manifest-assess-label">Assess Condition</span>
+                </button>
+
                 {% if is_expired %}
                 <span class="manifest-checkin-status manifest-checkin-expired">
                     Expired
                 </span>
-            {% else %}
+                {% else %}
                 <span class="manifest-checkin-status">
                     Check-In Open
                 </span>
-            {% endif %}
+                {% endif %}
+
+            </div>
 
         </div>
 
@@ -1754,4 +1771,74 @@ document.addEventListener("DOMContentLoaded", function () {
 
 </script>
 
+{% endblock %}
+
+{% block scripts %}
+<!-- Host for the shared Dashboard DSS result card (filled on demand) -->
+<div id="dss-modal-host"></div>
+
+<script>
+(function () {
+    var btn = document.getElementById("assessConditionBtn");
+    var host = document.getElementById("dss-modal-host");
+    if (!btn || !host || !window.fetch || !window.bootstrap) return;
+
+    var errorBox = btn.parentNode.querySelector(".manifest-assess-error");
+    var label = btn.querySelector(".manifest-assess-label");
+    var icon = btn.querySelector("i");
+    var busy = false;
+
+    function setError(message) {
+        if (!errorBox) return;
+        errorBox.textContent = message || "";
+        errorBox.hidden = !message;
+    }
+
+    function setBusy(on) {
+        busy = on;
+        btn.disabled = on;
+        btn.setAttribute("aria-busy", on ? "true" : "false");
+        label.textContent = on ? "Assessing..." : "Assess Condition";
+        icon.className = on ? "bi bi-hourglass-split" : "bi bi-activity";
+    }
+
+    btn.addEventListener("click", function () {
+        if (busy || host.firstElementChild) return;   // no duplicate requests/cards
+
+        setError("");
+        setBusy(true);
+
+        fetch(btn.dataset.endpoint, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            cache: "no-store",
+            credentials: "same-origin"
+        })
+            .then(function (r) {
+                var type = r.headers.get("content-type") || "";
+                if (!r.ok || r.redirected || type.indexOf("text/html") === -1) {
+                    throw new Error("bad response");
+                }
+                return r.text();
+            })
+            .then(function (html) {
+                host.innerHTML = html;
+                var el = host.querySelector(".modal");
+                if (!el) throw new Error("no card");
+
+                var modal = new bootstrap.Modal(el);
+                el.addEventListener("hidden.bs.modal", function () {
+                    modal.dispose();
+                    host.innerHTML = "";
+                    btn.focus();
+                });
+                modal.show();
+            })
+            .catch(function () {
+                host.innerHTML = "";
+                setError("Could not retrieve the assessment. Please try again.");
+            })
+            .then(function () { setBusy(false); });
+    });
+})();
+</script>
 {% endblock %}
