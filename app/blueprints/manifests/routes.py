@@ -39,6 +39,22 @@ def _block_if_departed(trip):
         return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
     return None
 
+def _is_expired(trip):
+    """True when a live-status trip's departure day (PH) has already passed.
+    Same rule as the grey Expired badge on /manifests."""
+    return (
+        trip.status in ("Open", "Boarding", "Full", "Delayed")
+        and trip.departure_time.date() < ph_today()
+    )
+
+
+def _block_if_expired(trip):
+    """Return a redirect if the trip is expired, else None."""
+    if _is_expired(trip):
+        flash("This trip is expired. Its departure date has passed, so it cannot be departed.")
+        return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+    return None
+
 
 @manifests_bp.route("/manifests")
 @login_required
@@ -154,6 +170,7 @@ def trip_detail(trip_id):
         boats=boats,
         current_count=current_count,
         capacity=capacity,
+        is_expired=_is_expired(trip),
         pending_search=pending_search,
         manifest_search=manifest_search,
         active_page="manifests"
@@ -412,7 +429,9 @@ def reject_registration(trip_id, reg_id):
 @login_required
 def confirm_departure(trip_id):
     trip = Trip.query.get_or_404(trip_id)
-
+    blocked = _block_if_expired(trip)
+    if blocked:
+        return blocked
     audit_confirmed = request.form.get("audit_confirmed")
 
     if not audit_confirmed:

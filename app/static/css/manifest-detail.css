@@ -151,6 +151,11 @@
     font-weight: 500;
 }
 
+.manifest-checkin-status.manifest-checkin-expired {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
 .manifest-trip-info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 0.8fr 1.7fr;

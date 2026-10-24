@@ -84,9 +84,15 @@
                 Trip Information
             </h6>
 
-            <span class="manifest-checkin-status">
-                Check-In Open
-            </span>
+                {% if is_expired %}
+                <span class="manifest-checkin-status manifest-checkin-expired">
+                    Expired
+                </span>
+            {% else %}
+                <span class="manifest-checkin-status">
+                    Check-In Open
+                </span>
+            {% endif %}
 
         </div>
 
@@ -639,6 +645,7 @@
                     name="audit_confirmed"
                     value="yes"
                     id="auditCheck"
+                    {% if is_expired %}disabled{% endif %}
                 >
 
                 <label
@@ -652,7 +659,11 @@
 
             </div>
 
-
+            {% if is_expired %}
+                <p class="text-muted small mb-3">
+                    This trip's departure date has passed, so it can no longer be departed.
+                </p>
+            {% endif %}
             <div class="manifest-confirm-actions">
 
                 <a
