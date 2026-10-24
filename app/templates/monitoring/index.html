@@ -51,7 +51,11 @@
                     </div>
 
                     <div class="monitoring-summary-source">
-                        Source: Open-Meteo weather model
+                        {% if weather_summary.source == "manual" %}
+                            Source: Manual observation{% if weather_summary.retrieved_at %}, {{ weather_summary.retrieved_at|ph_time }}{% endif %}
+                        {% else %}
+                            Source: Open-Meteo weather model
+                        {% endif %}
                     </div>
 
                 {% else %}
@@ -86,19 +90,26 @@
 
                 {% if wind_summary %}
 
-                    <div class="monitoring-summary-value">
-                        {{ wind_summary.speed }} km/h
-                    </div>
-
-                    <div class="monitoring-summary-subvalue">
+                                      <div class="monitoring-summary-subvalue">
                         {{ wind_summary.direction or "Direction unavailable" }}
-                        &middot; highest at {{ wind_summary.station_name }}
-                        (Station {{ wind_summary.station_no }})
+                        {% if wind_summary.source == "manual" %}
+                            &middot; entered for {{ wind_summary.station_name }}
+                            (Station {{ wind_summary.station_no }})
+                        {% else %}
+                            &middot; highest at {{ wind_summary.station_name }}
+                            (Station {{ wind_summary.station_no }})
+                        {% endif %}
                     </div>
 
                     <div class="monitoring-summary-source">
-                        Source: Open-Meteo weather model
+                        {% if wind_summary.source == "manual" %}
+                            Source: Manual observation{% if wind_summary.retrieved_at %}, {{ wind_summary.retrieved_at|ph_time }}{% endif %}
+                        {% else %}
+                            Source: Open-Meteo weather model
+                        {% endif %}
                     </div>
+
+                    
 
                 {% else %}
 
@@ -629,9 +640,9 @@
             </div>
         </div>
 
-
+        
         {# ---------- WATER LEVEL (lake-wide) ---------- #}
-        <h3 class="h6 fw-semibold mb-2 mt-3">Water Level</h3>
+       <h3 class="monitoring-subheading h6 fw-semibold mb-2 mt-3">Water Level</h3>
 
         {% if baseline_water_reading %}
 
@@ -679,7 +690,7 @@
 
 
         {# ---------- WEATHER (reference station) ---------- #}
-        <h3 class="h6 fw-semibold mb-2 mt-4">Weather</h3>
+        <h3 class="monitoring-subheading h6 fw-semibold mb-2 mt-4">Weather</h3>
 
         {% set wx = latest_weather.reading %}
 

@@ -147,6 +147,40 @@ def index():
                 "station_name": top["station"].name,
                 "station_no": top["station"].station_no,
             }
+
+    # Weather as decision-support sees it (one shared rule). When the model
+    # is not live and a recent manual entry stands in, the top cards show
+    # that entry labeled as manual, never as weather-model data.
+    latest_weather = monitoring_service.get_dss_weather_conditions(station_weather)
+
+    manual_wx = (
+        latest_weather["reading"]
+        if latest_weather["status"] == monitoring_service.STATUS_MANUAL
+        else None
+    )
+    if manual_wx is not None:
+        manual_station = next(
+            (c["station"] for c in station_cards
+             if c["station"].station_no == monitoring_service.DSS_STATION_NO),
+            None,
+        )
+        if manual_station is not None:
+            weather_summary = {
+                "condition": manual_wx.weather_condition,
+                "station_name": manual_station.name,
+                "station_no": manual_station.station_no,
+                "temperature_c": manual_wx.temperature_c,
+                "source": "manual",
+                "retrieved_at": manual_wx.retrieved_at,
+            }
+            wind_summary = {
+                "speed": manual_wx.wind_speed_kmh,
+                "direction": manual_wx.wind_direction,
+                "station_name": manual_station.name,
+                "station_no": manual_station.station_no,
+                "source": "manual",
+                "retrieved_at": manual_wx.retrieved_at,
+            }
     
 
     map_stations = [
@@ -178,9 +212,7 @@ def index():
         _parse_date(request.args.get("wx_end")),
     )
 
-        # Latest Weather block: the same reference-station reading decision-support
-    # uses, built from the weather already fetched above (no second API call).
-    latest_weather = monitoring_service.get_dss_weather_conditions(station_weather)
+       
 
     # Manual weather form: the dropdown lists exactly the conditions saved in
     # Admin Settings, so every choice can be classified by the rules.

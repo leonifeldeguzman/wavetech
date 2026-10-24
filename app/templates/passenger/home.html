@@ -75,7 +75,7 @@
                         Weather
                     </div>
 
-                    {% if windy_status in ("live", "cached") and windy_reading %}
+                    {% if windy_status in ("live", "cached", "manual") and windy_reading %}
 
                         <div class="home-environment-value">
                             {{ windy_reading.weather_condition or "Unavailable" }}
@@ -92,6 +92,12 @@
                         <div class="home-environment-subvalue environmental-condition {{ environmental_condition.css_class }}">
                             {{ environmental_condition.label }}
                         </div>
+
+                            {% if windy_status == "manual" %}
+                            <div class="home-environment-subvalue">
+                                Manual observation{% if windy_reading.retrieved_at %}, {{ windy_reading.retrieved_at|ph_time }}{% endif %}
+                            </div>
+                        {% endif %}
 
                     {% else %}
 
@@ -122,7 +128,7 @@
                         Wind Speed
                     </div>
 
-                    {% if windy_status in ("live", "cached") and windy_reading %}
+                    {% if windy_status in ("live", "cached", "manual") and windy_reading %}
 
                         <div class="home-environment-value">
                             {% if windy_reading.wind_speed_kmh is not none %}
@@ -136,6 +142,12 @@
                             {{ windy_reading.wind_direction or "Direction unavailable" }}
                             Direction
                         </div>
+
+                            {% if windy_status == "manual" %}
+                            <div class="home-environment-subvalue">
+                                Manual observation{% if windy_reading.retrieved_at %}, {{ windy_reading.retrieved_at|ph_time }}{% endif %}
+                            </div>
+                        {% endif %}
 
                     {% else %}
 
