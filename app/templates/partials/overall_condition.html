@@ -19,7 +19,7 @@
         <span class="overall-condition-summary" id="overall-condition-summary">{{ overall_condition.summary }}</span>
     </div>
 
-    <a class="overall-condition-link" href="{{ url_for('monitoring.index') }}">
+        <a class="overall-condition-link" href="{{ decision_support_url }}">
         View Details <i class="bi bi-arrow-right"></i>
     </a>
 </div>
@@ -35,10 +35,13 @@
         <div class="condition-alert-body">
             <div class="condition-alert-title" id="condition-alert-title"></div>
             <div class="condition-alert-text" id="condition-alert-text"></div>
+            <div class="condition-alert-actions">
+                <a class="condition-alert-link" id="condition-alert-link"
+                   href="{{ decision_support_url }}"></a>
+            </div>
         </div>
 
-        <button type="button"
-                class="condition-alert-dismiss"
+        <button type="button" class="condition-alert-dismiss"
                 id="condition-alert-dismiss">
             Dismiss
         </button>
@@ -61,18 +64,20 @@
     var CLASSES = ["safe", "caution", "unsafe", "unavailable"];
 
     // Alert wording is advisory only. GOOD / UNAVAILABLE never get an alert.
-    var ALERTS = {
+       var ALERTS = {
         Caution: {
             css: "caution",
             icon: "bi-exclamation-triangle-fill",
             title: "CAUTION",
-            text: "Current environmental conditions require monitoring."
+            text: "Current environmental conditions require monitoring.",
+            action: "View Decision Support"
         },
         Unsafe: {
             css: "unsafe",
             icon: "bi-exclamation-octagon-fill",
             title: "POOR CONDITIONS",
-            text: "Current conditions may affect ferry operations."
+            text: "Current conditions may affect ferry operations.",
+            action: "Review Decision Support"
         }
     };
 
@@ -80,6 +85,7 @@
     var alertIcon = document.getElementById("condition-alert-icon");
     var alertTitle = document.getElementById("condition-alert-title");
     var alertText = document.getElementById("condition-alert-text");
+    var alertLink = document.getElementById("condition-alert-link");
     var dismissBtn = document.getElementById("condition-alert-dismiss");
 
     // Last actionable condition (Safe / Caution / Unsafe) already accounted
@@ -117,6 +123,7 @@
         alertIcon.className = "bi condition-alert-icon " + spec.icon;
         alertTitle.textContent = spec.title;
         alertText.textContent = spec.text;
+        alertLink.textContent = spec.action;
         alertBox.hidden = false;
     }
 
@@ -236,12 +243,8 @@
 
     if (dismissBtn) dismissBtn.addEventListener("click", hideAlert);
 
-    // Show the current warning again whenever Manifesting is loaded. Dismissing
-    // an alert only dismisses it for the current page session; a fresh page
-    // load intentionally re-displays the current CAUTION/UNSAFE condition.
-    if (lastKnown && ALERTS[lastKnown]) {
-        showAlert(lastKnown);
-    }
+   
+    
 
     // The ONE poll for this page: same Settings interval as the Dashboard /
     // Monitoring pages. The server answers from its stored reading until that

@@ -915,6 +915,18 @@
     margin-top: 9px;
 }
 
+.condition-alert-link {
+    color: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.condition-alert-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
 .condition-alert-dismiss {
     flex: 0 0 auto;
     align-self: center;
