@@ -460,13 +460,13 @@
 
                 {% for announcement in announcements %}
 
-                <div class="home-announcement
+                <article class="home-announcement
                     {% if announcement.type == 'Safety Alert' %}
                         safety
                     {% endif %}
                 ">
 
-                    <div class="home-announcement-icon">
+                    <div class="home-announcement-icon" aria-hidden="true">
 
                         {% if announcement.type == 'Safety Alert' %}
                             <i class="bi bi-exclamation-triangle"></i>
@@ -488,15 +488,15 @@
                                 </h3>
 
                                 {% if announcement.published_at %}
-                                    <span>
-                                        Posted:
+                                    <span class="home-announcement-date">
+                                        <i class="bi" aria-hidden="true"></i>
                                         {{ announcement.published_at | ph_time }}
                                     </span>
                                 {% endif %}
 
                             </div>
 
-                            <span class="home-announcement-type">
+                            <span class="home-announcement-type {% if announcement.type == 'Safety Alert' %}safety{% endif %}">
                                 {{ announcement.type }}
                             </span>
 
@@ -509,7 +509,7 @@
 
                     </div>
 
-                </div>
+                </article>
 
                 {% else %}
 

@@ -242,7 +242,8 @@
 
     margin: 66px auto 0;
 
-    padding: 0 20px;
+    /* Space between the Announcements card and the footer */
+    padding: 0 20px 64px;
 }
 
 .home-overview-grid {
@@ -630,73 +631,117 @@
    ANNOUNCEMENTS
    ========================================================= */
 
-.announcements-card {
-    padding: 45px 55px 55px;
-    margin-bottom: 50px;
-}
-
 .announcements-page {
-    margin-top: 45px;
-    margin-bottom: 60px;
+    width: 100%;
+    max-width: 1180px;
+    margin: 40px auto 60px;
+    padding: 0 24px;
 }
 
 .announcements-back-link {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-
     margin-bottom: 18px;
-
-    color: #6b7280;
-
-    font-size: 0.84rem;
+    color: #315a7d;
+    font-size: 0.85rem;
+    font-weight: 400;
     text-decoration: none;
-
-    transition: color 0.2s ease;
 }
 
 .announcements-back-link:hover {
-    color: var(--navy);
+    color: #234967;
+    text-decoration: none;
+}
+
+.announcements-card {
+    width: 100%;
+    padding: 34px 38px 40px;
+    margin: 0;
+    background: #ffffff;
+    border: 1px solid #e1e7ed;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.announcements-card .home-card-heading {
+    margin-bottom: 24px;
+}
+
+.announcements-card .home-card-title {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.announcements-card .home-card-title i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #f1f6fb;
+    color: #315a7d;
+    font-size: 0.95rem;
+}
+
+.announcements-card .home-card-title h2 {
+    margin: 0;
+    color: #263746;
+    font-size: 1.25rem;
+    font-weight: 700;
 }
 
 .home-announcements {
     display: flex;
     flex-direction: column;
-
-    gap: 24px;
+    gap: 10px;
 }
 
 .home-announcement {
     display: flex;
     align-items: flex-start;
+    width: 100%;
+    padding: 18px 19px;
+    border: 1px solid #e1e7ed;
+    border-radius: 9px;
+    background: #ffffff;
+    gap: 13px;
+    transition: border-color .15s ease, background-color .15s ease;
+}
 
-    gap: 18px;
-
-    padding: 20px 22px;
-
-    border: 1px solid #bfd2e8;
-    border-radius: 8px;
-
-    background: #f7fbff;
+.home-announcement:hover {
+    border-color: #cbd7e3;
+    background: #fcfdfe;
 }
 
 .home-announcement-icon {
-    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    margin-top: 1px;
+    border-radius: 8px;
+    background: #f1f6fb;
+    color: #315a7d;
+    font-size: 0.9rem;
+}
 
-    padding-top: 2px;
-
-    color: #555555;
-
-    font-size: 1.15rem;
+.home-announcement.safety {
+    border-color: #edd1d1;
+    background: #fffdfd;
 }
 
 .home-announcement.safety .home-announcement-icon {
-    color: #ef4444;
+    background: #fff1f1;
+    color: #c43d3d;
 }
 
 .home-announcement-content {
     flex: 1;
-
     min-width: 0;
 }
 
@@ -704,92 +749,104 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-
-    gap: 20px;
+    gap: 14px;
 }
 
 .home-announcement-header h3 {
-    margin: 0 0 7px;
-
-    color: #171717;
-
-    font-size: 0.92rem;
+    margin: 0;
+    color: #111827;
+    font-size: 0.9rem;
     font-weight: 700;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
-.home-announcement-header span {
-    color: #777777;
+.home-announcement-date {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    color: #8a929c;
+    font-size: 0.71rem;
+    font-weight: 400;
+    line-height: 1.4;
+}
 
-    font-size: 0.76rem;
+.home-announcement-date i {
+    font-size: 0.68rem;
 }
 
 .home-announcement-type {
+    display: inline-flex;
+    align-items: center;
     flex-shrink: 0;
-
-    padding: 5px 11px;
-
-    border-radius: 4px;
-
-    background: #0f1b3c;
-    color: #ffffff !important;
-
-    font-size: 0.72rem !important;
+    min-height: 22px;
+    padding: 3px 8px;
+    border: 1px solid #dbe2e9;
+    border-radius: 999px;
+    background: #f7f9fb;
+    color: #5f6b78 !important;
+    font-size: 0.66rem !important;
+    font-weight: 600;
+    line-height: 1.2;
 }
 
-.home-announcement.safety .home-announcement-type {
-    background: #ffe8e8;
-    color: #d92d20 !important;
+.home-announcement-type.safety {
+    border-color: #efc8c8;
+    background: #fff1f1;
+    color: #bd3b3b !important;
 }
 
 .home-announcement-content p {
-    margin: 13px 0 0;
-
-    color: #222222;
-
-    font-size: 0.84rem;
-    line-height: 1.55;
-
+    margin: 10px 0 0;
+    color: #4b5563;
+    font-size: 0.82rem;
+    line-height: 1.58;
     white-space: pre-line;
+    overflow-wrap: anywhere;
 }
 
 .home-announcement-empty {
-    padding: 40px 20px;
-
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 170px;
+    padding: 35px 20px;
     text-align: center;
 }
 
 .home-announcement-empty i {
-    color: #9aa3ad;
-
-    font-size: 2rem;
+    margin-bottom: 12px;
+    color: #a0a9b4;
+    font-size: 1.65rem;
 }
 
 .home-announcement-empty h3 {
-    margin: 12px 0 5px;
-
-    font-size: 0.95rem;
+    margin: 0 0 5px;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .home-announcement-empty p {
+    max-width: 360px;
     margin: 0;
-
-    color: #777777;
-
-    font-size: 0.8rem;
+    color: #89929d;
+    font-size: 0.76rem;
+    line-height: 1.5;
 }
 
 .home-view-announcements {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: flex-end;
-
-    gap: 8px;
-
-    margin-top: 28px;
-
-    color: #3f92ff;
-
-    font-size: 0.84rem;
+    gap: 7px;
+    width: 100%;
+    margin-top: 20px;
+    color: #315a7d;
+    font-size: 0.78rem;
+    font-weight: 400;
     text-decoration: none;
 }
 
@@ -797,6 +854,24 @@
     color: #0f1b3c;
 }
 
+@media (max-width: 767.98px) {
+    .announcements-card {
+        padding: 27px 20px 30px;
+    }
+
+    .home-announcement {
+        padding: 16px;
+    }
+
+    .home-announcement-header {
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    .home-announcement-type {
+        align-self: flex-start;
+    }
+}
 
 /* =========================================================
    FOOTER
@@ -882,7 +957,7 @@
     .home-content {
         margin-top: 40px;
 
-        padding: 0 15px;
+        padding: 0 15px 44px;
     }
 
     .home-overview-grid {
