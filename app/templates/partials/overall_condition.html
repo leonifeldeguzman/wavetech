@@ -19,7 +19,7 @@
         <span class="overall-condition-summary" id="overall-condition-summary">{{ overall_condition.summary }}</span>
     </div>
 
-    <a class="overall-condition-link" href="{{ decision_support_url }}">
+    <a class="overall-condition-link" href="{{ url_for('monitoring.index') }}">
         View Details <i class="bi bi-arrow-right"></i>
     </a>
 </div>
@@ -31,16 +31,17 @@
 <div class="condition-alert-region" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="condition-alert" id="condition-alert" hidden>
         <i class="bi condition-alert-icon" id="condition-alert-icon" aria-hidden="true"></i>
+
         <div class="condition-alert-body">
             <div class="condition-alert-title" id="condition-alert-title"></div>
             <div class="condition-alert-text" id="condition-alert-text"></div>
-            <div class="condition-alert-actions">
-                <a class="condition-alert-link" id="condition-alert-link"
-                   href="{{ decision_support_url }}"></a>
-                <button type="button" class="condition-alert-dismiss"
-                        id="condition-alert-dismiss">Dismiss</button>
-            </div>
         </div>
+
+        <button type="button"
+                class="condition-alert-dismiss"
+                id="condition-alert-dismiss">
+            Dismiss
+        </button>
     </div>
 </div>
 
@@ -62,16 +63,16 @@
     // Alert wording is advisory only. GOOD / UNAVAILABLE never get an alert.
     var ALERTS = {
         Caution: {
-            css: "caution", icon: "bi-exclamation-triangle-fill",
+            css: "caution",
+            icon: "bi-exclamation-triangle-fill",
             title: "CAUTION",
-            text: "Current environmental conditions require monitoring.",
-            action: "View Decision Support"
+            text: "Current environmental conditions require monitoring."
         },
         Unsafe: {
-            css: "unsafe", icon: "bi-exclamation-octagon-fill",
+            css: "unsafe",
+            icon: "bi-exclamation-octagon-fill",
             title: "POOR CONDITIONS",
-            text: "Current conditions may affect ferry operations.",
-            action: "Review Decision Support"
+            text: "Current conditions may affect ferry operations."
         }
     };
 
@@ -79,7 +80,6 @@
     var alertIcon = document.getElementById("condition-alert-icon");
     var alertTitle = document.getElementById("condition-alert-title");
     var alertText = document.getElementById("condition-alert-text");
-    var alertLink = document.getElementById("condition-alert-link");
     var dismissBtn = document.getElementById("condition-alert-dismiss");
 
     // Last actionable condition (Safe / Caution / Unsafe) already accounted
@@ -117,14 +117,43 @@
         alertIcon.className = "bi condition-alert-icon " + spec.icon;
         alertTitle.textContent = spec.title;
         alertText.textContent = spec.text;
-        alertLink.textContent = spec.action;
         alertBox.hidden = false;
     }
 
+    function normalizeStatus(data) {
+        if (!data || typeof data !== "object") return null;
+
+        var rawStatus = typeof data.status === "string" ? data.status.trim() : "";
+        var rawCss = typeof data.css_class === "string" ? data.css_class.trim().toLowerCase() : "";
+        var rawBadge = typeof data.badge === "string" ? data.badge.trim().toUpperCase() : "";
+
+        // Use the backend's canonical status first. The badge/css_class are
+        // presentation fields and must not prevent a valid status transition
+        // from reaching the change detector.
+        var aliases = {
+            "Safe": "Safe", "GOOD": "Safe", "Good": "Safe",
+            "Caution": "Caution", "CAUTION": "Caution",
+            "Unsafe": "Unsafe", "UNSAFE": "Unsafe", "POOR": "Unsafe",
+            "Unavailable": "Unavailable", "UNAVAILABLE": "Unavailable"
+        };
+
+        var status = aliases[rawStatus] || aliases[rawStatus.toUpperCase()] ||
+            ({ safe: "Safe", caution: "Caution", unsafe: "Unsafe", unavailable: "Unavailable" }[rawCss]) ||
+            ({ GOOD: "Safe", CAUTION: "Caution", POOR: "Unsafe", UNSAFE: "Unsafe", UNAVAILABLE: "Unavailable" }[rawBadge]) || null;
+
+        if (!status) return null;
+
+        return {
+            status: status,
+            css_class: KNOWN[status],
+            badge: typeof data.badge === "string" ? data.badge : status,
+            summary: typeof data.summary === "string" ? data.summary : ""
+        };
+    }
+
     function valid(data) {
-        return !!data && typeof data.status === "string" &&
-            KNOWN[data.status] === data.css_class &&
-            typeof data.badge === "string" && typeof data.summary === "string";
+        var normalized = normalizeStatus(data);
+        return !!normalized && typeof normalized.summary === "string";
     }
 
     function handle(data) {
@@ -145,8 +174,21 @@
     }
 
     function poll() {
-        if (document.hidden) return;   // no requests from background tabs
-        if (inFlight) return;          // never overlap requests
+        if (document.hidden) {
+            console.debug("[Overall Condition] Poll skipped: document is hidden.");
+            return;
+        }
+        if (inFlight) {
+            console.debug("[Overall Condition] Poll skipped: previous request is still in flight.");
+            return;
+        }
+
+        console.debug("[Overall Condition] Polling", {
+            endpoint: box.dataset.endpoint,
+            previousStatus: lastKnown,
+            intervalSeconds: seconds
+        });
+
         inFlight = true;
         fetch(box.dataset.endpoint, {
             headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -155,15 +197,51 @@
         })
             .then(function (r) {
                 var type = r.headers.get("content-type") || "";
-                if (!r.ok || r.redirected || type.indexOf("application/json") === -1) return null;
+                console.debug("[Overall Condition] Response", {
+                    ok: r.ok, redirected: r.redirected, contentType: type, statusCode: r.status
+                });
+                if (!r.ok || r.redirected || type.indexOf("application/json") === -1) {
+                    console.warn("[Overall Condition] Ignoring response: expected JSON.");
+                    return null;
+                }
                 return r.json();
             })
-            .then(function (data) { if (valid(data)) handle(data); })
-            .catch(function () { /* keep the last shown state; no false warning */ })
+            .then(function (data) {
+                console.debug("[Overall Condition] Raw payload", data);
+                if (!valid(data)) {
+                    console.warn("[Overall Condition] Invalid/unrecognized payload", data);
+                    return;
+                }
+
+                var normalized = normalizeStatus(data);
+                console.debug("[Overall Condition] Normalized", {
+                    previousStatus: lastKnown,
+                    currentStatus: normalized.status,
+                    cssClass: normalized.css_class,
+                    badge: normalized.badge
+                });
+                handle(normalized);
+
+                console.debug("[Overall Condition] After handling", {
+                    previousStatus: lastKnown,
+                    alertHidden: alertBox ? alertBox.hidden : null,
+                    alertClass: alertBox ? alertBox.className : null
+                });
+            })
+            .catch(function (error) {
+                console.error("[Overall Condition] Poll failed", error);
+            })
             .then(function () { inFlight = false; });
     }
 
     if (dismissBtn) dismissBtn.addEventListener("click", hideAlert);
+
+    // Show the current warning again whenever Manifesting is loaded. Dismissing
+    // an alert only dismisses it for the current page session; a fresh page
+    // load intentionally re-displays the current CAUTION/UNSAFE condition.
+    if (lastKnown && ALERTS[lastKnown]) {
+        showAlert(lastKnown);
+    }
 
     // The ONE poll for this page: same Settings interval as the Dashboard /
     // Monitoring pages. The server answers from its stored reading until that

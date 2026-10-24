@@ -21,7 +21,13 @@
     <section class="announcement-panel announcement-create-panel">
 
         <div class="announcement-panel-header">
-            <h2>Create Announcement</h2>
+            <div class="announcement-panel-title">
+                <i class="bi bi-megaphone" aria-hidden="true"></i>
+                <div>
+                    <h2>Create Announcement</h2>
+                    <p>Share updates and important information with passengers.</p>
+                </div>
+            </div>
         </div>
 
         <div class="announcement-divider"></div>
@@ -54,7 +60,7 @@
                 <!-- Type / Priority -->
                 <div class="announcement-field">
                     <label for="announcement-type">
-                        Priority
+                        Type
                     </label>
 
                     <select
@@ -99,6 +105,7 @@
                     value="publish_now"
                     class="announcement-btn announcement-btn-primary"
                 >
+                    <i class="bi bi-send" aria-hidden="true"></i>
                     Publish Now
                 </button>
 
@@ -211,7 +218,13 @@
     <section class="announcement-panel">
 
         <div class="announcement-panel-header">
-            <h2>Published Announcement</h2>
+            <div class="announcement-panel-title">
+                <i class="bi bi-broadcast" aria-hidden="true"></i>
+                <div>
+                    <h2>Published Announcements</h2>
+                    <p>Currently visible to passengers.</p>
+                </div>
+            </div>
         </div>
 
         <div class="announcement-divider"></div>
@@ -251,13 +264,19 @@
                         {{ announcement.content }}
                     </div>
 
-                    <div class="announcement-item-date">
-                        Published:
-                        {% if announcement.published_at %}
-                            {{ announcement.published_at | ph_time }}
-                        {% else %}
-                            —
-                        {% endif %}
+                    <div class="announcement-item-meta">
+                        <span>
+                            <i class="bi bi-calendar3" aria-hidden="true"></i>
+                            Published:
+                            {% if announcement.published_at %}
+                                {{ announcement.published_at | ph_time }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </span>
+                        <span class="announcement-type-badge {% if announcement.type == 'Safety Alert' %}announcement-type-safety{% endif %}">
+                            {{ announcement.type }}
+                        </span>
                     </div>
 
                     <!-- Existing actions preserved -->
@@ -281,6 +300,7 @@
                                 type="submit"
                                 class="announcement-action-btn announcement-action-warning"
                             >
+                                <i class="bi bi-pause-circle" aria-hidden="true"></i>
                                 Deactivate
                             </button>
                         </form>
@@ -294,6 +314,7 @@
                                 type="submit"
                                 class="announcement-action-btn announcement-action-danger"
                             >
+                                <i class="bi bi-trash3" aria-hidden="true"></i>
                                 Delete
                             </button>
                         </form>
@@ -327,6 +348,7 @@
                             <div class="modal-header announcement-modal-header">
 
                                 <h5 class="modal-title">
+                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                     Edit Announcement
                                 </h5>
 
@@ -408,6 +430,7 @@
                                     type="submit"
                                     class="announcement-modal-confirm"
                                 >
+                                    <i class="bi bi-check2" aria-hidden="true"></i>
                                     Save Changes
                                 </button>
 
@@ -439,7 +462,13 @@
     <section class="announcement-panel">
 
         <div class="announcement-panel-header">
-            <h2>Scheduled</h2>
+            <div class="announcement-panel-title">
+                <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+                <div>
+                    <h2>Scheduled</h2>
+                    <p>Announcements waiting to be published.</p>
+                </div>
+            </div>
         </div>
 
         <div class="announcement-divider"></div>
@@ -464,13 +493,19 @@
                         {{ announcement.content }}
                     </div>
 
-                    <div class="announcement-item-date">
-                        Scheduled:
-                        {% if announcement.scheduled_at %}
-                            {{ announcement.scheduled_at | ph_time }}
-                        {% else %}
-                            —
-                        {% endif %}
+                    <div class="announcement-item-meta">
+                        <span>
+                            <i class="bi bi-calendar3" aria-hidden="true"></i>
+                            Scheduled:
+                            {% if announcement.scheduled_at %}
+                                {{ announcement.scheduled_at | ph_time }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </span>
+                        <span class="announcement-type-badge">
+                            {{ announcement.type }}
+                        </span>
                     </div>
 
                     <!-- Existing actions preserved -->
@@ -494,6 +529,7 @@
                                 type="submit"
                                 class="announcement-action-btn announcement-action-warning"
                             >
+                                <i class="bi bi-x-circle" aria-hidden="true"></i>
                                 Cancel
                             </button>
                         </form>
@@ -540,6 +576,7 @@
                             <div class="modal-header announcement-modal-header">
 
                                 <h5 class="modal-title">
+                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                     Edit Scheduled Announcement
                                 </h5>
 
@@ -669,7 +706,13 @@
     <section class="announcement-panel announcement-inactive-panel">
 
         <div class="announcement-panel-header">
-            <h2>Inactive</h2>
+            <div class="announcement-panel-title">
+                <i class="bi bi-archive" aria-hidden="true"></i>
+                <div>
+                    <h2>Inactive</h2>
+                    <p>Announcements that are no longer visible to passengers.</p>
+                </div>
+            </div>
         </div>
 
         <div class="announcement-divider"></div>
@@ -694,13 +737,16 @@
                         {{ announcement.content }}
                     </div>
 
-                    <div class="announcement-item-date">
-                        Type: {{ announcement.type }}
+                    <div class="announcement-item-meta">
+                        <span class="announcement-type-badge">
+                            {{ announcement.type }}
+                        </span>
                     </div>
 
                     {% if announcement.published_at %}
 
                     <div class="announcement-item-date">
+                        <i class="bi bi-calendar3" aria-hidden="true"></i>
                         Previously published:
                         {{ announcement.published_at | ph_time }}
                     </div>
@@ -717,6 +763,7 @@
                                 type="submit"
                                 class="announcement-action-btn announcement-action-success"
                             >
+                                <i class="bi bi-check-circle" aria-hidden="true"></i>
                                 Activate
                             </button>
                         </form>
