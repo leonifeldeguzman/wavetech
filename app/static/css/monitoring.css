@@ -1139,3 +1139,8 @@
 .monitoring-trend-form select {
     min-width: 220px;
 }
+
+.monitoring-subheading {
+    padding-left: 40px;
+    padding-right: 40px;
+}
