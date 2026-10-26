@@ -628,9 +628,13 @@
 
                             <!-- Status -->
                             <td>
-                                <span class="dashboard-status-pill {{ trip.status|lower }}">
-                                    {{ trip.status }}
-                                </span>
+                                {% if trip.id in expired_ids %}
+                                    <span class="dashboard-status-pill expired">Expired</span>
+                                {% else %}
+                                    <span class="dashboard-status-pill {{ trip.status|lower }}">
+                                        {{ trip.status }}
+                                    </span>
+                                {% endif %}
                             </td>
 
                         </tr>

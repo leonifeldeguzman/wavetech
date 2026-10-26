@@ -581,6 +581,12 @@
 
 /* ---------- MODAL ---------- */
 
+.dashboard-status-pill.expired {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #6b7280;
+}
+
 .dashboard-modal-table td {
     padding: 13px 8px;
 }

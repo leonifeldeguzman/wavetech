@@ -136,13 +136,14 @@ def make_trip(app):
     return _make
 
 
+
+
 @pytest.fixture
 def morning_clock(monkeypatch):
     """Pretend it is 8:00 AM PH time today, so a noon trip today is still upcoming."""
     from datetime import datetime, time
     from app.utils.ph_clock import ph_today
 
-    monkeypatch.setattr(
-        "app.blueprints.manifests.routes.ph_now",
-        lambda: datetime.combine(ph_today(), time(8, 0)),
-    )
+    fake_now = lambda: datetime.combine(ph_today(), time(8, 0))
+    monkeypatch.setattr("app.blueprints.manifests.routes.ph_now", fake_now)
+    monkeypatch.setattr("app.blueprints.dashboard.routes.ph_now", fake_now)

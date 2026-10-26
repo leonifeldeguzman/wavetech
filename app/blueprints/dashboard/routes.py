@@ -27,11 +27,16 @@ def index():
         Trip.status.notin_(["Cancelled", "Departed"]),
     ).order_by(Trip.departure_time).all()
 
-    active_trips_count = Trip.query.filter(
-        Trip.departure_time >= day_start,
-        Trip.departure_time < day_end,
-        Trip.status.in_(["Open", "Boarding", "Full", "Delayed"]),
-    ).count()
+    live_statuses = ("Open", "Boarding", "Full", "Delayed")
+    now = ph_now()
+    expired_ids = {
+        t.id for t in all_trips_today
+        if t.status in live_statuses and t.departure_time < now
+    }
+    active_trips_count = sum(
+        1 for t in all_trips_today
+        if t.status in live_statuses and t.id not in expired_ids
+    )
 
     trip_ids_today = [t.id for t in all_trips_today]
     passengers_today = 0
@@ -80,6 +85,7 @@ def index():
     return render_template(
         "dashboard/index.html",
         trips=all_trips_today,
+        expired_ids=expired_ids,
         scheduled_trips=scheduled_trips,
         active_trips_count=active_trips_count,
         passengers_today=passengers_today,

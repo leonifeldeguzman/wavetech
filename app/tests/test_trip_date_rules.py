@@ -65,7 +65,7 @@ def _dashboard_context(app, client):
 # ---------------------------------------------------------------- Active Trips
 
 def test_active_trips_counts_today_and_ignores_old_open_trip(
-        app, admin_client, make_boat, make_trip):
+        app, admin_client, make_boat, make_trip, morning_clock):
     boat_id = make_boat()
     make_trip(boat_id=boat_id, status="Open", departure_time=_today_noon())
     make_trip(boat_id=boat_id, status="Open", departure_time=_days_ago(3))
@@ -76,7 +76,7 @@ def test_active_trips_counts_today_and_ignores_old_open_trip(
 
 
 def test_active_trips_status_list_includes_full_and_excludes_finished(
-        app, admin_client, make_boat, make_trip):
+        app, admin_client, make_boat, make_trip, morning_clock):
     boat_id = make_boat()
     for status in ("Open", "Boarding", "Full", "Delayed"):
         make_trip(boat_id=boat_id, status=status, departure_time=_today_noon())
