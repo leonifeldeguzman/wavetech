@@ -50,7 +50,7 @@ def test_expired_delayed_trip_cannot_depart(app, admin_client, make_boat, make_t
     assert _status(app, trip_id) == "Delayed"
 
 
-def test_todays_open_trip_can_still_depart(app, admin_client, make_boat, make_trip):
+def test_todays_open_trip_can_still_depart(app, admin_client, make_boat, make_trip, morning_clock):
     boat_id = make_boat("MB Coral", 15)
     trip_id = make_trip(boat_id=boat_id, status="Open",
                         departure_time=_at_noon(ph_today()))
@@ -74,7 +74,7 @@ def test_expired_trip_page_shows_expired_and_locks_checkbox(admin_client, make_b
     assert "Check-In Open" not in html
 
 
-def test_todays_trip_page_still_shows_check_in_open(admin_client, make_boat, make_trip):
+def test_todays_trip_page_still_shows_check_in_open(admin_client, make_boat, make_trip, morning_clock):
     boat_id = make_boat("MB Coral", 15)
     trip_id = make_trip(boat_id=boat_id, status="Open",
                         departure_time=_at_noon(ph_today()))
@@ -83,3 +83,36 @@ def test_todays_trip_page_still_shows_check_in_open(admin_client, make_boat, mak
 
     assert "Check-In Open" in html
     assert "manifest-checkin-expired" not in html
+
+
+
+def test_todays_trip_after_its_time_is_expired(app, admin_client, make_boat, make_trip, monkeypatch):
+    """A trip today whose time has passed (4 PM slot at 5 PM) must be locked."""
+    monkeypatch.setattr(
+        "app.blueprints.manifests.routes.ph_now",
+        lambda: datetime.combine(ph_today(), time(17, 0)),
+    )
+    boat_id = make_boat("MB Coral", 15)
+    trip_id = make_trip(boat_id=boat_id, status="Open",
+                        departure_time=datetime.combine(ph_today(), time(16, 0)))
+
+    response = _depart(admin_client, trip_id)
+
+    assert "departure-success" not in response.headers["Location"]
+    assert _status(app, trip_id) == "Open"
+
+
+def test_todays_trip_before_its_time_is_not_expired(app, admin_client, make_boat, make_trip, monkeypatch):
+    """A trip today still ahead of the clock (4 PM slot at 3 PM) can depart."""
+    monkeypatch.setattr(
+        "app.blueprints.manifests.routes.ph_now",
+        lambda: datetime.combine(ph_today(), time(15, 0)),
+    )
+    boat_id = make_boat("MB Coral", 15)
+    trip_id = make_trip(boat_id=boat_id, status="Open",
+                        departure_time=datetime.combine(ph_today(), time(16, 0)))
+
+    response = _depart(admin_client, trip_id)
+
+    assert "departure-success" in response.headers["Location"]
+    assert _status(app, trip_id) == "Departed"

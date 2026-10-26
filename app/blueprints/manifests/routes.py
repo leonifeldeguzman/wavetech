@@ -12,7 +12,7 @@ from app.models.pending_registration import PendingRegistration
 from app.models.trip import Trip
 from app.services import activity_log_service, scheduling_service, settings_service
 from app.utils.decorators import login_required
-from app.utils.ph_clock import ph_today
+from app.utils.ph_clock import ph_now, ph_today
 
 
 def _apply_search(query, term, *columns):
@@ -40,11 +40,11 @@ def _block_if_departed(trip):
     return None
 
 def _is_expired(trip):
-    """True when a live-status trip's departure day (PH) has already passed.
+    """True when a live-status trip's departure time (PH) has already passed.
     Same rule as the grey Expired badge on /manifests."""
     return (
         trip.status in ("Open", "Boarding", "Full", "Delayed")
-        and trip.departure_time.date() < ph_today()
+        and trip.departure_time < ph_now()
     )
 
 
@@ -77,12 +77,7 @@ def list_slots():
         Trip.departure_time < day_end,
     ).order_by(Trip.departure_time).all()
 
-    today_start = datetime.combine(ph_today(), datetime.min.time())
-    expired_ids = {
-        s.id for s in slots
-        if s.status in ("Open", "Boarding", "Full", "Delayed")
-        and s.departure_time < today_start
-    }
+    expired_ids = {s.id for s in slots if _is_expired(s)}
 
     prev_date = selected_date - timedelta(days=1)
     next_date = selected_date + timedelta(days=1)
@@ -105,7 +100,7 @@ def list_slots():
 @login_required
 def add_slot():
     departure_time_str = request.form.get("departure_time")
-    today = date.today()
+    today = ph_today()
 
     departure_time = datetime.combine(
         today, datetime.strptime(departure_time_str, "%H:%M").time()

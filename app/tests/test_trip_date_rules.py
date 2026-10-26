@@ -134,7 +134,7 @@ def test_expired_badge_shows_for_past_open_trip(
 
 
 def test_expired_badge_not_shown_for_today_or_finished_trips(
-        app, admin_client, make_boat, make_trip):
+        app, admin_client, make_boat, make_trip, morning_clock):
     boat_id = make_boat()
     today_id = make_trip(boat_id=boat_id, status="Open",
                          departure_time=_today_noon())
