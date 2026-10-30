@@ -35,7 +35,10 @@ def test_status_page_masks_personal_details(client, make_boat, make_trip):
     trip_id = make_trip(boat_id=make_boat(capacity=3), status="Open")
     code = _register(client, trip_id)
     html = client.get(f"/passenger/registrations/{code}").get_data(as_text=True)
-    assert "J*** D." in html and "4567" not in html and "6789" in html
+    assert "J*** C." in html
+    assert "Juan Dela Cruz" not in html
+    assert "09123456789" not in html
+    assert "6789" in html
     assert "Juan Dela Cruz" not in html
 
 

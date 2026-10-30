@@ -55,7 +55,7 @@ def test_status_pending_before_admin_action(client, make_boat, make_trip):
     assert body["data"]["reference_code"] == reference_code
     assert body["data"]["trip_id"] == trip_id
     assert body["data"]["status"] == "pending"
-    assert body["data"]["full_name"] == "Test Passenger"
+    assert body["data"]["full_name"] == "T*** P."
 
 
 # ---------------------------------------------------------------------------

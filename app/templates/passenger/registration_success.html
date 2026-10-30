@@ -68,21 +68,16 @@
                     </button>
                 </div>
 
-                <div class="registration-detail-row">
-                        <span>Passenger Name</span><strong>{{ masked_name }}</strong>
-                    </div>
-                    <div class="registration-detail-row">
-                        <span>Contact</span><strong>{{ masked_phone }}</strong>
-                </div>
-
-                <div class="registration-details-card">
+                    <div class="registration-details-card">
 
                     <div class="registration-detail-row">
                         <span>Passenger Name</span>
-                        <strong>
-                           {% set state = 'pending' if raw_status.startswith('pending')
-                            else (raw_status if raw_status in ['approved', 'rejected', 'cancelled'] else 'other') %}
-                        </strong>
+                        <strong>{{ masked_name }}</strong>
+                    </div>
+
+                    <div class="registration-detail-row">
+                        <span>Contact</span>
+                        <strong>{{ masked_phone }}</strong>
                     </div>
 
                     <div class="registration-detail-row">
@@ -145,44 +140,7 @@
                 {% endif %}
 
             </div>
-            {% block scripts %}
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    var copyBtn = document.getElementById("copyCodeBtn");
-    if (copyBtn) copyBtn.addEventListener("click", function () {
-        var code = copyBtn.dataset.code, label = copyBtn.querySelector("span");
-        function done() { label.textContent = "Copied"; setTimeout(function () { label.textContent = "Copy"; }, 1800); }
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(code).then(done);
-        } else {
-            var t = document.createElement("textarea"); t.value = code;
-            document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); done();
-        }
-    });
-
-    var toggle = document.getElementById("cancelToggleBtn");
-    var panel = document.getElementById("cancelPanel");
-    if (!toggle || !panel) return;
-    toggle.addEventListener("click", function () { panel.hidden = !panel.hidden; });
-
-    document.getElementById("confirmCancelBtn").addEventListener("click", function () {
-        var err = document.getElementById("cancelError"), btn = this;
-        var body = new FormData();
-        body.append("contact_number", document.getElementById("cancelPhone").value);
-        body.append("reason", document.getElementById("cancelReason").value);
-        btn.disabled = true; err.hidden = true;
-        fetch("{{ url_for('passenger.cancel_registration', reference_code=registration.reference_code) }}",
-              { method: "POST", body: body })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                if (d.success) { window.location.reload(); return; }
-                err.textContent = d.message; err.hidden = false; btn.disabled = false;
-            })
-            .catch(function () { err.textContent = "Something went wrong. Please try again."; err.hidden = false; btn.disabled = false; });
-    });
-});
-</script>
-{% endblock %}
+           
 
         </div>
 
@@ -190,4 +148,85 @@ document.addEventListener("DOMContentLoaded", function () {
 
 </div>
 
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var copyBtn = document.getElementById("copyCodeBtn");
+
+    if (copyBtn) {
+        copyBtn.addEventListener("click", function () {
+            var code = copyBtn.dataset.code;
+            var label = copyBtn.querySelector("span");
+
+            function done() {
+                label.textContent = "Copied";
+                setTimeout(function () {
+                    label.textContent = "Copy";
+                }, 1800);
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(code).then(done);
+            } else {
+                var t = document.createElement("textarea");
+                t.value = code;
+                document.body.appendChild(t);
+                t.select();
+                document.execCommand("copy");
+                t.remove();
+                done();
+            }
+        });
+    }
+
+    var toggle = document.getElementById("cancelToggleBtn");
+    var panel = document.getElementById("cancelPanel");
+
+    if (toggle && panel) {
+        toggle.addEventListener("click", function () {
+            panel.hidden = !panel.hidden;
+        });
+    }
+
+    var confirmBtn = document.getElementById("confirmCancelBtn");
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener("click", function () {
+            var err = document.getElementById("cancelError");
+            var btn = this;
+            var body = new FormData();
+
+            body.append("contact_number", document.getElementById("cancelPhone").value);
+            body.append("reason", document.getElementById("cancelReason").value);
+
+            btn.disabled = true;
+            err.hidden = true;
+
+            fetch("{{ url_for('passenger.cancel_registration', reference_code=registration.reference_code) }}", {
+                method: "POST",
+                body: body
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) {
+                    window.location.reload();
+                    return;
+                }
+
+                err.textContent = d.message;
+                err.hidden = false;
+                btn.disabled = false;
+            })
+            .catch(function () {
+                err.textContent = "Something went wrong. Please try again.";
+                err.hidden = false;
+                btn.disabled = false;
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

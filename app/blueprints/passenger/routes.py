@@ -638,9 +638,10 @@ def trip_detail_page(trip_id):
 
 @passenger_bp.route("/passenger/register", methods=["GET"])
 def register_page():
-    trips = [_serialize_trip_summary(t) for t in _registrable_trips()]
-
-    trip_rows = [_serialize_trip_summary(t) for t in trips]
+    trip_rows = [
+        _serialize_trip_summary(t)
+        for t in _registrable_trips()
+    ]
 
     return render_template(
         "passenger/register.html",
