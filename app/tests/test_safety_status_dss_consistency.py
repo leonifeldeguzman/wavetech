@@ -121,7 +121,7 @@ def test_dashboard_page_shows_same_condition_in_both_places(
     with patch(WATER, return_value=_water(level)), patch(WEATHER, return_value=weather):
         html = admin_client.get(f"/dashboard?trip_id={trip_id}").get_data(as_text=True)
 
-    kpi = html.split("Safety Status", 1)[1].split("dashboard-kpi-sub", 1)[0]
+    kpi = html.split("Advisory Status", 1)[1].split("dashboard-kpi-sub", 1)[0]
     assert overall.upper() in kpi.upper()
     assert recommendation in html
     # Decision Support "Overall Safety" badge shows the same word.

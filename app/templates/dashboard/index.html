@@ -28,10 +28,16 @@
                     {{ active_trips_count }}
                 </div>
 
+                {% if active_trips_count %}
                 <div class="dashboard-kpi-sub dashboard-kpi-positive">
                     <i class="bi bi-arrow-up"></i>
                     Active today
                 </div>
+                {% else %}
+                <div class="dashboard-kpi-sub dashboard-kpi-muted">
+                    No active trips today
+                </div>
+                {% endif %}
 
             </div>
         </div>
@@ -82,7 +88,7 @@
             <div class="dashboard-kpi h-100">
 
                 <div class="dashboard-kpi-label">
-                    Safety Status
+                    Advisory Status
                 </div>
 
                 <div class="dashboard-kpi-value
@@ -110,11 +116,18 @@
                     {% endif %}
 
                 </div>
+                {% if safety_status not in ['safe', 'caution', 'unsafe'] %}
+                <a href="{{ url_for('monitoring.index') }}" class="small">
+                    Enter manually
+                </a>
+                {% endif %}
 
             </div>
         </div>
 
     </div>
+
+    
 
 
     <!-- =====================================================
@@ -259,9 +272,11 @@
                 <div class="col-12 col-lg-4">
 
                     <button type="submit"
-                            class="btn assess-btn text-white w-100">
+                            id="assess-btn"
+                            class="btn assess-btn text-white w-100"
+                            {% if not selected_trip %}disabled{% endif %}>
 
-                        Assess Conditions
+                        Assess Condition
 
                     </button>
 
@@ -755,6 +770,12 @@ document.addEventListener("DOMContentLoaded", function () {
             dropdown.classList.remove("open");
 
             toggle.setAttribute("aria-expanded", "false");
+
+            /* Enable Assess only when a real trip is selected */
+            const assessBtn = document.getElementById("assess-btn");
+            if (assessBtn) {
+                assessBtn.disabled = (value === "");
+            }
 
             /*
              * Intentionally NO form submit here.

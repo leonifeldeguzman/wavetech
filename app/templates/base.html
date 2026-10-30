@@ -151,12 +151,10 @@
 </header>
 
         <!-- Flash messages -->
-        <div class="px-3 px-lg-4 pt-3 flash-messages">
-          {% with messages = get_flashed_messages() %} {% if messages %} {% for
-          message in messages %}
-          <div class="alert alert-warning py-2">{{ message }}</div>
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for
+          category, message in messages %}
+          <div class="alert alert-{{ 'success' if category == 'success' else ('danger' if category in ['danger', 'error'] else 'warning') }} py-2">{{ message }}</div>
           {% endfor %} {% endif %} {% endwith %}
-        </div>
 
         <!-- Page content -->
         <main class="p-3 p-lg-4 flex-grow-1" style="min-width: 0">
@@ -207,4 +205,20 @@
 </script>
     {% block scripts %}{% endblock %}
   </body>
+  <script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".flash-messages .alert").forEach(function (el) {
+    var delay = el.classList.contains("alert-success") ? 4000 : 8000;
+    setTimeout(function () {
+      el.style.transition = "opacity 0.4s";
+      el.style.opacity = "0";
+      setTimeout(function () {
+        var box = el.parentElement;
+        el.remove();
+        if (box && !box.querySelector(".alert")) box.remove();
+      }, 400);
+    }, delay);
+  });
+});
+</script>
 </html>

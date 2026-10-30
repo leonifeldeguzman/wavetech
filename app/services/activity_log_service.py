@@ -28,6 +28,7 @@ ACTION_ANNOUNCEMENT_ACTIVATED = "Activated Announcement"
 ACTION_ANNOUNCEMENT_DEACTIVATED = "Deactivated Announcement"
 ACTION_ANNOUNCEMENT_CANCELLED = "Cancelled Announcement"
 ACTION_ANNOUNCEMENT_DELETED = "Deleted Announcement"
+ACTION_PASSENGER_CANCELLED = "Passenger cancellation"
 
 
 ACTION_REGISTRATION_SMS_SENT = "Registration SMS Sent"

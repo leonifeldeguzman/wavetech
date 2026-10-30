@@ -19,7 +19,7 @@ def test_trip_information_card_has_assess_button(admin_client, make_boat, make_t
     assert f"/dashboard/dss-details/{trip_id}" in html
     # Sits in the Trip Information header, beside the Check-In indicator.
     header = html[html.index("Trip Information"):]
-    assert header.index("assessConditionBtn") < header.index("Check-In Open")
+    assert header.index("assessConditionBtn") < header.index('manifest-checkin-status')
 
 
 def test_manifest_list_is_not_expandable(admin_client, make_boat, make_trip):

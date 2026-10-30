@@ -29,11 +29,15 @@ from app.models.pending_registration import PendingRegistration, generate_refere
 from app.utils.api_responses import success_response, error_response
 from app.models.announcement import Announcement
 from app.services import semaphore_service, unisms_service
-from app.services.activity_log_service import log_action, ACTION_REGISTRATION_SMS_SENT
+from app.services.activity_log_service import log_action, ACTION_REGISTRATION_SMS_SENT, ACTION_PASSENGER_CANCELLED
 from app.models.environmental_reading import EnvironmentalReading
 from app.services import monitoring_service, scheduling_service
 from sqlalchemy import func
 from app.utils.ph_clock import ph_now
+import re
+
+REGISTRABLE_STATUSES = {"Open", "Delayed"}
+CANCELLABLE_STATUSES = {"pending"}
 # ---------------------------------------------------------------------------
 # Business rules (documented here since they are not fully explicit in the
 # existing manifests blueprint — see ASSUMPTIONS in the final report).
@@ -102,17 +106,53 @@ def _has_departure_time_passed(trip):
     return effective < ph_now()
 
 
-def _upcoming_trips_query():
-    """Listable trips that have not yet left, soonest first. Done in the
-    query (not by changing trip status), so old trips stay untouched for
-    Reports, Analytics and manifest PDFs."""
+def _assigned_upcoming_query():
+    """Trips with a boat that have not yet left (home overview, timetable)."""
     effective = func.coalesce(Trip.new_departure_time, Trip.departure_time)
     return (
         Trip.query
-        .filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
+        .filter(Trip.boat_id.isnot(None))
         .filter(effective >= ph_now())
+    )
+
+
+def _upcoming_trips_query():
+    effective = func.coalesce(Trip.new_departure_time, Trip.departure_time)
+    return (
+        _assigned_upcoming_query()
+        .filter(~Trip.status.in_(NON_LISTABLE_STATUSES))
         .order_by(effective)
     )
+
+
+def _registrable_trips():
+    """Only trips that can take a registration right now (Register page)."""
+    return [t for t in _upcoming_trips_query().all() if _accepts_registration(t)[0]]
+
+
+def normalize_ph_mobile(raw):
+    """Any of 09XXXXXXXXX / +639XXXXXXXXX / 9XXXXXXXXX -> '09XXXXXXXXX', else None."""
+    digits = re.sub(r"\D", "", str(raw or ""))
+    if digits.startswith("63") and len(digits) == 12:
+        digits = "0" + digits[2:]
+    elif len(digits) == 10 and digits.startswith("9"):
+        digits = "0" + digits
+    return digits if re.fullmatch(r"09\d{9}", digits) else None
+
+
+def _mask_name(full_name):
+    parts = (full_name or "").split()
+    if not parts:
+        return "—"
+    masked = parts[0][0] + "***"
+    if len(parts) > 1:
+        masked += f" {parts[-1][0]}."
+    return masked
+
+
+def _mask_phone(number):
+    digits = re.sub(r"\D", "", str(number or ""))
+    return ("•" * 7 + digits[-4:]) if len(digits) >= 4 else "—"
 
 
 def _accepts_registration(trip):
@@ -124,6 +164,8 @@ def _accepts_registration(trip):
         return False, "TRIP_FULL", "This trip is already full."
     if trip.status in STATUS_BLOCKS_REGISTRATION:
         return False, "TRIP_NOT_AVAILABLE", "This trip is no longer accepting registrations."
+    if trip.status not in REGISTRABLE_STATUSES:
+        return False, "TRIP_NOT_AVAILABLE", "This trip is not open for registration."
     if _has_departure_time_passed(trip):
         return False, "TRIP_NOT_AVAILABLE", "This trip's departure time has already passed."
     if not trip.boat:
@@ -176,6 +218,7 @@ def _serialize_trip_summary(trip):
         "remaining_capacity": remaining,
         "accepts_registration": can_register,
         "notice": block_reason,
+        "delay_reason": trip.delay_reason
     }
 
 
@@ -514,6 +557,7 @@ def home():
     effective_departure = func.coalesce(Trip.new_departure_time, Trip.departure_time)
     current_trip = (
         Trip.query
+        .filter(Trip.boat_id.isnot(None))
         .filter(effective_departure >= ph_now())
         .order_by(Trip.updated_at.desc())
         .first()
@@ -594,7 +638,7 @@ def trip_detail_page(trip_id):
 
 @passenger_bp.route("/passenger/register", methods=["GET"])
 def register_page():
-    trips = _upcoming_trips_query().all()
+    trips = [_serialize_trip_summary(t) for t in _registrable_trips()]
 
     trip_rows = [_serialize_trip_summary(t) for t in trips]
 
@@ -724,7 +768,7 @@ def _serialize_registration_status(registration):
     over an endpoint that only requires knowing a reference code."""
     return {
         "reference_code": registration.reference_code,
-        "full_name": registration.full_name,
+        "full_name": _mask_name(registration.full_name),
         "trip_id": registration.trip_id,
         "status": registration.status,
     }
@@ -771,6 +815,7 @@ REGISTRATION_STATUS_LABELS = {
     "pending": "Pending Verification",
     "approved": "Approved",
     "rejected": "Rejected",
+    "cancelled": "Cancelled by passenger",
 }
 
 
@@ -781,27 +826,73 @@ def _registration_status_label(status):
 
 @passenger_bp.route("/passenger/registrations/<reference_code>", methods=["GET"])
 def registration_status_page(reference_code):
-
     registration = _find_registration_by_reference_code(reference_code)
-
     if not registration:
         return render_template(
             "passenger/registration_success.html",
-            registration=None,
-            trip=None,
+            registration=None, trip=None, status_label=None, can_cancel=False,
+            masked_name=None, masked_phone=None,
             lookup_error="No registration found for that reference code.",
-            status_label=None,
         )
 
     trip = db.session.get(Trip, registration.trip_id)
-
+    left = bool(trip) and (trip.status == "Departed" or _has_departure_time_passed(trip))
     return render_template(
         "passenger/registration_success.html",
         registration=registration,
         trip=_serialize_trip_detail(trip) if trip else None,
         lookup_error=None,
         status_label=_registration_status_label(registration.status),
+        masked_name=_mask_name(registration.full_name),
+        masked_phone=_mask_phone(registration.contact_number),
+        can_cancel=registration.status in CANCELLABLE_STATUSES and not left,
     )
+
+@passenger_bp.route("/passenger/registrations/<reference_code>/cancel", methods=["POST"])
+def cancel_registration(reference_code):
+    generic = {"success": False,
+               "message": "We couldn't find a matching registration. Check the code and phone number."}
+    phone = normalize_ph_mobile(request.form.get("contact_number"))
+    reason = (request.form.get("reason") or "").strip()[:200]
+
+    reg = (PendingRegistration.query
+           .filter_by(reference_code=reference_code.strip().upper())
+           .with_for_update().first())
+    # Same message whether the code or the phone is wrong, so codes can't be probed.
+    if not reg or not phone or normalize_ph_mobile(reg.contact_number) != phone:
+        db.session.rollback()
+        return jsonify(generic), 404
+
+    if reg.status == "cancelled":
+        return jsonify({"success": True, "message": "Your registration was cancelled."})
+    if reg.status not in CANCELLABLE_STATUSES:
+        db.session.rollback()
+        return jsonify({"success": False,
+                        "message": "This registration can no longer be cancelled online. "
+                                   "Please see the terminal staff."}), 409
+
+    trip = db.session.get(Trip, reg.trip_id)
+    if trip and (trip.status == "Departed" or _has_departure_time_passed(trip)):
+        db.session.rollback()
+        return jsonify({"success": False,
+                        "message": "This trip has already left, so it can't be cancelled."}), 409
+
+    reg.status = "cancelled"            # seat is freed: only "pending" rows count as reserved
+    if trip and trip.status == "Full":  # reopen if the seat made room
+        _, _, remaining = _trip_capacity_info(trip)
+        if remaining and remaining > 0:
+            trip.status = "Delayed" if trip.new_departure_time else "Open"
+    db.session.commit()
+
+    try:
+        log_action(user_id=None, admin_name="System", action=ACTION_PASSENGER_CANCELLED,
+                   details=f"Passenger cancelled {reg.reference_code} ({reason or 'no reason given'})")
+        unisms_service.send_sms(
+            reg.contact_number, f"Your registration {reg.reference_code} has been cancelled.")
+    except Exception:
+        current_app.logger.warning("Cancel log/SMS failed for %s", reg.reference_code, exc_info=True)
+
+    return jsonify({"success": True, "message": "Your registration was cancelled."})
 
 @passenger_bp.route("/passenger/guide", methods=["GET"])
 def guide():

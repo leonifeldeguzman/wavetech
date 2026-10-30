@@ -342,7 +342,7 @@ def add_reading():
     db.session.add(new_reading)
     db.session.commit()
 
-    flash("Environmental reading recorded successfully.")
+    flash("Environmental reading recorded successfully.", "success")
 
     return redirect(url_for("monitoring.index"))
 
@@ -400,5 +400,5 @@ def add_weather_reading():
     ))
     db.session.commit()
 
-    flash("Manual weather recorded for the reference station.")
+    flash("Manual weather recorded for the reference station.", "success")
     return redirect(url_for("monitoring.index"))

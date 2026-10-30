@@ -39,6 +39,11 @@
                     'icon_class': 'success-icon-neutral',
                     'heading': 'Registration Status',
                     'message': 'Here are the details of your registration.'
+                },
+                'cancelled': {
+                    'icon': 'bi-x-lg', 'icon_class': 'success-icon-neutral',
+                    'heading': 'Registration Cancelled',
+                    'message': 'Your registration was cancelled.'
                 }
             }[state] %}
 
@@ -57,6 +62,17 @@
                 <div class="reference-box">
                     <span>Reference Code</span>
                     <strong>{{ registration.reference_code }}</strong>
+                    <button type="button" class="copy-code-btn" id="copyCodeBtn"
+                            data-code="{{ registration.reference_code }}">
+                        <i class="bi bi-clipboard"></i> <span>Copy</span>
+                    </button>
+                </div>
+
+                <div class="registration-detail-row">
+                        <span>Passenger Name</span><strong>{{ masked_name }}</strong>
+                    </div>
+                    <div class="registration-detail-row">
+                        <span>Contact</span><strong>{{ masked_phone }}</strong>
                 </div>
 
                 <div class="registration-details-card">
@@ -64,7 +80,8 @@
                     <div class="registration-detail-row">
                         <span>Passenger Name</span>
                         <strong>
-                            {{ registration.first_name }} {{ registration.last_name }}
+                           {% set state = 'pending' if raw_status.startswith('pending')
+                            else (raw_status if raw_status in ['approved', 'rejected', 'cancelled'] else 'other') %}
                         </strong>
                     </div>
 
@@ -108,15 +125,64 @@
                 </div>
 
                 <div class="success-actions">
-                    <a
-                        href="{{ url_for('passenger.home') }}"
-                        class="success-btn"
-                    >
-                        Back to Home
-                    </a>
+                    {% if can_cancel %}
+                    <button type="button" class="registration-cancel-btn" id="cancelToggleBtn">Cancel Registration</button>
+                    {% endif %}
+                    <a href="{{ url_for('passenger.home') }}#registration-status" class="success-btn">Check Status</a>
                 </div>
 
+                {% if can_cancel %}
+                <div class="cancel-panel" id="cancelPanel" hidden>
+                    <p>To cancel, enter the mobile number you registered with.</p>
+                    <input type="tel" id="cancelPhone" class="registration-input" placeholder="09XXXXXXXXX">
+                    <input type="text" id="cancelReason" class="registration-input" maxlength="200"
+                        placeholder="Reason (optional)">
+                    <div class="registration-lookup-error" id="cancelError" hidden></div>
+                    <button type="button" class="registration-next-btn" id="confirmCancelBtn">
+                        Yes, cancel my registration
+                    </button>
+                </div>
+                {% endif %}
+
             </div>
+            {% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var copyBtn = document.getElementById("copyCodeBtn");
+    if (copyBtn) copyBtn.addEventListener("click", function () {
+        var code = copyBtn.dataset.code, label = copyBtn.querySelector("span");
+        function done() { label.textContent = "Copied"; setTimeout(function () { label.textContent = "Copy"; }, 1800); }
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(code).then(done);
+        } else {
+            var t = document.createElement("textarea"); t.value = code;
+            document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); done();
+        }
+    });
+
+    var toggle = document.getElementById("cancelToggleBtn");
+    var panel = document.getElementById("cancelPanel");
+    if (!toggle || !panel) return;
+    toggle.addEventListener("click", function () { panel.hidden = !panel.hidden; });
+
+    document.getElementById("confirmCancelBtn").addEventListener("click", function () {
+        var err = document.getElementById("cancelError"), btn = this;
+        var body = new FormData();
+        body.append("contact_number", document.getElementById("cancelPhone").value);
+        body.append("reason", document.getElementById("cancelReason").value);
+        btn.disabled = true; err.hidden = true;
+        fetch("{{ url_for('passenger.cancel_registration', reference_code=registration.reference_code) }}",
+              { method: "POST", body: body })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) { window.location.reload(); return; }
+                err.textContent = d.message; err.hidden = false; btn.disabled = false;
+            })
+            .catch(function () { err.textContent = "Something went wrong. Please try again."; err.hidden = false; btn.disabled = false; });
+    });
+});
+</script>
+{% endblock %}
 
         </div>
 

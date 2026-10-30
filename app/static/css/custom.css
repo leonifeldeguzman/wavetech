@@ -877,3 +877,12 @@ nav.d-lg-flex .sidebar-brand {
     background: #e9ecef;
     color: #6c757d;
 }
+
+.flash-messages {
+    padding-top: 1rem;
+}
+
+.flash-messages .alert {
+    margin-bottom: 0;
+    border-radius: 8px;
+}

@@ -118,6 +118,14 @@
     border-color: #0b1530;
 }
 
+.btn.assess-btn:disabled {
+    background: #0f1b3c;
+    border-color: #0f1b3c;
+    color: #fff;
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 
 /* ---------- DECISION SUMMARY ---------- */
 

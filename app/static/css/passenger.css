@@ -1109,6 +1109,16 @@ body {
     font-size: 1rem;
 }
 
+.reference-box .copy-code-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: 12px auto 0; padding: 6px 16px;
+    border: 1px solid var(--navy); border-radius: 7px;
+    background: #fff; color: var(--navy); font-size: 0.85rem;
+}
+.reference-box { display: flex; flex-direction: column; align-items: center; }
+.cancel-panel { max-width: 600px; margin: 24px auto 0; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.cancel-panel[hidden] { display: none; }
+.registration-detail-row .registration-status.status-cancelled { color: #64748b; font-weight: 600; }
 
 /* =========================================
    REFERENCE CODE

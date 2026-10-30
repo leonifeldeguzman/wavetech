@@ -104,8 +104,8 @@
                     Expired
                 </span>
                 {% else %}
-                <span class="manifest-checkin-status">
-                    Check-In Open
+                <span class="manifest-checkin-status manifest-checkin-{{ trip.status|lower }}">
+                    {{ trip.status }}
                 </span>
                 {% endif %}
 
@@ -691,15 +691,21 @@
                 </a>
 
 
-                <button
-                    type="submit"
-                    class="manifest-confirm-btn"
-                    id="confirmDepartureBtn"
-                    disabled
+                                <span
+                    class="manifest-confirm-wrap"
+                    id="confirmDepartureWrap"
+                    {% if not is_expired %}title="Tick the audit confirmation to continue."{% endif %}
                 >
-                    <i class="bi bi-check-lg"></i>
-                    Confirm Departure
-                </button>
+                    <button
+                        type="submit"
+                        class="manifest-confirm-btn"
+                        id="confirmDepartureBtn"
+                        disabled
+                    >
+                        <i class="bi bi-check-lg"></i>
+                        Confirm Departure
+                    </button>
+                </span>
 
             </div>
 
@@ -1345,16 +1351,18 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     /* COAST GUARD AUDIT CHECKBOX */
-    const auditCheck = document.getElementById("auditCheck");
-    const confirmDepartureBtn = document.getElementById("confirmDepartureBtn");
-
-    if (auditCheck && confirmDepartureBtn) {
-
-        auditCheck.addEventListener("change", function () {
+            auditCheck.addEventListener("change", function () {
             confirmDepartureBtn.disabled = !this.checked;
-        });
 
-    }
+            const wrap = document.getElementById("confirmDepartureWrap");
+            if (wrap) {
+                if (this.checked) {
+                    wrap.removeAttribute("title");
+                } else {
+                    wrap.setAttribute("title", "Tick the audit confirmation to continue.");
+                }
+            }
+        });
 
 });
 

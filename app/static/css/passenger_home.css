@@ -8,6 +8,11 @@
     background: #f5f6f8;
     color: #111111;
 }
+.home-safety-value.unavailable {
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
 
 /* =========================================================
    HERO

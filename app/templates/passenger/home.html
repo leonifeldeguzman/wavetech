@@ -184,14 +184,7 @@
                         {{ water_level_card.reading.water_level_m }} m
                     </div>
 
-                    <div class="home-environment-subvalue">
-                        {% if water_level_card.reading.source == 'manual' %}
-                            Manual observation
-                        {% else %}
-                            LLDA daily average
-                        {% endif %}
-                    </div>
-
+                    
                     <div class="home-environment-subvalue">
                         {% if water_level_card.is_today %}
                             Recorded today
@@ -228,36 +221,22 @@
             </div>
 
             <div>
-                <div class="home-environment-label">
-                    Safety
-                </div>
+    <div class="home-environment-label">Travel Advisory</div>
 
-                <div class="home-safety-value
-                    {% if safety_status == 'safe' %}safe
-                    {% elif safety_status == 'unsafe' %}unsafe
-                    {% elif safety_status == 'caution' %}caution
-                    {% else %}unavailable
-                    {% endif %}">
-                    {{ safety_label }}
-                </div>
-
-                <div class="home-environment-subvalue">
-                    {% if safety_status == "safe" %}
-                        All clear
-                    {% elif safety_status == "caution" %}
-                        Exercise caution
-                    {% elif safety_status == "unsafe" %}
-                        Travel not recommended
-                    {% else %}
-                        Manual verification
-                    {% endif %}
-                </div>
-
-                <div class="home-environment-subvalue">
-                    Based on water level, weather and wind
-                </div>
-
-            </div>
+    {% if safety_status in ('safe', 'caution', 'unsafe') %}
+        <div class="home-safety-value {{ safety_status }}">{{ safety_label }}</div>
+        <div class="home-environment-subvalue">
+            {% if safety_status == 'safe' %}All clear
+            {% elif safety_status == 'caution' %}Exercise caution
+            {% else %}Travel not recommended{% endif %}
+        </div>
+        <div class="home-environment-subvalue">Based on water level, weather and wind</div>
+    {% else %}
+        <div class="home-safety-value unavailable">
+            Conditions are being checked. Confirm with terminal staff before travel.
+        </div>
+    {% endif %}
+</div>
 
         </div>
 

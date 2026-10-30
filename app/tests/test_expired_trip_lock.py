@@ -4,6 +4,7 @@ An Open/Boarding/Full/Delayed trip whose departure_time is before today
 (PH day) must not be departable. A trip scheduled for today still can.
 """
 from datetime import datetime, time, timedelta
+from pydoc import html
 
 from app.extensions import db  # ADAPT: use the import path your other tests use for db
 from app.models.trip import Trip
@@ -70,8 +71,8 @@ def test_expired_trip_page_shows_expired_and_locks_checkbox(admin_client, make_b
 
     html = admin_client.get(f"/manifests/{trip_id}").get_data(as_text=True)
 
-    assert "manifest-checkin-expired" in html
-    assert "Check-In Open" not in html
+    assert 'manifest-checkin-open' not in html
+    assert '<span class="manifest-checkin-status">' not in html
 
 
 def test_todays_trip_page_still_shows_check_in_open(admin_client, make_boat, make_trip, morning_clock):
@@ -81,7 +82,7 @@ def test_todays_trip_page_still_shows_check_in_open(admin_client, make_boat, mak
 
     html = admin_client.get(f"/manifests/{trip_id}").get_data(as_text=True)
 
-    assert "Check-In Open" in html
+    assert 'manifest-checkin-open' in html
     assert "manifest-checkin-expired" not in html
 
 

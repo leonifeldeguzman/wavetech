@@ -271,7 +271,7 @@ def edit_manifest_entry(trip_id, entry_id):
         details=f"Edited manifest entry for {entry.full_name} on trip #{trip.id}.",
     )
 
-    flash(f"{entry.full_name}'s manifest entry was updated.")
+    flash(f"{entry.full_name}'s manifest entry was updated.", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
 
@@ -303,7 +303,7 @@ def delete_manifest_entry(trip_id, entry_id):
         details=f"Deleted manifest entry for {full_name} on trip #{trip.id}.",
     )
 
-    flash(f"{full_name}'s manifest entry was deleted.")
+    flash(f"{full_name}'s manifest entry was deleted.", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
 
@@ -329,7 +329,7 @@ def delay_trip(trip_id):
     trip.new_departure_time = new_time
     db.session.commit()
 
-    flash(f"Trip delayed to {new_time.strftime('%I:%M %p')}. Reason: {reason}")
+    flash(f"Trip delayed to {new_time.strftime('%I:%M %p')}. Reason: {reason}", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
 
@@ -348,7 +348,7 @@ def cancel_trip(trip_id):
     trip.cancel_reason = reason
     db.session.commit()
 
-    flash(f"Trip cancelled. Reason: {reason}")
+    flash(f"Trip cancelled. Reason: {reason}", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
 @manifests_bp.route("/manifests/<int:trip_id>/pending/<int:reg_id>/approve", methods=["POST"])
@@ -399,7 +399,7 @@ def approve_registration(trip_id, reg_id):
         details=f"Approved {registration.full_name} for trip #{trip.id}.",
     )
 
-    flash(f"{registration.full_name} approved and added to manifest.")
+    flash(f"{registration.full_name} approved and added to manifest.", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
 
@@ -417,7 +417,7 @@ def reject_registration(trip_id, reg_id):
         details=f"Rejected {registration.full_name} for trip #{trip_id}.",
     )
 
-    flash(f"{registration.full_name}'s registration was rejected.")
+    flash(f"{registration.full_name}'s registration was rejected.", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip_id))
 
 @manifests_bp.route("/manifests/<int:trip_id>/confirm-departure", methods=["POST"])
