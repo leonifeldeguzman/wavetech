@@ -17,16 +17,11 @@
     <div class="stat-card analytics-kpi h-100">
       <div class="kpi-label">Daily Passengers</div>
       <div class="kpi-value">{{ summary.daily_passengers }}</div>
-      <div class="kpi-sub">
-        {% set chg = summary.passengers_change_pct %}
-        {% if chg is none %}
-        <span class="kpi-muted">— vs yesterday</span>
-        {% elif chg > 0 %}
-        <span class="kpi-up">↑ {{ chg }}% vs yesterday</span>
-        {% elif chg < 0 %}
-        <span class="kpi-down">↓ {{ chg|abs }}% vs yesterday</span>
+      <div class="kpi-sub kpi-muted">
+        {% if summary.yesterday_passengers is not none %}
+        Yesterday: {{ summary.yesterday_passengers }}
         {% else %}
-        <span class="kpi-muted">No change vs yesterday</span>
+        No data yesterday
         {% endif %}
       </div>
     </div>
@@ -37,13 +32,8 @@
     <div class="stat-card analytics-kpi h-100">
       <div class="kpi-label">Trips Today</div>
       <div class="kpi-value">{{ summary.trips_today }}</div>
-      <div class="kpi-sub">
-        Capacity:
-        {% if summary.overall_capacity_pct is not none %}
-        {{ '%.0f'|format(summary.overall_capacity_pct) }}%
-        {% else %}
-        —
-        {% endif %}
+      <div class="kpi-sub kpi-muted">
+        {{ summary.trips_caption or "No trips with a boat assigned yet" }}
       </div>
     </div>
   </div>
@@ -59,25 +49,20 @@
         —
         {% endif %}
       </div>
-      <div class="kpi-sub kpi-info">Target: {{ capacity_target_pct }}%</div>
+      <div class="kpi-sub kpi-muted">Based on trips with a boat assigned.</div>
     </div>
   </div>
 
-  <!-- Delayed Trips -->
+  <!-- Trip Status Summary -->
   <div class="col-6 col-md-3">
     <div class="stat-card analytics-kpi h-100">
-      <div class="kpi-label">Delayed Trips</div>
-      <div class="kpi-value">{{ summary.delayed_trips }}</div>
-      <div class="kpi-sub">
-        {% set d = summary.delayed_diff %}
-        {% if d > 0 %}
-        <span class="kpi-warn">+{{ d }} from yesterday</span>
-        {% elif d < 0 %}
-        <span class="kpi-up">{{ d }} from yesterday</span>
-        {% else %}
-        <span class="kpi-muted">Same as yesterday</span>
-        {% endif %}
+      <div class="kpi-label">Trip Status Summary</div>
+      <div class="kpi-value kpi-value-sm">
+        Departed {{ summary.departed_trips }} &middot;
+        Delayed {{ summary.delayed_trips }} &middot;
+        Cancelled {{ summary.cancelled_trips }}
       </div>
+      <div class="kpi-sub kpi-muted">Today's trips by final or current status.</div>
     </div>
   </div>
 

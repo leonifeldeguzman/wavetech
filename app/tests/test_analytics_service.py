@@ -44,6 +44,10 @@ def _ctx(app):
     with app.app_context():
         yield
 
+@pytest.fixture(autouse=True)
+def _clock(monkeypatch):
+    monkeypatch.setattr(svc, "ph_now", lambda: datetime(2026, 5, 29, 8, 0))
+
 
 def test_summary_counts_passengers_and_trips():
     b = _boat(capacity=10)
@@ -55,30 +59,63 @@ def test_summary_counts_passengers_and_trips():
     assert s["overall_capacity_pct"] == 40.0  # 8 / 20 seats
 
 
-def test_avg_capacity_ignores_empty_future_trips():
+def test_avg_capacity_includes_empty_open_trips():
     b = _boat(capacity=10)
     _pax(_trip(b, 10, "Departed"), 8)   # 80%
     _pax(_trip(b, 12, "Boarding"), 6)   # 60%
-    _trip(b, 16, "Open")                # empty, not counted
-    assert svc.get_daily_summary(DAY)["avg_capacity_pct"] == 70.0
+    _trip(b, 16, "Open")                # empty, now counted as 0%
+    assert svc.get_daily_summary(DAY)["avg_capacity_pct"] == 46.7
 
 
-def test_cancelled_trips_excluded():
+def test_cancelled_trips_counted_in_trips_but_not_passengers():
     b = _boat()
     t = _trip(b, 10, "Cancelled", cancel_reason="Weather")
     _pax(t, 4)
     s = svc.get_daily_summary(DAY)
-    assert s["trips_today"] == 0
+    assert s["trips_today"] == 1
+    assert s["cancelled_trips"] == 1
     assert s["daily_passengers"] == 0
     assert svc.get_trip_breakdown(DAY) == []
 
 
-def test_delayed_counts_trip_that_later_departed():
+def test_status_summary_uses_current_status_only():
     b = _boat()
-    _trip(b, 10, "Departed", delay_reason="Strong winds")
+    _trip(b, 10, "Departed", delay_reason="Strong winds")  # delayed earlier, now departed
     _trip(b, 12, "Delayed")
     _trip(b, 16, "Open")
-    assert svc.get_daily_summary(DAY)["delayed_trips"] == 2
+    s = svc.get_daily_summary(DAY)
+    assert s["departed_trips"] == 1
+    assert s["delayed_trips"] == 1
+
+def test_unassigned_trip_not_counted():
+    b = _boat()
+    _pax(_trip(b, 10, "Departed"), 4)
+    _trip(None, 12, "Open")             # no boat = unassigned
+    s = svc.get_daily_summary(DAY)
+    assert s["trips_today"] == 1
+    assert s["trips_caption"] == "Departed 1"
+
+
+def test_expired_trip_not_counted(monkeypatch):
+    b = _boat()
+    _trip(b, 10, "Open")
+    assert svc.get_daily_summary(DAY)["trips_today"] == 1   # 8:00 AM, not expired
+    monkeypatch.setattr(svc, "ph_now", lambda: datetime(2026, 5, 29, 11, 0))
+    assert svc.get_daily_summary(DAY)["trips_today"] == 0   # 11:00 AM, expired
+
+
+def test_trip_caption_lists_only_nonzero_statuses():
+    b = _boat()
+    _pax(_trip(b, 10, "Departed"), 2)
+    _trip(b, 12, "Open")
+    assert svc.get_daily_summary(DAY)["trips_caption"] == "Open 1, Departed 1"
+
+
+def test_yesterday_passengers_value_or_none():
+    b = _boat()
+    _pax(_trip(b, 10, "Departed", day=DAY - timedelta(days=1)), 5)
+    assert svc.get_daily_summary(DAY)["yesterday_passengers"] == 5
+    assert svc.get_daily_summary(DAY + timedelta(days=5))["yesterday_passengers"] is None
 
 
 def test_vs_yesterday_and_dash_when_no_data():

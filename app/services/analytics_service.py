@@ -80,14 +80,80 @@ def get_trip_breakdown(day: date = None):
         })
     return rows
 
+LIVE_STATUSES = ("Open", "Boarding", "Full", "Delayed")
+COUNTED_STATUSES = LIVE_STATUSES + ("Departed",)
+SUMMARY_ORDER = ("Open", "Full", "Delayed", "Departed", "Cancelled")
+
+
+def _real_trips(day: date):
+    """Trips that really exist on a day: a boat is assigned, and the slot
+    is not expired (past and never departed). Cancelled trips are kept."""
+    now = ph_now()
+    trips = []
+    for t in _trips_for_day(day):
+        if t.boat is None:
+            continue  # unassigned slot
+        if t.status in LIVE_STATUSES and t.departure_time < now:
+            continue  # expired slot
+        if t.status in COUNTED_STATUSES or t.status == "Cancelled":
+            trips.append(t)
+    return trips
+
+
+def _status_counts(trips):
+    """{'Open': n, 'Full': n, ...}. Boarding is shown as Open."""
+    result = {s: 0 for s in SUMMARY_ORDER}
+    for t in trips:
+        label = "Open" if t.status == "Boarding" else t.status
+        result[label] += 1
+    return result
+
 
 def _day_totals(day: date):
-    trips = _trips_for_day(day)
-    active = [t for t in trips if t.status != "Cancelled"]
-    counts = _passenger_counts([t.id for t in active])
-    total_passengers = sum(counts.get(t.id, 0) for t in active)
-    delayed = sum(1 for t in active if _is_delayed(t))
-    return active, counts, total_passengers, delayed
+    real = _real_trips(day)
+    counted = [t for t in real if t.status != "Cancelled"]
+    counts = _passenger_counts([t.id for t in counted])
+    total_passengers = sum(counts.get(t.id, 0) for t in counted)
+    return real, counted, counts, total_passengers
+
+
+def get_daily_summary(day: date = None):
+    """The four KPI cards."""
+    day = day or ph_today()
+    real, counted, counts, passengers = _day_totals(day)
+    y_real, y_counted, _, y_passengers = _day_totals(day - timedelta(days=1))
+
+    status_counts = _status_counts(real)
+    trips_caption = ", ".join(
+        f"{s} {status_counts[s]}" for s in SUMMARY_ORDER if status_counts[s]
+    )
+
+    # Avg Capacity: every counted trip that has a known capacity
+    per_trip = [
+        _pct(counts.get(t.id, 0), t.boat.capacity)
+        for t in counted
+        if t.boat.capacity
+    ]
+    avg_capacity = round(sum(per_trip) / len(per_trip), 1) if per_trip else None
+
+    total_seats = sum(t.boat.capacity for t in counted if t.boat.capacity)
+    y_delayed = _status_counts(y_real)["Delayed"]
+
+    return {
+        "day": day,
+        "daily_passengers": passengers,
+        "yesterday_passengers": y_passengers if y_counted else None,
+        "passengers_change_pct": _change_pct(passengers, y_passengers),
+        "trips_today": len(real),
+        "trips_caption": trips_caption,
+        "overall_capacity_pct": _pct(passengers, total_seats),
+        "avg_capacity_pct": avg_capacity,
+        "departed_trips": status_counts["Departed"],
+        "delayed_trips": status_counts["Delayed"],
+        "cancelled_trips": status_counts["Cancelled"],
+        "delayed_diff": status_counts["Delayed"] - y_delayed,
+    }
+
 
 
 def _change_pct(today_value, yesterday_value):
@@ -97,34 +163,7 @@ def _change_pct(today_value, yesterday_value):
     return round((today_value - yesterday_value) / yesterday_value * 100)
 
 
-def get_daily_summary(day: date = None):
-    """The four KPI cards."""
-    day = day or ph_today()
-    active, counts, passengers, delayed = _day_totals(day)
-    _, _, y_passengers, y_delayed = _day_totals(day - timedelta(days=1))
 
-    total_seats = sum(t.boat.capacity for t in active if t.boat)
-    seated_passengers = sum(counts.get(t.id, 0) for t in active if t.boat)
-
-    # Avg Capacity: only trips that departed or have passengers, and a known capacity
-    per_trip = [
-        _pct(counts.get(t.id, 0), t.boat.capacity)
-        for t in active
-        if t.boat and t.boat.capacity
-        and (t.status == "Departed" or counts.get(t.id, 0) > 0)
-    ]
-    avg_capacity = round(sum(per_trip) / len(per_trip), 1) if per_trip else None
-
-    return {
-        "day": day,
-        "daily_passengers": passengers,
-        "passengers_change_pct": _change_pct(passengers, y_passengers),
-        "trips_today": len(active),
-        "overall_capacity_pct": _pct(seated_passengers, total_seats),
-        "avg_capacity_pct": avg_capacity,
-        "delayed_trips": delayed,
-        "delayed_diff": delayed - y_delayed,
-    }
 
 
 # ---------------------------------------------------------------------------
