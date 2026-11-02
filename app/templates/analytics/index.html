@@ -81,7 +81,7 @@
           <h6>Passenger Flow - Today</h6>
         </div>
 
-        {% if breakdown %}
+        {% if flow_rows %}
         <div class="analytics-chart-wrapper">
           <canvas
             id="passengerFlowChart"
@@ -89,15 +89,20 @@
             data-values='{{ chart_passengers|tojson }}'
           ></canvas>
         </div>
+        <p class="analytics-chart-caption">
+          Approved and walk-in passengers per trip. Cancelled trips are not shown.
+        </p>
         {% else %}
-        <div class="text-center text-muted py-5">No trips scheduled today.</div>
+        <div class="text-center text-muted py-5">
+          No trips with a boat assigned yet today.
+        </div>
         {% endif %}
 
       </div>
     </div>
   </div>
 
-  <!-- Capacity Utilization by Trip -->
+    <!-- Capacity Utilization by Trip -->
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100 analytics-capacity-card">
       <div class="card-body">
@@ -106,32 +111,44 @@
           <h6>Capacity Utilization by Trip</h6>
         </div>
 
-        {% for row in breakdown %}
-        <div class="mb-3">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>{{ row.label }}</span>
+        {% if capacity_rows %}
+        <div class="analytics-capacity-list">
+          {% for row in capacity_rows %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center small mb-1">
+              <span>
+                {{ row.label }}
+                {% if row.is_full %}
+                <span class="analytics-full-badge">Full</span>
+                {% endif %}
+              </span>
+                <span>
+                <span class="text-muted">{{ row.passengers }} / {{ row.capacity if row.capacity is not none else '—' }}</span>
+                <span class="analytics-capacity-sep">&middot;</span>
+                <span class="fw-bold">
+                  {% if row.capacity_pct is not none %}{{ '%.0f'|format(row.capacity_pct) }}%{% else %}—{% endif %}
+                </span>
+              </span>
+            </div>
 
-            <span class="fw-bold">
-              {% if row.capacity_pct is not none %}
-              {{ '%.0f'|format(row.capacity_pct) }}%
-              {% else %}
-              —
-              <span class="fw-normal text-muted">(no boat assigned)</span>
-              {% endif %}
-            </span>
+            <div class="progress" style="height: 8px">
+              <div
+                class="progress-bar"
+                style="background-color: #0f1b3c"
+                data-width="{{ [row.capacity_pct or 0, 100]|min }}"
+              ></div>
+            </div>
           </div>
-
-          <div class="progress" style="height: 8px">
-            <div
-              class="progress-bar"
-              style="background-color: #0f1b3c"
-              data-width="{{ [row.capacity_pct or 0, 100]|min }}"
-            ></div>
-          </div>
+          {% endfor %}
         </div>
+        <p class="analytics-chart-caption">
+          Share of seats filled on each trip. Based on the capacity saved in trip details.
+        </p>
         {% else %}
-        <div class="text-center text-muted py-5">No trips scheduled today.</div>
-        {% endfor %}
+        <div class="text-center text-muted py-5">
+          No trips with a boat assigned yet today.
+        </div>
+        {% endif %}
 
       </div>
     </div>
@@ -600,7 +617,7 @@
       if (existingFlowChart) existingFlowChart.destroy();
 
       new Chart(flowCanvas, {
-        type: "line",
+      type: "bar",
 
         data: {
           labels: flowLabels,
@@ -608,13 +625,9 @@
             {
               label: "Passengers",
               data: flowValues,
-              borderColor: "#0f1b3c",
               backgroundColor: "#0f1b3c",
-              pointBackgroundColor: "#0f1b3c",
-              pointBorderColor: "#0f1b3c",
-              tension: 0,
-              pointRadius: 5,
-              pointHoverRadius: 7,
+              borderRadius: 4,
+              maxBarThickness: 48,
             },
           ],
         },
@@ -629,15 +642,14 @@
 
           scales: {
             x: {
-              // Centers points so a single point isn't clipped at the axis edge.
-              offset: true,
-              // Lets many trip labels rotate/skip instead of colliding on phones.
-              ticks: { autoSkip: true, maxRotation: 45, minRotation: 0 },
+              // One label per trip, so don't skip any; tilt them if crowded.
+              ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 },
             },
 
             y: {
               beginAtZero: true,
               ticks: { precision: 0 },
+              title: { display: true, text: "Passengers" },
             },
           },
         },

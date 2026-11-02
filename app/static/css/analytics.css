@@ -89,6 +89,35 @@
     height: 260px;
 }
 
+.analytics-chart-caption {
+    margin: 14px 0 0;
+    color: #6b7280;
+    font-size: 0.8rem;
+}
+
+.analytics-capacity-list {
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.analytics-full-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 0.7rem;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.analytics-capacity-sep {
+    margin: 0 6px;
+    color: #9ca3af;
+}
+
 
 /* =========================================================
    MANIFEST CARDS (Records + Details)

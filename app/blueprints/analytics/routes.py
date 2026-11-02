@@ -27,10 +27,12 @@ def index():
     # added to config.py (or, later, Admin Settings).
     capacity_target_pct = current_app.config.get("ANALYTICS_CAPACITY_TARGET_PCT", 80)
 
-    # Per-trip rows (cancelled trips excluded) for both charts.
-    breakdown = analytics_service.get_trip_breakdown()
-    for row in breakdown:
-        row["label"] = row["departure_ph"].strftime("%I:%M %p").lstrip("0")
+    # Passenger Flow bar chart: one bar per trip, already filtered and sorted.
+    flow_rows = analytics_service.get_flow_chart()
+
+    # Capacity Utilization bars: same trips, with "2 / 15, 13%" labels.
+    capacity_rows = analytics_service.get_capacity_chart()
+        
 
     # Manifest Records: search + filter come from the query string.
     search = (request.args.get("q") or "").strip()
@@ -79,9 +81,10 @@ def index():
         "analytics/index.html",
         summary=summary,
         capacity_target_pct=capacity_target_pct,
-        breakdown=breakdown,
-        chart_labels=[r["label"] for r in breakdown],
-        chart_passengers=[r["passengers"] for r in breakdown],
+        capacity_rows=capacity_rows,
+        flow_rows=flow_rows,
+        chart_labels=[r["label"] for r in flow_rows],
+        chart_passengers=[r["passengers"] for r in flow_rows],
         records=records,
         filters=filters,
         filters_active=bool(date_from or date_to or boat_id or status),

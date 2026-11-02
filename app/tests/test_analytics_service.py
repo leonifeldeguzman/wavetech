@@ -267,3 +267,94 @@ def test_manifest_detail_without_boat_or_passengers():
     d = svc.get_manifest_detail(t.id)
     assert d["boat_name"] is None and d["capacity"] is None
     assert d["passengers"] == 0 and d["passenger_list"] == []
+
+
+# ---------------------------------------------------------------------------
+# Passenger Flow chart (Batch 4)
+# ---------------------------------------------------------------------------
+
+def test_flow_chart_includes_only_counted_assigned_trips():
+    b = _boat("MB Coral")
+    _pax(_trip(b, 10, "Departed"), 5)
+    _pax(_trip(b, 12, "Open"), 2)
+    _trip(b, 14, "Cancelled", cancel_reason="Weather")
+    _trip(None, 15, "Open")                      # unassigned
+    _trip(b, 7, "Open")                          # expired (clock is 8:00 AM)
+    rows = svc.get_flow_chart(DAY)
+    assert [(r["label"], r["passengers"]) for r in rows] == [
+        ("10:00 AM, MB Coral", 5),
+        ("12:00 PM, MB Coral", 2),
+    ]
+
+
+def test_flow_chart_plots_delayed_trip_at_new_time():
+    b = _boat("MB Horizon")
+    _trip(b, 9, "Delayed", new_departure_time=datetime(2026, 5, 29, 13, 0))
+    _trip(b, 11, "Open")
+    rows = svc.get_flow_chart(DAY)
+    assert [r["label"] for r in rows] == [
+        "11:00 AM, MB Horizon",
+        "1:00 PM, MB Horizon",
+    ]
+
+
+def test_delayed_trip_is_not_expired_until_its_new_time(monkeypatch):
+    b = _boat()
+    _trip(b, 9, "Delayed", new_departure_time=datetime(2026, 5, 29, 13, 0))
+    monkeypatch.setattr(svc, "ph_now", lambda: datetime(2026, 5, 29, 11, 0))
+    assert svc.get_daily_summary(DAY)["trips_today"] == 1   # new time is 1 PM
+    monkeypatch.setattr(svc, "ph_now", lambda: datetime(2026, 5, 29, 14, 0))
+    assert svc.get_daily_summary(DAY)["trips_today"] == 0   # now expired
+
+
+def test_flow_chart_empty_when_nothing_qualifies():
+    _trip(None, 10, "Open")
+    assert svc.get_flow_chart(DAY) == []
+
+
+# ---------------------------------------------------------------------------
+# Capacity Utilization chart (Batch 4)
+# ---------------------------------------------------------------------------
+
+def test_capacity_chart_label_and_percentage():
+    b = _boat("MB Coral", capacity=15)
+    _pax(_trip(b, 10, "Departed"), 2)
+    row = svc.get_capacity_chart(DAY)[0]
+    assert row["label"] == "10:00 AM, MB Coral"
+    assert row["count_label"] == "2 / 15, 13%"
+    assert row["capacity_pct"] == 13.3
+    assert row["is_full"] is False
+
+
+def test_capacity_chart_marks_full_trips():
+    b = _boat("MB Blue", capacity=10)
+    _pax(_trip(b, 12, "Full"), 10)
+    row = svc.get_capacity_chart(DAY)[0]
+    assert row["is_full"] is True
+    assert row["count_label"] == "10 / 10, 100%"
+
+
+def test_capacity_chart_excludes_cancelled_unassigned_and_expired():
+    b = _boat("MB Coral")
+    _pax(_trip(b, 10, "Departed"), 5)
+    _trip(b, 14, "Cancelled", cancel_reason="Weather")
+    _trip(None, 15, "Open")                      # unassigned
+    _trip(b, 7, "Open")                          # expired (clock is 8:00 AM)
+    rows = svc.get_capacity_chart(DAY)
+    assert [r["label"] for r in rows] == ["10:00 AM, MB Coral"]
+
+
+def test_capacity_chart_sorted_and_delayed_uses_new_time():
+    b = _boat("MB Horizon")
+    _trip(b, 9, "Delayed", new_departure_time=datetime(2026, 5, 29, 13, 0))
+    _trip(b, 11, "Open")
+    rows = svc.get_capacity_chart(DAY)
+    assert [r["label"] for r in rows] == [
+        "11:00 AM, MB Horizon",
+        "1:00 PM, MB Horizon",
+    ]
+
+
+def test_capacity_chart_empty_when_nothing_qualifies():
+    _trip(None, 10, "Open")
+    assert svc.get_capacity_chart(DAY) == []

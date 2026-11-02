@@ -85,6 +85,13 @@ COUNTED_STATUSES = LIVE_STATUSES + ("Departed",)
 SUMMARY_ORDER = ("Open", "Full", "Delayed", "Departed", "Cancelled")
 
 
+def _effective_departure(trip):
+    """A Delayed trip counts at its new time, everything else at its slot time."""
+    if trip.status == "Delayed" and trip.new_departure_time:
+        return trip.new_departure_time
+    return trip.departure_time
+
+
 def _real_trips(day: date):
     """Trips that really exist on a day: a boat is assigned, and the slot
     is not expired (past and never departed). Cancelled trips are kept."""
@@ -93,7 +100,7 @@ def _real_trips(day: date):
     for t in _trips_for_day(day):
         if t.boat is None:
             continue  # unassigned slot
-        if t.status in LIVE_STATUSES and t.departure_time < now:
+        if t.status in LIVE_STATUSES and _effective_departure(t) < now:
             continue  # expired slot
         if t.status in COUNTED_STATUSES or t.status == "Cancelled":
             trips.append(t)
@@ -116,6 +123,53 @@ def _day_totals(day: date):
     total_passengers = sum(counts.get(t.id, 0) for t in counted)
     return real, counted, counts, total_passengers
 
+def get_flow_chart(day: date = None):
+    """One entry per trip for the Passenger Flow bar chart, sorted by time.
+
+    Open, Full, Delayed (at the new time) and Departed only.
+    Cancelled, unassigned and expired trips are left out.
+    """
+    day = day or ph_today()
+    _, counted, counts, _ = _day_totals(day)
+    rows = []
+    for t in sorted(counted, key=_effective_departure):
+        rows.append({
+            "trip_id": t.id,
+            "label": f"{_time_label(_effective_departure(t))}, {t.boat.name}",
+            "passengers": counts.get(t.id, 0),
+            "status": t.status,
+        })
+    return rows
+
+
+def get_capacity_chart(day: date = None):
+    """One entry per trip for the Capacity Utilization bars, sorted by time.
+
+    Same trips as the Passenger Flow chart: Open, Full, Delayed (at the new
+    time) and Departed. Cancelled, unassigned and expired trips are left out.
+    """
+    day = day or ph_today()
+    _, counted, counts, _ = _day_totals(day)
+    rows = []
+    for t in sorted(counted, key=_effective_departure):
+        capacity = t.boat.capacity
+        passengers = counts.get(t.id, 0)
+        pct = _pct(passengers, capacity)
+        if pct is None:
+            count_label = f"{passengers} / —"
+        else:
+            count_label = f"{passengers} / {capacity}, {pct:.0f}%"
+        rows.append({
+            "trip_id": t.id,
+            "label": f"{_time_label(_effective_departure(t))}, {t.boat.name}",
+            "passengers": passengers,
+            "capacity": capacity,
+            "capacity_pct": pct,
+            "count_label": count_label,
+            "status": t.status,
+            "is_full": t.status == "Full",
+        })
+    return rows
 
 def get_daily_summary(day: date = None):
     """The four KPI cards."""
