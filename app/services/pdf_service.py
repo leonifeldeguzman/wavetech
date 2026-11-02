@@ -8,6 +8,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from xml.sax.saxutils import escape
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import KeepTogether, Paragraph, Spacer, Table, TableStyle
 
 from app.utils.ph_clock import ph_now
 
@@ -98,7 +102,37 @@ def _passenger_table(passenger_list):
                   repeatRows=1)
     table.setStyle(TableStyle(style))
     return table
+def _signature_block(detail):
+    """Two signature lines with the printed name underneath."""
+    name_style = ParagraphStyle(
+        "SigName", fontSize=10, leading=12, alignment=TA_CENTER
+    )
+    role_style = ParagraphStyle(
+        "SigRole", fontSize=8, leading=10, alignment=TA_CENTER,
+        textColor=colors.HexColor("#6b7280"),
+    )
 
+    operator = escape(detail.get("driver_name") or "")
+
+    data = [
+        ["", "", ""],  # blank space to sign in
+        [Paragraph(f"<b>{operator}</b>", name_style), "", Paragraph("", name_style)],
+        [Paragraph("Operator / Driver", role_style), "",
+         Paragraph("Admin / Coast Guard", role_style)],
+    ]
+
+    table = Table(
+        data,
+        colWidths=[75 * mm, 20 * mm, 75 * mm],
+        rowHeights=[16 * mm, None, None],
+    )
+    table.setStyle(TableStyle([
+        ("LINEABOVE", (0, 1), (0, 1), 0.8, colors.black),
+        ("LINEABOVE", (2, 1), (2, 1), 0.8, colors.black),
+        ("TOPPADDING", (0, 1), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 1),
+    ]))
+    return table
 
 def build_manifest_pdf(detail):
     """detail = analytics_service.get_manifest_detail(...). Returns PDF bytes."""
@@ -117,6 +151,8 @@ def build_manifest_pdf(detail):
         Spacer(1, 6 * mm),
         Paragraph("Passenger List", HEADING),
         _passenger_table(detail["passenger_list"]),
+        Spacer(1, 14 * mm),
+        KeepTogether(_signature_block(detail)),
     ]
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     return buffer.getvalue()
