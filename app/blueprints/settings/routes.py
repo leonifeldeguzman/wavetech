@@ -53,15 +53,15 @@ def change_password():
     confirm_password = request.form.get("confirm_password", "")
 
     if user is None or not verify_password(current_password, user.password_hash):
-        flash("Current password is incorrect.")
+        flash("Current password is incorrect.", "danger")
         return redirect(url_for("settings.index"))
 
     if len(new_password) < 8:
-        flash("New password must be at least 8 characters long.")
+        flash("New password must be at least 8 characters long.", "danger")
         return redirect(url_for("settings.index"))
 
     if new_password != confirm_password:
-        flash("New password and confirmation do not match.")
+        flash("New password and confirmation do not match.", "danger")
         return redirect(url_for("settings.index"))
 
     user.password_hash = hash_password(new_password)
@@ -74,7 +74,7 @@ def change_password():
         details="Password changed successfully.",
     )
 
-    flash("Password updated successfully.")
+    flash("Password updated successfully.", "success")
     return redirect(url_for("settings.index"))
 
 @settings_bp.route("/settings/update-display-name", methods=["POST"])
@@ -83,17 +83,17 @@ def update_display_name():
     user = db.session.get(User, session["user_id"])
 
     if user is None:
-        flash("User account could not be found.")
+        flash("User account could not be found.", "danger")
         return redirect(url_for("settings.index"))
 
     display_name = request.form.get("display_name", "").strip()
 
     if not display_name:
-        flash("Display name cannot be empty.")
+        flash("Display name cannot be empty.", "danger")
         return redirect(url_for("settings.index"))
 
     if len(display_name) > 100:
-        flash("Display name must be 100 characters or less.")
+        flash("Display name must be 100 characters or less.", "danger")
         return redirect(url_for("settings.index"))
 
     user.full_name = display_name
@@ -103,7 +103,7 @@ def update_display_name():
 
     db.session.commit()
 
-    flash("Display name updated successfully.")
+    flash("Display name updated successfully.", "success")
     return redirect(url_for("settings.index"))
 
 @settings_bp.route("/settings/update-personal-info", methods=["POST"])
@@ -112,7 +112,7 @@ def update_personal_info():
     user = db.session.get(User, session["user_id"])
 
     if user is None:
-        flash("User account could not be found.")
+        flash("User account could not be found.", "danger")
         return redirect(url_for("settings.index"))
 
     first_name = request.form.get("first_name", "").strip()
@@ -120,19 +120,19 @@ def update_personal_info():
     phone = request.form.get("phone", "").strip()
 
     if not first_name:
-        flash("First name cannot be empty.")
+        flash("First name cannot be empty.", "danger")
         return redirect(url_for("settings.index"))
 
     if not last_name:
-        flash("Last name cannot be empty.")
+        flash("Last name cannot be empty.", "danger")
         return redirect(url_for("settings.index"))
 
     if len(first_name) > 50:
-        flash("First name must be 50 characters or less.")
+        flash("First name must be 50 characters or less.", "danger")
         return redirect(url_for("settings.index"))
 
     if len(last_name) > 50:
-        flash("Last name must be 50 characters or less.")
+        flash("Last name must be 50 characters or less.", "danger")
         return redirect(url_for("settings.index"))
 
     full_name = f"{first_name} {last_name}"
@@ -143,7 +143,7 @@ def update_personal_info():
 
     db.session.commit()
 
-    flash("Personal information updated successfully.")
+    flash("Personal information updated successfully.", "success")
     return redirect(url_for("settings.index"))
     
 # ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ def update_safety_thresholds():
             updated_by_user_id=session.get("user_id"),
         )
     except SettingsValidationError as exc:
-        flash(str(exc))
+        flash(str(exc), "danger")
         return redirect(url_for("settings.index"))
 
     activity_log_service.log_action(
@@ -178,7 +178,7 @@ def update_safety_thresholds():
         details=changes,
     )
 
-    flash("Safety thresholds updated successfully.")
+    flash("Safety thresholds updated successfully.", "success")
     return redirect(url_for("settings.index"))
 
 
@@ -196,7 +196,7 @@ def update_refresh_interval():
             request.form.get("refresh_interval_seconds")
         )
     except SettingsValidationError as exc:
-        flash(str(exc))
+        flash(str(exc), "danger")
         return redirect(url_for("settings.index"))
 
     if old_seconds != seconds:
@@ -208,9 +208,9 @@ def update_refresh_interval():
         )
 
     if seconds == 0:
-        flash("Auto-refresh turned off.")
+        flash("Auto-refresh turned off.", "success")
     else:
-        flash(f"Refresh interval set to {seconds} seconds.")
+        flash(f"Refresh interval set to {seconds} seconds.", "success")
 
     return redirect(url_for("settings.index"))
 
@@ -227,7 +227,7 @@ def update_session_timeout():
             request.form.get("session_timeout_minutes")
         )
     except SettingsValidationError as exc:
-        flash(str(exc))
+        flash(str(exc), "danger")
         return redirect(url_for("settings.index"))
 
     activity_log_service.log_action(
@@ -237,7 +237,7 @@ def update_session_timeout():
         details=f"Session timeout set to {minutes} minutes.",
     )
 
-    flash(f"Session timeout set to {minutes} minutes.")
+    flash(f"Session timeout set to {minutes} minutes.", "success")
     return redirect(url_for("settings.index"))
 
 

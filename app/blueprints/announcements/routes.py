@@ -83,7 +83,7 @@ def create():
             created_by_user_id=session.get("user_id"),
         )
     except AnnouncementValidationError as exc:
-        flash(str(exc))
+        flash(str(exc), "danger")
         return redirect(url_for("announcements.index"))
 
     if publish_now:
@@ -91,7 +91,7 @@ def create():
             activity_log_service.ACTION_ANNOUNCEMENT_PUBLISHED,
             details=f"'{announcement.title}' ({announcement.type})",
         )
-        flash("Announcement published successfully.")
+        flash("Announcement published successfully.", "success")
     else:
         _log(
             activity_log_service.ACTION_ANNOUNCEMENT_SCHEDULED,
@@ -100,7 +100,7 @@ def create():
                 f"scheduled for {announcement.scheduled_at}"
             ),
         )
-        flash("Announcement scheduled successfully.")
+        flash("Announcement scheduled successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
@@ -126,14 +126,14 @@ def edit(announcement_id):
             scheduled_at_raw=form.get("scheduled_at"),
         )
     except AnnouncementValidationError as exc:
-        flash(str(exc))
+        flash(str(exc), "danger")
         return redirect(url_for("announcements.index"))
 
     _log(
         activity_log_service.ACTION_ANNOUNCEMENT_EDITED,
         details=f"'{announcement.title}' ({announcement.type})",
     )
-    flash("Announcement updated successfully.")
+    flash("Announcement updated successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
@@ -148,7 +148,7 @@ def delete(announcement_id):
         activity_log_service.ACTION_ANNOUNCEMENT_DELETED,
         details=f"'{title}' ({type_})",
     )
-    flash("Announcement deleted successfully.")
+    flash("Announcement deleted successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
@@ -162,7 +162,7 @@ def activate(announcement_id):
         activity_log_service.ACTION_ANNOUNCEMENT_ACTIVATED,
         details=f"'{announcement.title}' ({announcement.type})",
     )
-    flash("Announcement activated successfully.")
+    flash("Announcement activated successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
@@ -181,13 +181,13 @@ def deactivate(announcement_id):
             activity_log_service.ACTION_ANNOUNCEMENT_CANCELLED,
             details=f"'{announcement.title}' ({announcement.type})",
         )
-        flash("Scheduled announcement cancelled successfully.")
+        flash("Scheduled announcement cancelled successfully.", "success")
     else:
         _log(
             activity_log_service.ACTION_ANNOUNCEMENT_DEACTIVATED,
             details=f"'{announcement.title}' ({announcement.type})",
         )
-        flash("Announcement deactivated successfully.")
+        flash("Announcement deactivated successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
