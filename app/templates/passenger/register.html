@@ -3,937 +3,557 @@
 {% block title %}Register{% endblock %}
 
 {% block content %}
-
 <div class="passenger-register-page">
 
-    <!-- =========================
-         HERO
-    ========================== -->
-    <section class="register-hero">
+  <section class="register-hero">
+    <div class="register-hero-overlay"></div>
+    <div class="register-hero-content">
+      <h1>Pre-Register for Your Trip</h1>
 
-        <div class="register-hero-overlay"></div>
+      {% if trips %}
+        <p>Save time at the terminal by registering before your scheduled departure.</p>
+        <button type="button" class="register-start-btn" id="startRegistrationBtn">Start Registration</button>
+      {% else %}
+        <p><strong>No trips are open for registration right now.</strong><br>
+           The next trip will appear here once the terminal opens one.</p>
+        <p class="register-hours">Terminal hours: {{ terminal_hours }}</p>
+        <a href="{{ url_for('passenger.schedule') }}" class="register-start-btn">View Schedule</a>
+        <p class="register-walkin">You can still register at the terminal as a walk-in.</p>
+      {% endif %}
+    </div>
+  </section>
 
-        <div class="register-hero-content">
+  {% if trips %}
+  <div class="register-steps" id="registrationSteps" style="display:none;">
+    <div class="register-step active" data-step="1"><span>1</span></div>
+    <div class="register-step-line"></div>
+    <div class="register-step" data-step="2"><span>2</span></div>
+    <div class="register-step-line"></div>
+    <div class="register-step" data-step="3"><span>3</span></div>
+  </div>
 
-            <h1>Pre-Register for Your Trip</h1>
+  <section class="registration-panel" id="registrationPanel" data-max-party="{{ max_party }}">
 
-            <p>
-                Save time at the terminal by registering before
-                your scheduled departure.
-            </p>
-
-            <button
-                type="button"
-                class="register-start-btn"
-                id="startRegistrationBtn"
-            >
-                Start Registration
-            </button>
-
+    <!-- STEP 1: CHOOSE TRIP -->
+    <div class="registration-step-content" id="step1">
+      <div class="registration-card">
+        <div class="registration-card-header">
+          <h3>Choose Your Trip</h3>
+          <p>Choose an available boat and schedule.</p>
         </div>
-
-    </section>
-
-
-    <!-- =========================
-         STEPS
-    ========================== -->
-    <div
-    class="register-steps"
-    id="registrationSteps"
-    style="display: none;"
-    >
-
-        <div class="register-step active" data-step="1">
-            <span>1</span>
+        <hr>
+        <div class="available-trips">
+          {% for trip in trips %}
+          <label class="trip-selection-card">
+            <input type="radio" name="selected_trip" value="{{ trip.trip_id }}"
+                   data-seats="{{ trip.remaining_capacity }}"
+                   data-boat="{{ trip.boat.name }}"
+                   data-route="{{ trip.route_origin }} to {{ trip.route_destination }}"
+                   data-date="{{ trip.display_date }}"
+                   data-time="{{ trip.display_time }}">
+            <div class="trip-selection-content">
+              <div class="trip-selection-top">
+                <div>
+                  <h5>
+                    <i class="fa-solid fa-ship"></i> {{ trip.boat.name }}
+                    {% if trip.crew_name %}
+                      <span class="trip-crew"><i class="fa-solid fa-user"></i> {{ trip.crew_name }}</span>
+                    {% endif %}
+                  </h5>
+                  <div class="trip-route">
+                    {{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }}
+                  </div>
+                </div>
+                <div class="trip-top-right">
+                  <span class="status-pill {{ trip.status|lower }}">{{ trip.status|upper }}</span>
+                  <span class="trip-select-indicator"><i class="bi bi-check"></i></span>
+                </div>
+              </div>
+              <div class="trip-selection-details">
+                <div><i class="bi bi-clock"></i> {{ trip.departure_time }}</div>
+                <div><i class="bi bi-calendar3"></i> {{ trip.departure_date }}</div>
+                <div><i class="bi bi-people"></i> {{ trip.remaining_capacity }} seat{{ '' if trip.remaining_capacity == 1 else 's' }} left</div>
+              </div>
+              {% if trip.status == 'Delayed' %}
+              <div class="trip-delay-note">
+                Now departs at {{ trip.display_time }}{% if trip.delay_reason %} — {{ trip.delay_reason }}{% endif %}
+              </div>
+              {% endif %}
+            </div>
+          </label>
+          {% endfor %}
         </div>
-
-        <div class="register-step-line"></div>
-
-        <div class="register-step" data-step="2">
-            <span>2</span>
+        <div class="registration-actions">
+          <button type="button" class="registration-next-btn" id="toStep2Btn" disabled>Next</button>
         </div>
-
-        <div class="register-step-line"></div>
-
-        <div class="register-step" data-step="3">
-            <span>3</span>
-        </div>
-
+      </div>
     </div>
 
+    <!-- STEP 2: YOUR DETAILS -->
+    <div class="registration-step-content" id="step2" hidden>
+      <div class="registration-card">
+        <div class="registration-card-header">
+          <h3>Your Details</h3>
+          <p>* required</p>
+        </div>
+        <hr>
 
-    <!-- =========================
-         REGISTRATION CONTAINER
-         Hidden initially
-    ========================== -->
-    <section class="registration-panel" id="registrationPanel">
+        <fieldset class="who-group">
+          <legend>Who is traveling?</legend>
+          <label><input type="radio" name="mode" value="solo" checked> Just me</label>
+          <label><input type="radio" name="mode" value="group" id="modeGroup"> Me and others (family or group)</label>
+        </fieldset>
 
-        <!-- =================================
-             STEP 1
-        ================================== -->
-        <div class="registration-step-content" id="step1">
+        <div id="peopleList"></div>
 
-            <div class="registration-card">
-
-                <div class="registration-card-header">
-                    <h3>Passenger Information</h3>
-                </div>
-
-                <hr>
-
-                <form id="passengerInformationForm">
-
-                    <div class="registration-form-grid">
-
-                        <!-- Full Name -->
-                        <div class="registration-field">
-                            <label for="full_name">
-                                Full Name
-                            </label>
-
-                            <input
-                                type="text"
-                                id="full_name"
-                                name="full_name"
-                                class="registration-input"
-                                placeholder="First Name Last Name"
-                                required
-                            >
-                        </div>
-
-
-                        <!-- Age -->
-                        <div class="registration-field">
-                            <label for="age">
-                                Age
-                            </label>
-
-                            <input
-                                type="number"
-                                id="age"
-                                name="age"
-                                class="registration-input"
-                                placeholder="Enter your age"
-                                min="1"
-                                max="120"
-                                required
-                            >
-                        </div>
-
-
-                        <!-- Address -->
-                        <div class="registration-field full-width">
-                            <label for="address">
-                                Address
-                            </label>
-
-                            <input
-                                type="text"
-                                id="address"
-                                name="address"
-                                class="registration-input"
-                                placeholder="House No., Street, Barangay, City/Municipality"
-                                required
-                            >
-                        </div>
-
-
-                        <!-- Contact -->
-                        <div class="registration-field">
-                            <label for="contact_number">
-                                Contact Number
-                            </label>
-
-                            <input
-                                type="text"
-                                id="contact_number"
-                                name="contact_number"
-                                class="registration-input"
-                                placeholder="09XXXXXXXXX"
-                                required
-                            >
-                        </div>
-
-
-                        <!-- Passenger Type -->
-                        <div class="registration-field">
-                            <label for="passengerType">Passenger Type</label>
-
-                            <div class="manifest-boat-dropdown" id="passengerTypeDropdown">
-
-                                <button
-                                    type="button"
-                                    class="manifest-boat-toggle"
-                                    id="passengerTypeToggle"
-                                    aria-haspopup="listbox"
-                                    aria-expanded="false"
-                                >
-                                    <span id="passengerTypeSelected" class="passenger-type-placeholder">
-                                        Select Passenger Type
-                                    </span>
-
-                                    <i class="bi bi-chevron-down manifest-boat-chevron"></i>
-                                </button>
-
-                                <div
-                                    class="manifest-boat-menu"
-                                    id="passengerTypeMenu"
-                                    role="listbox"
-                                >
-                                    {% for passenger_type in passenger_types %}
-                                        <button
-                                            type="button"
-                                            class="manifest-boat-option"
-                                            data-value="{{ passenger_type }}"
-                                            role="option"
-                                            aria-selected="false"
-                                        >
-                                            <span class="manifest-boat-option-info">
-                                                <span class="manifest-boat-name">
-                                                    {{ passenger_type }}
-                                                </span>
-                                            </span>
-
-                                            <i
-                                                class="bi bi-check2 manifest-boat-check"
-                                                style="display: none;"
-                                            ></i>
-                                        </button>
-                                    {% endfor %}
-                                </div>
-
-                                <input
-                                    type="hidden"
-                                    name="passenger_type"
-                                    id="passengerTypeInput"
-                                    required
-                                >
-
-                            </div>
-                        </div>
-
-                    </div>
-
-
-                    <div class="registration-actions">
-
-                        <button
-                            type="button"
-                            class="registration-cancel-btn"
-                            id="cancelRegistrationBtn"
-                        >
-                            Cancel
-                        </button>
-
-                        <button
-                            type="submit"
-                            class="registration-next-btn"
-                        >
-                            Next
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
+        <div id="groupControls" hidden>
+          <button type="button" class="registration-cancel-btn" id="addPassengerBtn">+ Add Passenger</button>
+          <small id="seatLimitNote"></small>
         </div>
 
+        <div class="registration-error" id="detailsError" hidden></div>
 
-        <!-- =================================
-             STEP 2
-        ================================== -->
-        <div
-            class="registration-step-content"
-            id="step2"
-            style="display: none;"
-        >
+        <div class="registration-actions">
+          <button type="button" class="registration-cancel-btn" id="backToStep1Btn">Back</button>
+          <button type="button" class="registration-next-btn" id="toStep3Btn">Next</button>
+        </div>
+      </div>
+    </div>
 
-            <div class="registration-card">
+    <!-- STEP 3: REVIEW & CONFIRM -->
+    <div class="registration-step-content" id="step3" hidden>
+      <div class="registration-card">
+        <div class="registration-card-header"><h3>Review Your Registration</h3></div>
+        <hr>
+        <div id="reviewBody"></div>
+        <button type="button" class="registration-cancel-btn" id="editDetailsBtn">Edit details</button>
 
-                <div class="registration-card-header">
+        <label class="consent-box">
+          <input type="checkbox" id="consentPrivacy">
+          <span>
+            <strong>DATA PRIVACY CONSENT *</strong><br>
+            <span id="privacySolo">I agree that WaveTech may collect and use the information above for the trip manifest and for sending SMS about my trip, in line with the Data Privacy Act of 2012 (RA 10173).</span>
+            <span id="privacyGroup" hidden>I agree that WaveTech may collect and use the information of all passengers listed above for the trip manifest and for sending SMS about this trip, in line with the Data Privacy Act of 2012 (RA 10173).</span>
+            <details class="privacy-notice">
+              <summary>Read Privacy Notice</summary>
+              <p>Replace this text with your official privacy notice.</p>
+            </details>
+          </span>
+        </label>
 
-                    <h3>Select Your Trip</h3>
+        <label class="consent-box">
+          <input type="checkbox" id="consentTruth">
+          <span>
+            <strong>TRUTHFULNESS DECLARATION *</strong><br>
+            <span id="truthSolo">I declare that all information I submitted is true and correct. I understand that giving false or fake information may subject me to penalties under applicable laws.</span>
+            <span id="truthGroup" hidden>As the contact person, I declare that all information submitted for every passenger listed is true and correct. For passengers under 18, I confirm that I am their parent or guardian, or that I have the guardian's permission. I understand that giving false or fake information may subject me to penalties under applicable laws.</span>
+          </span>
+        </label>
 
-                    <p>
-                        Choose an available boat and schedule.
-                    </p>
+        <div class="registration-error" id="reviewError" hidden></div>
 
-                </div>
+        <div class="registration-actions">
+          <button type="button" class="registration-cancel-btn" id="backToStep2Btn">Back</button>
+          <button type="button" class="registration-next-btn" id="confirmBtn" disabled>Confirm Registration</button>
+        </div>
+      </div>
+    </div>
 
-                <hr>
+    <!-- SUCCESS -->
+    <div class="registration-step-content" id="step4" hidden>
+      <div class="registration-card success-card">
+        <div class="success-icon"><i class="bi bi-check-lg"></i></div>
+        <h3 id="successHeading">Registration Successful!</h3>
+        <p class="success-message">Your registration has been submitted successfully.</p>
 
+        <div class="registration-details-card" id="codeList"></div>
 
-                <div class="available-trips">
-
-                    {% for trip in trips %}
-
-                    <label
-                        class="trip-selection-card
-                        {% if trip.remaining_capacity is not none and trip.remaining_capacity <= 0 %}
-                            trip-disabled
-                        {% endif %}"
-                    >
-
-                        <input
-                            type="radio"
-                            name="selected_trip"
-                            value="{{ trip.trip_id }}"
-                            {% if trip.remaining_capacity is not none and trip.remaining_capacity <= 0 %}
-                                disabled
-                            {% endif %}
-                        >
-
-                        <div class="trip-selection-content">
-
-                            <div class="trip-selection-top">
-
-                                <div>
-
-                                    <h5>
-                                        {% if trip.boat %}
-                                            {{ trip.boat.name }}
-                                        {% else %}
-                                            Boat pending
-                                        {% endif %}
-                                    </h5>
-
-                                    <div class="trip-route">
-                                        {{ trip.route_origin }}
-                                        <i class="bi bi-arrow-right"></i>
-                                        {{ trip.route_destination }}
-                                    </div>
-
-                                </div>
-
-                                <span class="trip-select-indicator">
-                                    <i class="bi bi-check"></i>
-                                </span>
-
-                            </div>
-
-
-                            <div class="trip-selection-details">
-
-                                <div>
-                                    <i class="bi bi-clock"></i>
-
-                                    {{ trip.display_time }}
-                                </div>
-
-                                <div>
-                                    <i class="bi bi-calendar3"></i>
-
-                                    {{ trip.display_date }}
-                                </div>
-
-                                <div>
-                                    <i class="bi bi-people"></i>
-
-                                    {% if trip.remaining_capacity is not none %}
-
-                                        {% if trip.remaining_capacity <= 0 %}
-                                            Full
-                                        {% else %}
-                                            {{ trip.remaining_capacity }}
-                                            seats left
-                                        {% endif %}
-
-                                    {% else %}
-                                        Not available
-                                    {% endif %}
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </label>
-
-                    {% else %}
-
-                    <div class="no-trips-message">
-                        <i class="bi bi-calendar-x"></i>
-
-                        <h5>No available trips</h5>
-
-                        <p>
-                            There are currently no trips available
-                            for registration.
-                        </p>
-                    </div>
-
-                    {% endfor %}
-
-                </div>
-
-
-                <div
-                    class="registration-error"
-                    id="tripError"
-                    style="display: none;"
-                >
-                    Please select a trip before continuing.
-                </div>
-
-
-                <div class="registration-actions">
-
-                    <button
-                        type="button"
-                        class="registration-cancel-btn"
-                        id="backToStep1Btn"
-                    >
-                        Back
-                    </button>
-
-                    <button
-                        type="button"
-                        class="registration-next-btn"
-                        id="submitRegistrationBtn"
-                    >
-                        Confirm Registration
-                    </button>
-
-                </div>
-
-            </div>
-
+        <div class="registration-details-card">
+          <div class="registration-detail-row"><span>Route</span><strong id="successRoute">—</strong></div>
+          <div class="registration-detail-row"><span>Schedule</span><strong id="successTime">—</strong></div>
+          <div class="registration-detail-row"><span>Date</span><strong id="successDate">—</strong></div>
+          <div class="registration-detail-row"><span>Status</span>
+            <strong class="registration-status">Pending Verification</strong></div>
         </div>
 
-
-        <!-- =================================
-             STEP 3
-        ================================== -->
-        <div class="registration-step-content" id="step3" style="display: none;">
-            <div class="registration-card success-card">
-
-                <div class="success-icon">
-                    <i class="bi bi-check-lg"></i>
-                </div>
-
-                <h3>Registration Successful</h3>
-
-                <p class="success-message">
-                    Your registration has been submitted successfully.
-                </p>
-
-                <!-- Reference Code -->
-                <div class="reference-box">
-                    <span>Reference Code</span>
-                    <strong id="referenceCode">—</strong>
-                </div>
-
-                <!-- Registration Details -->
-                <div class="registration-details-card">
-
-                    <div class="registration-detail-row">
-                        <span>Passenger Name</span>
-                        <strong id="successPassengerName">—</strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Route</span>
-                        <strong id="successRoute">—</strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Schedule</span>
-                        <strong id="successSchedule">—</strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Date</span>
-                        <strong id="successDate">—</strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Status</span>
-                        <strong
-                            id="successStatus"
-                            class="registration-status"
-                        >
-                            Pending Verification
-                        </strong>
-                    </div>
-
-                </div>
-
-                <!-- Important Notice -->
-                <div class="registration-important">
-                    <strong>IMPORTANT:</strong>
-                    Present this Reference Code to the operator before boarding.
-                </div>
-
-                <!-- Button -->
-                <div class="success-actions">
-                    <a href="{{ url_for('passenger.register_page') }}" class="success-btn">
-                        Register Another
-                    </a>
-                </div>
-
-            </div>
+        <div class="registration-important">
+          <strong>IMPORTANT:</strong>
+          Present your Reference Code to the operator before boarding. Bring also a valid ID at the terminal. Fare discounts are verified there.
         </div>
 
-    </section>
+        <div class="success-actions">
+          <a href="#" class="registration-cancel-btn" id="cancelLink">Cancel Registration</a>
+          <a href="{{ url_for('passenger.home') }}#registration-status" class="success-btn">Check Status</a>
+        </div>
+      </div>
+    </div>
 
+  </section>
+  {% endif %}
 </div>
 
+{% if trips %}
+<template id="personTpl">
+  <div class="person-card">
+    <div class="person-head">
+      <h4 class="person-title"></h4>
+      <button type="button" class="person-remove only-extra">Remove</button>
+    </div>
+    <div class="registration-form-grid">
+      <div class="registration-field">
+        <label>Full Name *</label>
+        <input type="text" class="registration-input f-name" maxlength="100" placeholder="First Name Last Name">
+      </div>
+      <div class="registration-field">
+        <label>Age *</label>
+        <input type="number" class="registration-input f-age" min="1" max="120" placeholder="Age">
+      </div>
+      <div class="registration-field">
+        <label>Type *</label>
+        <select class="registration-input f-type">
+          {% for pt in passenger_types %}<option value="{{ pt }}"{% if pt == 'Regular' %} selected{% endif %}>{{ pt }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="registration-field only-contact">
+        <label>Contact Number *</label>
+        <div class="phone-input">
+          <span>+63</span>
+          <input type="tel" class="f-phone" inputmode="numeric" maxlength="13" placeholder="9XXXXXXXXX">
+        </div>
+        <small>We'll send your confirmation by SMS.</small>
+      </div>
+      <div class="registration-field full-width f-address-wrap">
+        <label>Address *</label>
+        <input type="text" class="registration-input f-address" maxlength="100" placeholder="Barangay, City/Municipality">
+      </div>
+      <label class="same-addr only-extra">
+        <input type="checkbox" class="f-same"> Same address and contact number as contact person
+      </label>
+    </div>
+    <div class="guardian-block only-contact" hidden>
+      <p>You are under 18, so a parent or guardian's details are required.</p>
+      <div class="registration-form-grid">
+        <div class="registration-field">
+          <label>Guardian Name *</label>
+          <input type="text" class="registration-input f-gname" maxlength="100">
+        </div>
+        <div class="registration-field">
+          <label>Guardian Contact *</label>
+          <input type="tel" class="registration-input f-gphone" placeholder="09XXXXXXXXX">
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+{% endif %}
+{% endblock %}
 
+
+{% block scripts %}
+{% if trips %}
 <script>
-    
-window.addEventListener("pageshow", function () {
-    history.scrollRestoration = "manual";
-    window.scrollTo(0, 0);
-});
-
 document.addEventListener("DOMContentLoaded", function () {
+var MAX_PARTY = Number(document.getElementById("registrationPanel").dataset.maxParty);
+var mode = "solo", maxParty = MAX_PARTY, trip = null;
 
-    history.scrollRestoration = "manual";
+  function el(id) { return document.getElementById(id); }
+  var panel = el("registrationPanel"), people = el("peopleList");
 
-    window.scrollTo(0, 0);
+  history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+  document.documentElement.classList.add("registration-locked");
+  document.body.classList.add("registration-locked");
 
-    document.documentElement.classList.add("registration-locked");
-    document.body.classList.add("registration-locked");
-    
-    const startButton =
-        document.getElementById("startRegistrationBtn");
+  /* ---------- helpers ---------- */
+  function phoneDigits(v) {
+    var d = String(v || "").replace(/\D/g, "");
+    if (d.indexOf("63") === 0) d = d.slice(2);
+    if (d.charAt(0) === "0") d = d.slice(1);
+    return d;
+  }
+  function cards() { return Array.prototype.slice.call(people.children); }
 
-    const cancelButton =
-        document.getElementById("cancelRegistrationBtn");
+  function setStep(n) {
+    [1, 2, 3, 4].forEach(function (i) { el("step" + i).hidden = (i !== n); });
+    document.querySelectorAll(".register-step").forEach(function (s) {
+      var k = Number(s.dataset.step);
+      s.classList.toggle("active", k === n);
+      s.classList.toggle("completed", k < n);
+    });
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
-    const registrationPanel =
-        document.getElementById("registrationPanel");
+  function showError(box, msg) { box.textContent = msg; box.hidden = false; }
+  function fail(msg, field) {
+    showError(el("detailsError"), msg);
+    if (field) field.focus();
+    return false;
+  }
 
-    const step1 =
-        document.getElementById("step1");
-
-    const step2 =
-        document.getElementById("step2");
-
-    const step3 =
-        document.getElementById("step3");
-
-    const passengerForm =
-        document.getElementById("passengerInformationForm");
-
-    const backButton =
-        document.getElementById("backToStep1Btn");
-
-    const submitButton =
-        document.getElementById("submitRegistrationBtn");
-
-    const tripError =
-        document.getElementById("tripError");
-
-    const referenceCode =
-        document.getElementById("referenceCode");
-    const successPassengerName =
-    document.getElementById("successPassengerName");
-
-    const successRoute =
-        document.getElementById("successRoute");
-
-    const successSchedule =
-        document.getElementById("successSchedule");
-
-    const successDate =
-        document.getElementById("successDate");
-
-    const successStatus =
-        document.getElementById("successStatus");
-
-    const registrationSteps =
-    document.getElementById("registrationSteps");
-
-
-    /*
-     * --------------------------------
-     * Start Registration
-     * --------------------------------
-     */
-
-startButton.addEventListener("click", function () {
-    registrationPanel.classList.add("registration-visible");
-    registrationSteps.style.display = "flex";
-
-    setStep(1);
-
-    // Allow scrolling
+  /* ---------- start ---------- */
+  el("startRegistrationBtn").addEventListener("click", function () {
+    panel.classList.add("registration-visible");
+    el("registrationSteps").style.display = "flex";
     document.documentElement.classList.remove("registration-locked");
     document.body.classList.remove("registration-locked");
-
-    // Smoothly scroll to the registration form
-    setTimeout(function () {
-        registrationPanel.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        });
-    }, 100);
-});
-
-
-    /*
-     * --------------------------------
-     * Cancel
-     * --------------------------------
-     */
-
-    cancelButton.addEventListener("click", function () {
-    registrationPanel.classList.remove("registration-visible");
-    registrationSteps.style.display = "none";
-
-    passengerForm.reset();
-
-    passengerTypeSelected.textContent = "Select Passenger Type";
-    passengerTypeSelected.classList.remove("passenger-type-selected");
-    passengerTypeSelected.classList.add("passenger-type-placeholder");
-    
-    document.querySelectorAll('input[name="selected_trip"]').forEach(function (radio) {
-        radio.checked = false;
-    });
-
     setStep(1);
+  });
 
-    document.documentElement.classList.add("registration-locked");
-    document.body.classList.add("registration-locked");
+  /* ---------- step 1 ---------- */
+  document.querySelectorAll('input[name="selected_trip"]').forEach(function (r) {
+    r.addEventListener("change", function () { el("toStep2Btn").disabled = false; });
+  });
 
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-});
+  el("toStep2Btn").addEventListener("click", function () {
+    var sel = document.querySelector('input[name="selected_trip"]:checked');
+    if (!sel) return;
+    trip = {
+      id: sel.value, boat: sel.dataset.boat, route: sel.dataset.route,
+      date: sel.dataset.date, time: sel.dataset.time, seats: Number(sel.dataset.seats)
+    };
+    maxParty = Math.min(MAX_PARTY, trip.seats);
 
-
-    /*
-     * --------------------------------
-     * Step 1 -> Step 2
-     * --------------------------------
-     */
-
-    passengerForm.addEventListener("submit", function (event) {
-
-        event.preventDefault();
-
-        if (!passengerForm.checkValidity()) {
-
-            passengerForm.reportValidity();
-
-            return;
-        }
-
-        setStep(2);
-
-        registrationPanel.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        });
-
-    });
-
-
-    /*
-     * --------------------------------
-     * Step 2 -> Step 1
-     * --------------------------------
-     */
-
-    backButton.addEventListener("click", function () {
-
-        setStep(1);
-
-        registrationPanel.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        });
-
-    });
-
-
-    /*
- * --------------------------------
- * Submit Registration
- * --------------------------------
- */
-
-submitButton.addEventListener("click", async function () {
-
-    const selectedTrip =
-        document.querySelector(
-            'input[name="selected_trip"]:checked'
-        );
-
-    if (!selectedTrip) {
-
-        tripError.style.display = "block";
-
-        return;
+    var groupRadio = el("modeGroup");
+    groupRadio.disabled = maxParty < 2;
+    if (maxParty < 2 && mode === "group") {
+      document.querySelector('input[name="mode"][value="solo"]').click();
     }
+    while (cards().length > maxParty) people.lastElementChild.remove();
 
-    tripError.style.display = "none";
+    if (!cards().length) people.appendChild(makePerson(true));
+    renumber(); updateGuardian(); updateAddBtn();
+    setStep(2);
+  });
 
-    submitButton.disabled = true;
-
-    submitButton.innerHTML =
-        '<span class="spinner-border spinner-border-sm me-2"></span>' +
-        'Submitting...';
-
-    const formData = new FormData(passengerForm);
-
-    formData.append(
-        "trip_id",
-        selectedTrip.value
-    );
-
-    try {
-
-        const response = await fetch(
-            "{{ url_for('passenger.submit_registration_inline') }}",
-            {
-                method: "POST",
-                body: formData
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-
-            throw new Error(
-                data.message ||
-                "Unable to complete registration."
-            );
-
-        }
-
-
-        /*
-         * --------------------------------
-         * Registration Success
-         * --------------------------------
-         */
-
-        const generatedReferenceCode =
-            data.data?.reference_code;
-
-        if (!generatedReferenceCode) {
-
-            console.error(
-                "Registration response:",
-                data
-            );
-
-            throw new Error(
-                "Registration was submitted, but the reference code was not returned."
-            );
-        }
-
-
-        /*
-         * Reference Code
-         */
-
-        referenceCode.textContent =
-            generatedReferenceCode;
-
-
-        /*
-         * Passenger Name
-         */
-
-        successPassengerName.textContent =
-            document.getElementById("full_name").value;
-
-
-        /*
-         * Get Selected Trip Information
-         */
-
-        const selectedTripCard =
-            selectedTrip.closest(".trip-selection-card");
-
-
-        /*
-         * Route
-         */
-
-        const routeElement =
-            selectedTripCard.querySelector(".trip-route");
-
-        if (routeElement) {
-            successRoute.textContent =
-                routeElement.textContent.trim();
-        }
-
-
-        /*
-         * Schedule
-         */
-
-        const tripDetails =
-            selectedTripCard.querySelectorAll(
-                ".trip-selection-details > div"
-            );
-
-        if (tripDetails.length >= 1) {
-
-            successSchedule.textContent =
-                tripDetails[0].textContent.trim();
-        }
-
-
-        /*
-         * Date
-         */
-
-        if (tripDetails.length >= 2) {
-
-            successDate.textContent =
-                tripDetails[1].textContent.trim();
-        }
-
-
-        /*
-         * Status
-         */
-
-        successStatus.textContent =
-            "Pending Verification";
-
-
-        /*
-         * Move to Step 3
-         */
-
-        setStep(3);
-
-        registrationPanel.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        });
-
-
-    } catch (error) {
-
-        alert(error.message);
-
-        submitButton.disabled = false;
-
-        submitButton.textContent =
-            "Confirm Registration";
-
+  /* ---------- step 2 ---------- */
+  function makePerson(isContact) {
+    var node = el("personTpl").content.firstElementChild.cloneNode(true);
+    node.querySelectorAll(isContact ? ".only-extra" : ".only-contact")
+        .forEach(function (n) { n.remove(); });
+    if (isContact) {
+      node.querySelector(".f-age").addEventListener("input", updateGuardian);
+    } else {
+      node.querySelector(".person-remove").addEventListener("click", function () {
+        node.remove(); renumber(); updateAddBtn();
+      });
+      node.querySelector(".f-same").addEventListener("change", function () {
+        node.querySelector(".f-address-wrap").hidden = this.checked;
+      });
     }
+    return node;
+  }
 
-});
-
-
-    /*
-     * --------------------------------
-     * Step Controller
-     * --------------------------------
-     */
-
-    function setStep(step) {
-
-        step1.style.display =
-            step === 1 ? "block" : "none";
-
-        step2.style.display =
-            step === 2 ? "block" : "none";
-
-        step3.style.display =
-            step === 3 ? "block" : "none";
-
-
-        document.querySelectorAll(
-            ".register-step"
-        ).forEach(function (element) {
-
-            const number =
-                Number(element.dataset.step);
-
-            element.classList.remove(
-                "active",
-                "completed"
-            );
-
-            if (number === step) {
-
-                element.classList.add("active");
-
-            } else if (number < step) {
-
-                element.classList.add("completed");
-
-            }
-
-        });
-
-    }
-
-});
-
-const passengerTypeDropdown = document.getElementById("passengerTypeDropdown");
-const passengerTypeToggle = document.getElementById("passengerTypeToggle");
-const passengerTypeMenu = document.getElementById("passengerTypeMenu");
-const passengerTypeSelected = document.getElementById("passengerTypeSelected");
-const passengerTypeInput = document.getElementById("passengerTypeInput");
-
-passengerTypeToggle.addEventListener("click", function () {
-    const isOpen = passengerTypeDropdown.classList.toggle("open");
-
-    passengerTypeToggle.setAttribute(
-        "aria-expanded",
-        isOpen ? "true" : "false"
-    );
-});
-
-document.querySelectorAll(
-    "#passengerTypeDropdown .manifest-boat-option"
-).forEach(function (option) {
-    option.addEventListener("click", function () {
-        const value = this.dataset.value;
-
-        passengerTypeInput.value = value;
-        passengerTypeSelected.textContent = value;
-
-        passengerTypeSelected.classList.remove("passenger-type-placeholder");
-        passengerTypeSelected.classList.add("passenger-type-selected");
-
-        document.querySelectorAll(
-            "#passengerTypeDropdown .manifest-boat-option"
-        ).forEach(function (item) {
-            item.classList.remove("selected");
-            item.setAttribute("aria-selected", "false");
-
-            const check = item.querySelector(".manifest-boat-check");
-            if (check) {
-                check.style.display = "none";
-            }
-        });
-
-        this.classList.add("selected");
-        this.setAttribute("aria-selected", "true");
-
-        const check = this.querySelector(".manifest-boat-check");
-        if (check) {
-            check.style.display = "inline-block";
-        }
-
-        passengerTypeDropdown.classList.remove("open");
-        passengerTypeToggle.setAttribute("aria-expanded", "false");
+  function renumber() {
+    cards().forEach(function (c, i) {
+      var t = c.querySelector(".person-title");
+      t.textContent = i === 0
+        ? (mode === "group" ? "Passenger 1 (Contact Person)" : "Your Details")
+        : "Passenger " + (i + 1);
     });
-});
+  }
 
-document.addEventListener("click", function (event) {
-    if (!passengerTypeDropdown.contains(event.target)) {
-        passengerTypeDropdown.classList.remove("open");
-        passengerTypeToggle.setAttribute("aria-expanded", "false");
+  function updateGuardian() {
+    var c = cards()[0]; if (!c) return;
+    var age = parseInt(c.querySelector(".f-age").value, 10);
+    c.querySelector(".guardian-block").hidden = !(mode === "solo" && age > 0 && age < 18);
+  }
+
+  function updateAddBtn() {
+    el("addPassengerBtn").disabled = cards().length >= maxParty;
+    el("seatLimitNote").textContent =
+      "Up to " + maxParty + " passengers on this trip (" + cards().length + " added).";
+  }
+
+  document.querySelectorAll('input[name="mode"]').forEach(function (r) {
+    r.addEventListener("change", function (e) {
+      mode = e.target.value;
+      if (mode === "group") {
+        if (cards().length < 2) people.appendChild(makePerson(false));
+      } else {
+        cards().slice(1).forEach(function (c) { c.remove(); });
+      }
+      el("groupControls").hidden = mode !== "group";
+      renumber(); updateGuardian(); updateAddBtn();
+    });
+  });
+
+  el("addPassengerBtn").addEventListener("click", function () {
+    if (cards().length >= maxParty) return;
+    people.appendChild(makePerson(false));
+    renumber(); updateAddBtn();
+  });
+
+  el("backToStep1Btn").addEventListener("click", function () { setStep(1); });
+
+  function validateDetails() {
+    el("detailsError").hidden = true;
+    var cs = cards();
+    for (var i = 0; i < cs.length; i++) {
+      var c = cs[i], prefix = (mode === "group") ? "Passenger " + (i + 1) + ": " : "";
+      var name = c.querySelector(".f-name"), age = c.querySelector(".f-age");
+      if (!name.value.trim()) return fail(prefix + "Full name is required.", name);
+      var a = parseInt(age.value, 10);
+      if (!(a >= 1 && a <= 120)) return fail(prefix + "Enter a valid age (1 to 120).", age);
+      var same = c.querySelector(".f-same");
+      if (!(same && same.checked)) {
+        var ad = c.querySelector(".f-address");
+        if (!ad.value.trim()) return fail(prefix + "Barangay and city/municipality are required.", ad);
+      }
+      if (i === 0) {
+        var ph = c.querySelector(".f-phone"), d = phoneDigits(ph.value);
+        if (!(d.length === 10 && d.charAt(0) === "9"))
+          return fail(prefix + "Enter a valid mobile number, e.g. 9XXXXXXXXX.", ph);
+        if (a < 18) {
+          if (mode === "group") return fail("The contact person must be 18 or older.", age);
+          var gn = c.querySelector(".f-gname"), gp = c.querySelector(".f-gphone");
+          if (!gn.value.trim()) return fail("Guardian name is required for passengers under 18.", gn);
+          if (!/^(\+?63|0)?9\d{9}$/.test(gp.value.replace(/[\s-]/g, "")))
+            return fail("Enter a valid guardian contact number.", gp);
+        }
+      }
     }
+    return true;
+  }
+
+  function collect() {
+    var list = [];
+    cards().forEach(function (c, i) {
+      var p = {
+        full_name: c.querySelector(".f-name").value.trim(),
+        age: parseInt(c.querySelector(".f-age").value, 10),
+        passenger_type: c.querySelector(".f-type").value,
+        address: c.querySelector(".f-address").value.trim()
+      };
+      if (i === 0) {
+        p.contact_number = "0" + phoneDigits(c.querySelector(".f-phone").value);
+        if (!c.querySelector(".guardian-block").hidden) {
+          p.guardian_name = c.querySelector(".f-gname").value.trim();
+          p.guardian_contact = c.querySelector(".f-gphone").value.trim();
+        }
+      } else {
+        var same = c.querySelector(".f-same");
+        if (same && same.checked) { p.same_as_contact = true; p.address = list[0].address; }
+      }
+      list.push(p);
+    });
+    return list;
+  }
+
+  /* ---------- step 3 ---------- */
+  function section(parent, title) {
+    var s = document.createElement("div"); s.className = "review-section";
+    var h = document.createElement("h4"); h.textContent = title;
+    var body = document.createElement("div"); body.className = "registration-details-card";
+    s.appendChild(h); s.appendChild(body); parent.appendChild(s);
+    return body;
+  }
+  function row(parent, label, value) {
+    var d = document.createElement("div"); d.className = "registration-detail-row";
+    var a = document.createElement("span"); a.textContent = label;
+    var b = document.createElement("strong"); b.textContent = value;
+    d.appendChild(a); d.appendChild(b); parent.appendChild(d);
+  }
+
+  function buildReview() {
+    var box = el("reviewBody"); box.textContent = "";
+    var t = section(box, "Trip Details");
+    row(t, "Date", trip.date); row(t, "Departure", trip.time);
+    row(t, "Boat", trip.boat); row(t, "Route", trip.route);
+
+    var list = collect(), c = list[0];
+    var s = section(box, mode === "solo" ? "Passenger" : "Contact Person");
+    row(s, "Name", c.full_name);
+    if (mode === "solo") { row(s, "Age", String(c.age)); row(s, "Type", c.passenger_type); }
+    row(s, "Contact", c.contact_number);
+    row(s, "Address", c.address);
+    if (c.guardian_name) row(s, "Guardian", c.guardian_name + " (" + c.guardian_contact + ")");
+
+    if (mode === "group") {
+      var g = section(box, "Passengers (" + list.length + ")");
+      list.forEach(function (p, i) {
+        row(g, "#" + (i + 1), p.full_name + " · " + p.age + " · " + p.passenger_type);
+      });
+    }
+    el("privacySolo").hidden = mode !== "solo"; el("privacyGroup").hidden = mode !== "group";
+    el("truthSolo").hidden = mode !== "solo";   el("truthGroup").hidden = mode !== "group";
+    el("consentPrivacy").checked = false; el("consentTruth").checked = false;
+    el("confirmBtn").disabled = true; el("reviewError").hidden = true;
+  }
+
+  el("toStep3Btn").addEventListener("click", function () {
+    if (!validateDetails()) return;
+    buildReview(); setStep(3);
+  });
+  el("editDetailsBtn").addEventListener("click", function () { setStep(2); });
+  el("backToStep2Btn").addEventListener("click", function () { setStep(2); });
+
+  function syncConfirm() {
+    el("confirmBtn").disabled = !(el("consentPrivacy").checked && el("consentTruth").checked);
+  }
+  el("consentPrivacy").addEventListener("change", syncConfirm);
+  el("consentTruth").addEventListener("change", syncConfirm);
+
+  /* ---------- submit ---------- */
+  el("confirmBtn").addEventListener("click", function () {
+    var btn = this, err = el("reviewError");
+    err.hidden = true; btn.disabled = true; btn.textContent = "Submitting...";
+
+    function reset() { btn.textContent = "Confirm Registration"; syncConfirm(); }
+
+    fetch("{{ url_for('passenger.submit_party_registration') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        trip_id: trip.id, mode: mode, people: collect(),
+        consent_privacy: el("consentPrivacy").checked,
+        consent_truth: el("consentTruth").checked
+      })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.d.success) {
+          if (res.d.fields) { setStep(2); showError(el("detailsError"), res.d.message); }
+          else { showError(err, res.d.message || "Unable to complete registration."); }
+          reset(); return;
+        }
+        showSuccess(res.d.data.registrations);
+      })
+      .catch(function () { showError(err, "Something went wrong. Please try again."); reset(); });
+  });
+
+  /* ---------- success ---------- */
+  function copyText(text, btn) {
+    var label = btn.querySelector("span");
+    function done() { label.textContent = "Copied"; setTimeout(function () { label.textContent = "Copy"; }, 1800); }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(done);
+    } else {
+      var t = document.createElement("textarea"); t.value = text;
+      document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); done();
+    }
+  }
+
+  function showSuccess(regs) {
+    var list = el("codeList"); list.textContent = "";
+    regs.forEach(function (r) {
+      var d = document.createElement("div"); d.className = "code-row";
+      var who = document.createElement("span"); who.textContent = r.full_name;
+      var code = document.createElement("strong"); code.textContent = r.reference_code;
+      var btn = document.createElement("button"); btn.type = "button"; btn.className = "copy-code-btn";
+      btn.innerHTML = '<i class="bi bi-clipboard"></i> <span>Copy</span>';
+      btn.addEventListener("click", function () { copyText(r.reference_code, btn); });
+      d.appendChild(who); d.appendChild(code); d.appendChild(btn); list.appendChild(d);
+    });
+    el("successHeading").textContent = regs.length > 1
+      ? "Registration Successful! (" + regs.length + " passengers)" : "Registration Successful!";
+    el("successRoute").textContent = trip.route;
+    el("successTime").textContent = trip.time;
+    el("successDate").textContent = trip.date;
+    el("cancelLink").href =
+      "{{ url_for('passenger.registration_status_page', reference_code='REF') }}".replace("REF", regs[0].reference_code);
+    setStep(4);
+  }
 });
 </script>
-
+{% endif %}
 {% endblock %}

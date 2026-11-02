@@ -2557,3 +2557,35 @@ text-align: center;
 }
 
 }
+
+.register-start-btn { display: inline-block; text-decoration: none; }
+.register-hours, .register-walkin { margin: 0 0 18px !important; font-size: 0.95rem !important; }
+.who-group { border: 0; margin: 0 0 22px; padding: 0; }
+.who-group legend { margin-bottom: 10px; font-size: 1rem; font-weight: 600; }
+.who-group label { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; }
+.person-card { margin-bottom: 16px; padding: 22px; border: 1px solid #d9e3ed; border-radius: 10px; background: #fff; }
+.person-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.person-head h4 { margin: 0; font-size: 1rem; font-weight: 600; }
+.person-remove { border: 0; background: none; color: #b42318; font-size: 0.85rem; }
+.phone-input { display: flex; overflow: hidden; border: 1px solid #d3dfeb; border-radius: 8px; background: #fff; }
+.phone-input span { padding: 9px 12px; border-right: 1px solid #d3dfeb; background: #f1f6fb; color: #36516d; }
+.phone-input input { flex: 1; min-width: 0; padding: 9px 14px; border: 0; outline: 0; font-size: 1rem; }
+.registration-field small, #seatLimitNote { margin-top: 6px; color: #777; font-size: 0.78rem; }
+#seatLimitNote { margin-left: 12px; }
+.same-addr { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.88rem; }
+.guardian-block { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #cbd7e3; }
+.guardian-block p { margin-bottom: 12px; color: #8a6100; font-size: 0.85rem; }
+.trip-crew { margin-left: 10px; color: #777; font-size: 0.82rem; font-weight: 400; }
+.trip-top-right { display: flex; align-items: center; gap: 12px; }
+.trip-delay-note { margin-top: 12px; color: #a16207; font-size: 0.85rem; }
+.consent-box { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; font-size: 0.88rem; line-height: 1.5; text-align: left; }
+.consent-box input { margin-top: 5px; }
+.privacy-notice { margin-top: 6px; font-size: 0.82rem; }
+.review-section { margin-bottom: 18px; text-align: left; }
+.review-section h4 { margin-bottom: 8px; color: #8a94a3; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.review-section .registration-details-card { margin: 0; max-width: none; box-shadow: none; border: 1px solid #e5eaf0; }
+.code-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef2f6; }
+.code-row:last-child { border-bottom: 0; }
+.code-row strong { color: var(--navy); }
+#editDetailsBtn { margin-top: 8px; }
+@media (max-width: 767px) { .code-row { flex-wrap: wrap; } }

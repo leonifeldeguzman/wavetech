@@ -58,6 +58,8 @@ STATUS_BLOCKS_REGISTRATION = {"Cancelled", "Departed"}
 VALID_PASSENGER_TYPES = {"Regular", "Student", "Senior", "PWD", "Child"}
 
 REFERENCE_CODE_MAX_ATTEMPTS = 5
+MAX_PARTY = 5
+TERMINAL_HOURS = "8 AM – 5 PM daily"
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +192,7 @@ def _serialize_trip_summary(trip):
         "departure_time": (
             trip.departure_time.strftime("%I:%M %p").lstrip("0")
             if trip.departure_time else None
+            
         ),
         "departure_date": (
             trip.departure_time.strftime("%B %d, %Y")
@@ -218,7 +221,8 @@ def _serialize_trip_summary(trip):
         "remaining_capacity": remaining,
         "accepts_registration": can_register,
         "notice": block_reason,
-        "delay_reason": trip.delay_reason
+        "delay_reason": trip.delay_reason,
+        "crew_name": trip.crew_name,
     }
 
 
@@ -481,6 +485,168 @@ def _execute_registration(trip_id, cleaned):
 
     return RegistrationResult(True, registration=registration)
 
+def _validate_party(payload):
+    """Returns (errors, trip_id, people). Error keys look like '0.full_name'."""
+    errors = {}
+    try:
+        trip_id = int(payload.get("trip_id"))
+    except (TypeError, ValueError):
+        return {"trip_id": "Please choose a trip."}, None, None
+
+    mode = payload.get("mode")
+    raw_people = payload.get("people")
+    if mode not in ("solo", "group") or not isinstance(raw_people, list):
+        return {"people": "Invalid registration data."}, None, None
+    if not (1 <= len(raw_people) <= MAX_PARTY):
+        return {"people": f"You can register 1 to {MAX_PARTY} passengers at a time."}, None, None
+    if mode == "solo" and len(raw_people) != 1:
+        return {"people": "Solo registration is for one passenger."}, None, None
+    if mode == "group" and len(raw_people) < 2:
+        return {"people": "A group needs at least 2 passengers."}, None, None
+    if payload.get("consent_privacy") is not True or payload.get("consent_truth") is not True:
+        return {"consent": "Please accept both declarations to continue."}, None, None
+
+    contact_in = raw_people[0] if isinstance(raw_people[0], dict) else {}
+    contact_phone = normalize_ph_mobile(contact_in.get("contact_number"))
+    if not contact_phone:
+        errors["0.contact_number"] = "Enter a valid Philippine mobile number."
+
+    people = []
+    for i, raw in enumerate(raw_people):
+        if not isinstance(raw, dict):
+            errors[f"{i}.full_name"] = "Invalid passenger data."
+            continue
+        merged = dict(raw)
+        merged["contact_number"] = contact_phone
+        if i > 0 and raw.get("same_as_contact"):
+            merged["address"] = contact_in.get("address")
+
+        fields, cleaned = validate_passenger_fields(merged)
+        if not cleaned.get("address"):
+            fields["address"] = "Barangay and city/municipality are required."
+        elif len(cleaned["address"]) > 100:
+            fields["address"] = "Must be 100 characters or fewer."
+
+        cleaned["guardian_name"] = None
+        cleaned["guardian_contact"] = None
+        age = cleaned.get("age")
+        if i == 0 and age is not None and age < 18:
+            if mode == "group":
+                fields["age"] = "The contact person must be 18 or older."
+            else:
+                gname = (raw.get("guardian_name") or "").strip()
+                gphone = normalize_ph_mobile(raw.get("guardian_contact"))
+                if not gname:
+                    fields["guardian_name"] = "Guardian name is required for passengers under 18."
+                if not gphone:
+                    fields["guardian_contact"] = "Enter a valid guardian contact number."
+                cleaned["guardian_name"] = gname[:100] or None
+                cleaned["guardian_contact"] = gphone
+
+        for key, msg in fields.items():
+            errors[f"{i}.{key}"] = msg
+        people.append(cleaned)
+
+    return errors, trip_id, people
+
+
+def _send_party_sms(registrations, trip):
+    """Best-effort: one SMS to the contact person listing every code."""
+    try:
+        shown = trip.new_departure_time or trip.departure_time
+        when = shown.strftime("%b %d, %Y, %I:%M %p") if shown else "TBA"
+        codes = ", ".join(r.reference_code for r in registrations)
+        label = "Ref" if len(registrations) == 1 else f"Refs ({len(registrations)} passengers)"
+        message = (
+            f"Talim Island Ferry: Registration confirmed. {label}: {codes}. "
+            f"Trip: {trip.route_origin} to {trip.route_destination}, departing {when}."
+        )
+        result = unisms_service.send_sms(registrations[0].contact_number, message)
+        if result.status != "skipped_no_number":
+            log_action(
+                user_id=None, admin_name="System", action=ACTION_REGISTRATION_SMS_SENT,
+                details=f"References {codes}, trip #{trip.id}, status={result.status}"
+                        + (f", error={result.error}" if result.error else ""),
+            )
+    except Exception:
+        current_app.logger.warning("Party registration SMS failed", exc_info=True)
+
+
+def _execute_party_registration(trip_id, people):
+    """All-or-nothing: lock trip, check seats for the WHOLE party, create one
+    PendingRegistration (and one reference code) per passenger, commit."""
+    try:
+        trip = Trip.query.filter_by(id=trip_id).with_for_update().first()
+        if not trip:
+            db.session.rollback()
+            return RegistrationResult(False, "TRIP_NOT_FOUND", "No trip found with this ID.")
+
+        ok, code, message = _accepts_registration(trip)
+        if not ok:
+            db.session.rollback()
+            return RegistrationResult(False, code, message)
+
+        _, _, remaining = _trip_capacity_info(trip)
+        if remaining is not None and len(people) > remaining:
+            db.session.rollback()
+            return RegistrationResult(
+                False, "TRIP_FULL",
+                f"Only {remaining} seat(s) left on this trip. Please remove a passenger or pick another trip.")
+
+        registrations, used = [], set()
+        for person in people:
+            reg = PendingRegistration(trip_id=trip.id, status="pending", **person)
+            for _ in range(REFERENCE_CODE_MAX_ATTEMPTS):
+                candidate = generate_reference_code()
+                if candidate in used or PendingRegistration.query.filter_by(
+                        reference_code=candidate).first():
+                    continue
+                reg.reference_code = candidate
+                break
+            else:
+                db.session.rollback()
+                return RegistrationResult(False, "REFERENCE_CODE_GENERATION_FAILED",
+                                          "Could not generate a reference code. Please try again.")
+            used.add(reg.reference_code)
+            db.session.add(reg)
+            registrations.append(reg)
+
+        db.session.flush()
+        _, _, remaining = _trip_capacity_info(trip)
+        if remaining is not None and remaining <= 0:
+            trip.status = "Full"
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Party registration failed")
+        return RegistrationResult(False, "REGISTRATION_FAILED",
+                                  "Registration could not be completed due to a server error.")
+
+    _send_party_sms(registrations, trip)
+    return RegistrationResult(True, registration=registrations)
+
+
+@passenger_bp.route("/passenger/register/submit-party", methods=["POST"])
+def submit_party_registration():
+    payload = request.get_json(silent=True) or {}
+    errors, trip_id, people = _validate_party(payload)
+    if errors:
+        return jsonify({"success": False, "message": next(iter(errors.values())),
+                        "fields": errors}), 400
+
+    result = _execute_party_registration(trip_id, people)
+    if not result.success:
+        status = 404 if result.error_code == "TRIP_NOT_FOUND" else (
+            409 if result.error_code in ("TRIP_FULL", "TRIP_NOT_AVAILABLE") else 500)
+        return jsonify({"success": False, "error_code": result.error_code,
+                        "message": result.message}), status
+
+    return jsonify({"success": True, "data": {
+        "trip_id": trip_id,
+        "registrations": [{"reference_code": r.reference_code, "full_name": r.full_name}
+                          for r in result.registration],
+    }}), 201
+
 
 @passenger_bp.route("/api/passenger/registrations", methods=["POST"])
 def create_registration():
@@ -638,15 +804,13 @@ def trip_detail_page(trip_id):
 
 @passenger_bp.route("/passenger/register", methods=["GET"])
 def register_page():
-    trip_rows = [
-        _serialize_trip_summary(t)
-        for t in _registrable_trips()
-    ]
-
+    trip_rows = [_serialize_trip_summary(t) for t in _registrable_trips()]
     return render_template(
         "passenger/register.html",
         trips=trip_rows,
         passenger_types=sorted(VALID_PASSENGER_TYPES),
+        terminal_hours=TERMINAL_HOURS,
+        max_party=MAX_PARTY,
         active_page="register",
     )
 

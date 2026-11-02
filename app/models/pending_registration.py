@@ -20,6 +20,8 @@ class PendingRegistration(db.Model):
     address = db.Column(db.String(255), nullable=True)
     contact_number = db.Column(db.String(20), nullable=True)
     passenger_type = db.Column(db.String(20), nullable=False, default="Regular")
+    guardian_name = db.Column(db.String(100), nullable=True)
+    guardian_contact = db.Column(db.String(20), nullable=True)
 
     submitted_at = db.Column(db.DateTime, server_default=db.func.now())
     status = db.Column(db.String(10), nullable=False, default="pending")
