@@ -412,6 +412,17 @@
 
                 </div>
 
+                {% if scheduling_assessment.missing %}
+                <div class="dss-missing">
+                    Missing: {{ scheduling_assessment.missing|join(", ") }}.
+                    <a href="{{ url_for('monitoring.index') }}">Enter manually</a>
+                </div>
+                {% endif %}
+
+                {% if scheduling_assessment.stale_note %}
+                <div class="dss-missing">{{ scheduling_assessment.stale_note }}</div>
+                {% endif %}
+
                                 {% if level_context %}
                 <div class="mt-4">
 

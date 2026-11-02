@@ -60,6 +60,8 @@ class SchedulingAssessment:
     observer_comment: str | None = None
     observation_recorded_at: datetime | None = None
     weather_is_manual: bool = False
+    missing: tuple = ()
+    stale_note: str | None = None
 
 
 def _thresholds() -> dict[str, float]:
@@ -291,6 +293,14 @@ def evaluate_conditions(windy_reading: Any, llda_reading: Any) -> SchedulingAsse
         else None
     )
 
+    missing = []
+    if wind.status == STATUS_UNAVAILABLE:
+        missing.append("wind speed")
+    if weather.status == STATUS_UNAVAILABLE:
+        missing.append("weather condition")
+    if water.status == STATUS_UNAVAILABLE:
+        missing.append("today's water level")
+
     return SchedulingAssessment(
         recommendation=recommendation,
         overall_status=overall,
@@ -304,6 +314,7 @@ def evaluate_conditions(windy_reading: Any, llda_reading: Any) -> SchedulingAsse
         llda_recorded_at=llda_recorded,
         last_updated_at=last_updated_at,
         llda_source_label=_water_source_label(llda_reading),
+        missing=tuple(missing)
     )
 def get_current_water_reading():
     """Newest LLDA/manual water level, accepted only if recorded today
@@ -394,12 +405,17 @@ def get_assessment() -> SchedulingAssessment:
         llda_reading = None
 
     assessment = evaluate_conditions(windy_reading, llda_reading)
+    stale_note = None
+    if llda_reading is None and monitoring_service.get_latest_water_reading() is not None:
+        stale_note = "Latest water level is from a previous day, so it cannot be used."
+
     assessment = dataclasses.replace(
         assessment,
         weather_is_manual=(
             windy_reading is not None
             and weather.get("status") == monitoring_service.STATUS_MANUAL
         ),
+        stale_note=stale_note,
     )
     return apply_operator_observation(
         assessment, monitoring_service.get_todays_observation()

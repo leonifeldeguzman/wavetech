@@ -20,6 +20,31 @@ from app.models.lake_station import LakeStation
 # A recorded water level older than this is not compared with the baseline.
 BASELINE_COMPARE_MAX_AGE = timedelta(hours=24)
 
+WATER_PLAUSIBLE_MIN_M = 10.0
+WATER_PLAUSIBLE_MAX_M = 14.0
+STALE_WEATHER_AFTER = timedelta(hours=3)
+WIND_DIRECTIONS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+
+
+def _age_info(taken_utc, stale_after=None):
+    """'9 hours ago' for a naive-UTC timestamp, plus whether to show it red."""
+    if taken_utc is None:
+        return None
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    minutes = int(max((now - taken_utc).total_seconds(), 0) // 60)
+    if minutes < 1:
+        text = "Just now"
+    elif minutes < 60:
+        text = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+    elif minutes < 1440:
+        h = minutes // 60
+        text = f"{h} hour{'s' if h != 1 else ''} ago"
+    else:
+        d = minutes // 1440
+        text = f"{d} day{'s' if d != 1 else ''} ago"
+    stale = stale_after is not None and (now - taken_utc) > stale_after
+    return {"text": text, "stale": stale}
+
 def _parse_date(value):
     """A YYYY-MM-DD query value as a date, or None if missing/invalid."""
     try:
@@ -45,7 +70,7 @@ def index():
         EnvironmentalReading.source.notin_(hidden_sources)
     ).order_by(
         EnvironmentalReading.retrieved_at.desc()
-    ).limit(10).all()
+    ).limit(25).all()
    
 
         # Historical baseline: seasonal context only, never a current reading.
@@ -78,7 +103,8 @@ def index():
     # there is no condition: it is never guessed.
     water_safety_status = None
     water_safety_label = None
-    if water_level_card["reading"] is not None:
+    # Only a reading from today may be classified (same rule as the Dashboard).
+    if water_level_card["reading"] is not None and water_level_card["is_today"]:
         water_safety_status, water_safety_label = (
             monitoring_service.classify_water_safety(
                 water_level_card["reading"].water_level_m
@@ -137,16 +163,15 @@ def index():
             "station_no": ref_station.station_no,
             "temperature_c": ref.temperature_c,
         }
-    if with_data:
-        winds = [c for c in with_data if c["reading"].wind_speed_kmh is not None]
-        if winds:
-            top = max(winds, key=lambda c: c["reading"].wind_speed_kmh)
+
+        if ref.wind_speed_kmh is not None:
             wind_summary = {
-                "speed": top["reading"].wind_speed_kmh,
-                "direction": top["reading"].wind_direction,
-                "station_name": top["station"].name,
-                "station_no": top["station"].station_no,
+                "speed": ref.wind_speed_kmh,
+                "direction": ref.wind_direction,
+                "station_name": ref_station.name,
+                "station_no": ref_station.station_no,
             }
+    
 
     # Weather as decision-support sees it (one shared rule). When the model
     # is not live and a recent manual entry stands in, the top cards show
@@ -224,6 +249,12 @@ def index():
     dss_station = LakeStation.query.filter_by(
         station_no=monitoring_service.DSS_STATION_NO
     ).first()
+
+    weather_age = _age_info(station_weather_updated, STALE_WEATHER_AFTER)
+    water_age = None
+    if water_level_card["reading"] is not None:
+        water_age = _age_info(water_level_card["reading"].retrieved_at)
+        water_age["stale"] = not water_level_card["is_today"]
     
     return render_template(
         "monitoring/index.html",
@@ -278,6 +309,13 @@ def index():
         weather_options=weather_options,
         dss_station=dss_station,
         latest_weather=latest_weather,
+
+
+        weather_age=weather_age,
+        water_age=water_age,
+        water_min=WATER_PLAUSIBLE_MIN_M,
+        water_max=WATER_PLAUSIBLE_MAX_M,
+        wind_directions=WIND_DIRECTIONS,
     )
 
 
@@ -301,7 +339,27 @@ def add_reading():
 
     # Water level is required
     if not water_level:
-        flash("Water level is required.")
+        flash("Water level is required.", "danger")
+        return redirect(url_for("monitoring.index"))
+
+    try:
+        water_value = float(water_level)
+    except ValueError:
+        flash("Water level must be a number.", "danger")
+        return redirect(url_for("monitoring.index"))
+
+    if water_value <= 0:
+        flash("Water level must be greater than 0.", "danger")
+        return redirect(url_for("monitoring.index"))
+
+    outside = not (WATER_PLAUSIBLE_MIN_M <= water_value <= WATER_PLAUSIBLE_MAX_M)
+    if outside and request.form.get("confirm_unusual") != "1":
+        flash(
+            f"{water_value:g} m is outside the usual range "
+            f"({WATER_PLAUSIBLE_MIN_M:g} to {WATER_PLAUSIBLE_MAX_M:g} m). "
+            "Check for a typo, then confirm to save.",
+            "danger",
+        )
         return redirect(url_for("monitoring.index"))
 
     # Create manual environmental reading
@@ -314,7 +372,7 @@ def add_reading():
             or "Central Bay, Cardona, Rizal"
         ),
 
-        water_level_m=float(water_level),
+        water_level_m=water_value,
 
         wind_speed_kmh=(
             float(wind_speed)
@@ -362,6 +420,10 @@ def add_weather_reading():
     wind_speed = (request.form.get("wind_speed_kmh") or "").strip()
     condition = (request.form.get("weather_condition") or "").strip()
     direction = (request.form.get("wind_direction") or "").strip()
+    direction = direction.upper()
+    if direction and direction not in WIND_DIRECTIONS:
+        flash("Invalid wind direction selected.", "danger")
+        return redirect(url_for("monitoring.index"))
     temperature = (request.form.get("temperature_c") or "").strip()
 
     if not wind_speed or not condition:

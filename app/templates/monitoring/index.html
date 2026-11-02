@@ -88,17 +88,16 @@
                     Wind Speed
                 </div>
 
-                {% if wind_summary %}
+                    {% if wind_summary %}
 
-                                      <div class="monitoring-summary-subvalue">
+                    <div class="monitoring-summary-value">
+                        {{ wind_summary.speed }} km/h
+                    </div>
+
+                    <div class="monitoring-summary-subvalue">
                         {{ wind_summary.direction or "Direction unavailable" }}
-                        {% if wind_summary.source == "manual" %}
-                            &middot; entered for {{ wind_summary.station_name }}
-                            (Station {{ wind_summary.station_no }})
-                        {% else %}
-                            &middot; highest at {{ wind_summary.station_name }}
-                            (Station {{ wind_summary.station_no }})
-                        {% endif %}
+                        &middot; at {{ wind_summary.station_name }}
+                        (Station {{ wind_summary.station_no }})
                     </div>
 
                     <div class="monitoring-summary-source">
@@ -108,8 +107,6 @@
                             Source: Open-Meteo weather model
                         {% endif %}
                     </div>
-
-                    
 
                 {% else %}
 
@@ -140,39 +137,28 @@
                 <div class="monitoring-summary-label">
                     Water Level
                 </div>
+
                                 {% if water_level_card.reading %}
 
-                    {% set wl = water_level_card.reading %}
-
                     <div class="monitoring-summary-value">
-                        {{ wl.water_level_m }} m
+                        {{ "%.2f"|format(water_level_card.reading.water_level_m) }} m
                     </div>
 
                     <div class="monitoring-summary-subvalue">
                         {% if water_level_card.is_today %}
                             Recorded today
-                        {% elif water_level_card.age_days == 1 %}
-                            Last recorded {{ water_level_card.date_label }} (1 day ago)
                         {% else %}
-                            Last recorded {{ water_level_card.date_label }}
-                            ({{ water_level_card.age_days }} days ago)
+                            STALE &middot; Last recorded {{ water_level_card.date_label }}
                         {% endif %}
                     </div>
 
                     <div class="monitoring-summary-source">
-                        {% if wl.source == "manual" %}
-                            Manual observation
-                        {% else %}
+                        {% if water_level_card.reading.source == "llda" %}
                             Source: LLDA
+                        {% else %}
+                            Source: Manual observation
                         {% endif %}
                     </div>
-
-                    {% if baseline %}
-                    <div class="monitoring-summary-source">
-                        Typical for this date: {{ "%.2f"|format(baseline.p10) }}&ndash;{{ "%.2f"|format(baseline.p90) }} m
-                        
-                    </div>
-                    {% endif %}
 
                 {% else %}
 
@@ -184,16 +170,14 @@
                         No water level recorded. Manual entry required.
                     </div>
 
-                    {% if baseline %}
-                    <div class="monitoring-summary-source">
-                        Typical for this date: {{ "%.2f"|format(baseline.p10) }}&ndash;{{ "%.2f"|format(baseline.p90) }} m
-                    </div>
-                    {% endif %}
-
                 {% endif %}
-                
 
-            </div>
+                {% if baseline %}
+                <div class="monitoring-summary-source">
+                    Typical for this date: {{ "%.2f"|format(baseline.p10) }}&ndash;{{ "%.2f"|format(baseline.p90) }} m
+                </div>
+                {% endif %}
+                    
 
         </div>
 
@@ -234,6 +218,17 @@
 
             </div>
 
+                        <div class="monitoring-map-legend">
+                <span class="legend-item">
+                    <i class="legend-dot"></i>
+                    Monitoring station (weather-model values)
+                </span>
+                <span class="legend-item">
+                    <i class="bi bi-triangle-fill legend-triangle"></i>
+                    Hilltop or peak (OpenStreetMap map data)
+                </span>
+            </div>
+
         </div>
 
 
@@ -267,7 +262,7 @@
                         Water Level Status
                     </div>
 
-                                        {% if water_level_card.reading %}
+                        {% if water_level_card.reading %}
 
                         {# Primary: the latest reading and its condition. #}
                         <div class="monitoring-status-value monitoring-waterlevel-main">
@@ -287,7 +282,7 @@
                             {% elif llda_status == "cached" %}
                                 Using cached data
                             {% else %}
-                                LLDA feed not connected. Using manual entry.
+                                Using manual entry.
                             {% endif %}
                         </div>
 
@@ -347,32 +342,52 @@
 
 
             <!-- LAST UPDATED -->
+                        <!-- LAST UPDATED: WEATHER -->
             <div class="monitoring-status-row">
-
                 <div class="monitoring-status-icon">
-                    <i class="bi bi-clock"></i>
+                    <i class="bi bi-cloud-sun"></i>
                 </div>
-
                 <div class="monitoring-status-content">
-
-                    <div class="monitoring-status-label">
-                        Last Updated
-                    </div>
-
+                    <div class="monitoring-status-label">Weather Last Updated</div>
                     <div class="monitoring-status-value">
-
                         {% if station_weather_updated %}
                             {{ station_weather_updated | ph_time }}
-                        {% elif llda_reading %}
-                            {{ llda_reading.retrieved_at | ph_time }}
                         {% else %}
                             No recent data
                         {% endif %}
-
                     </div>
 
+                     {% if weather_age %}
+                    <div class="monitoring-age {{ 'stale' if weather_age.stale }}">{{ weather_age.text }}</div>
+                    {% endif %}
+                    <div class="monitoring-status-note">
+                        When the weather model was last fetched
+                    </div>
                 </div>
+            </div>
 
+            <!-- LAST UPDATED: WATER LEVEL -->
+            <div class="monitoring-status-row">
+                <div class="monitoring-status-icon">
+                    <i class="bi bi-clock"></i>
+                </div>
+                <div class="monitoring-status-content">
+                    <div class="monitoring-status-label">Water Level Last Recorded</div>
+                    <div class="monitoring-status-value">
+                        {% if water_level_card.reading %}
+                            {{ water_level_card.reading.retrieved_at | ph_time }}
+                        {% else %}
+                            No reading recorded
+                        {% endif %}
+                    </div>
+
+                     {% if water_age %}
+                    <div class="monitoring-age {{ 'stale' if water_age.stale }}">{{ water_age.text }}</div>
+                    {% endif %}
+                    <div class="monitoring-status-note">
+                        When the latest level was entered (manual)
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -1101,7 +1116,11 @@
         <form
             method="POST"
             action="{{ url_for('monitoring.add_reading') }}"
+            id="water-reading-form"
+            data-min="{{ water_min }}"
+            data-max="{{ water_max }}"
         >
+    <input type="hidden" name="confirm_unusual" value="0">
 
             <div class="monitoring-form-grid">
 
@@ -1198,7 +1217,12 @@
 
                 <div class="monitoring-form-field">
                     <label>Wind Direction</label>
-                    <input type="text" class="form-control" name="wind_direction" maxlength="10" placeholder="e.g. NE">
+                    <select class="form-select" name="wind_direction">
+                    <option value="" selected>Not specified</option>
+                    {% for d in wind_directions %}
+                    <option value="{{ d }}">{{ d }}</option>
+                    {% endfor %}
+                </select>
                 </div>
 
                 <div class="monitoring-form-field">
@@ -1253,79 +1277,57 @@
         </div>
 
 
-        <div class="monitoring-table-wrapper">
 
+                <div class="monitoring-table-wrapper">
+          <div class="table-scroll">
             <table class="monitoring-table">
-
                 <thead>
-
                     <tr>
                         <th>Timestamp</th>
+                        <th>Type</th>
                         <th>Source</th>
-                        <th>Water Level (m)</th>
+                        <th>Reading</th>
+                        <th>Observation</th>
+                        <th>Comment</th>
                         <th>Entered By</th>
                     </tr>
-
                 </thead>
-
-
                 <tbody>
-
                     {% for reading in history %}
-
                     <tr>
-
+                        <td>{{ reading.retrieved_at | ph_time }}</td>
                         <td>
-                            {{ reading.retrieved_at | ph_time }}
+                            {% if reading.water_level_m is not none %}Water level
+                            {% elif reading.weather_condition or reading.wind_speed_kmh is not none %}Weather
+                            {% else %}Observation{% endif %}
                         </td>
-
+                        <td>{{ reading.source|capitalize }}</td>
                         <td>
-                            {{ reading.source|capitalize }}
+                            {% if reading.water_level_m is not none %}
+                                {{ reading.water_level_m }} m
+                            {% elif reading.weather_condition or reading.wind_speed_kmh is not none %}
+                                {{ reading.weather_condition or "—" }}
+                                {% if reading.wind_speed_kmh is not none %}
+                                    &middot; {{ reading.wind_speed_kmh }} km/h {{ reading.wind_direction or "" }}
+                                {% endif %}
+                            {% else %}—{% endif %}
                         </td>
-
+                        <td>{{ reading.observed_condition|capitalize if reading.observed_condition else "—" }}</td>
+                        <td>{{ reading.observer_comment or "—" }}</td>
                         <td>
-                            {{ reading.water_level_m
-                                if reading.water_level_m is not none
-                                else "—" }}
-                        </td>
-
-                        <td>
-
                             {% if reading.entered_by_user_id %}
-
-                                {{ reading.entered_by.full_name
-                                    if reading.entered_by
-                                    else "—" }}
-
-                            {% else %}
-
-                                —
-
-                            {% endif %}
-
+                                {{ reading.entered_by.full_name if reading.entered_by else "—" }}
+                            {% else %}—{% endif %}
                         </td>
-
                     </tr>
-
                     {% else %}
-
                     <tr>
-
-                        <td
-                            colspan="4"
-                            class="monitoring-table-empty"
-                        >
-                            No readings recorded yet.
-                        </td>
-
+                        <td colspan="7" class="monitoring-table-empty">No readings recorded yet.</td>
                     </tr>
-
                     {% endfor %}
-
                 </tbody>
-
             </table>
-
+          </div>
         </div>
 
     </section>
@@ -1609,6 +1611,27 @@
         'Temperature (weather model)', '\u00b0C', '#d9480f', false);
 
     initWaterLevelChart();
+
+
+        (function () {
+        const form = document.getElementById('water-reading-form');
+        if (!form) { return; }
+        const min = parseFloat(form.dataset.min);
+        const max = parseFloat(form.dataset.max);
+        form.addEventListener('submit', function (e) {
+            const v = parseFloat(form.elements['water_level_m'].value);
+            const flag = form.elements['confirm_unusual'];
+            flag.value = '0';
+            if (!isNaN(v) && (v < min || v > max)) {
+                const ok = window.confirm(
+                    v + ' m is outside the usual range (' + min + ' to ' + max +
+                    ' m). Is this correct, or is it a typo?'
+                );
+                if (!ok) { e.preventDefault(); return; }
+                flag.value = '1';
+            }
+        });
+    })();
 
 </script>
 

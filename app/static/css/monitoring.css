@@ -1144,3 +1144,46 @@
     padding-left: 40px;
     padding-right: 40px;
 }
+
+
+.monitoring-map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    padding: 0 40px 28px;
+    margin-top: -14px;
+    color: #6b7280;
+    font-size: 0.78rem;
+}
+
+.monitoring-map-legend .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #3388ff;
+    border-radius: 50%;
+    background: rgba(51, 136, 255, 0.2);
+}
+
+.legend-triangle {
+    color: #d92d20;
+    font-size: 0.75rem;
+}
+
+@media (max-width: 576px) {
+    .monitoring-map-legend { padding: 0 20px 22px; }
+}
+
+.monitoring-waterlevel-condition.stale { color: #777777; }
+
+.monitoring-age { margin-top: 3px; color: #6b7280; font-size: 0.75rem; }
+.monitoring-age.stale { color: #d92d20; font-weight: 600; }
+
+/* Reusable scrolling table with sticky header (QA 23 / Analytics 10) */
+.table-scroll { max-height: 420px; overflow: auto; border-radius: 9px; }
+.table-scroll .monitoring-table thead th { position: sticky; top: 0; z-index: 1; }
