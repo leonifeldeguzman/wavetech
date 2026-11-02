@@ -32,6 +32,9 @@ def index():
 
     # Capacity Utilization bars: same trips, with "2 / 15, 13%" labels.
     capacity_rows = analytics_service.get_capacity_chart()
+
+    # Passenger Trend: last 7 days, None = no data (left blank on the chart).
+    trend_rows = analytics_service.get_trend_chart()
         
 
     # Manifest Records: search + filter come from the query string.
@@ -85,6 +88,9 @@ def index():
         flow_rows=flow_rows,
         chart_labels=[r["label"] for r in flow_rows],
         chart_passengers=[r["passengers"] for r in flow_rows],
+        trend_labels=[r["label"] for r in trend_rows],
+        trend_values=[r["passengers"] for r in trend_rows],
+        trend_has_data=any(r["passengers"] is not None for r in trend_rows),
         records=records,
         filters=filters,
         filters_active=bool(date_from or date_to or boat_id or status),

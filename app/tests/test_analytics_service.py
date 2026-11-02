@@ -75,7 +75,7 @@ def test_cancelled_trips_counted_in_trips_but_not_passengers():
     assert s["trips_today"] == 1
     assert s["cancelled_trips"] == 1
     assert s["daily_passengers"] == 0
-    assert svc.get_trip_breakdown(DAY) == []
+    
 
 
 def test_status_summary_uses_current_status_only():
@@ -135,21 +135,6 @@ def test_ph_day_boundaries():
     assert svc.get_daily_summary(DAY)["trips_today"] == 2
 
 
-def test_trip_without_boat_has_no_percentage_and_no_crash():
-    t = _trip(None, 10, "Departed")
-    _pax(t, 3)
-    rows = svc.get_trip_breakdown(DAY)
-    assert rows[0]["capacity_pct"] is None
-    assert svc.get_daily_summary(DAY)["avg_capacity_pct"] is None
-
-
-def test_breakdown_ordered_by_departure_and_shows_ph_time():
-    b = _boat(capacity=10)
-    _pax(_trip(b, 12, "Open"), 2)
-    _pax(_trip(b, 10, "Departed"), 5)
-    rows = svc.get_trip_breakdown(DAY)
-    assert [r["departure_ph"].hour for r in rows] == [10, 12]
-    assert rows[0]["capacity_pct"] == 50.0
 
 
 # ---------------------------------------------------------------------------
@@ -358,3 +343,39 @@ def test_capacity_chart_sorted_and_delayed_uses_new_time():
 def test_capacity_chart_empty_when_nothing_qualifies():
     _trip(None, 10, "Open")
     assert svc.get_capacity_chart(DAY) == []
+
+# ---------------------------------------------------------------------------
+# Passenger Trend chart (Batch 4)
+# ---------------------------------------------------------------------------
+
+def test_trend_chart_has_seven_days_oldest_first():
+    rows = svc.get_trend_chart(DAY)
+    assert len(rows) == 7
+    assert rows[0]["date"] == DAY - timedelta(days=6)
+    assert rows[-1]["date"] == DAY
+    assert rows[-1]["label"] == "May 29"
+
+
+def test_trend_chart_blank_not_zero_for_days_without_data():
+    b = _boat()
+    _pax(_trip(b, 10, "Departed", day=DAY - timedelta(days=2)), 4)
+    rows = svc.get_trend_chart(DAY)
+    by_date = {r["date"]: r["passengers"] for r in rows}
+    assert by_date[DAY - timedelta(days=2)] == 4
+    assert by_date[DAY - timedelta(days=1)] is None
+    assert by_date[DAY] is None
+
+
+def test_trend_chart_real_zero_when_trip_has_no_passengers():
+    b = _boat()
+    _trip(b, 10, "Departed", day=DAY - timedelta(days=1))
+    by_date = {r["date"]: r["passengers"] for r in svc.get_trend_chart(DAY)}
+    assert by_date[DAY - timedelta(days=1)] == 0
+
+
+def test_trend_chart_ignores_cancelled_and_unassigned():
+    b = _boat()
+    _pax(_trip(b, 10, "Cancelled", cancel_reason="Weather"), 5)
+    _pax(_trip(None, 12, "Open"), 3)
+    by_date = {r["date"]: r["passengers"] for r in svc.get_trend_chart(DAY)}
+    assert by_date[DAY] is None

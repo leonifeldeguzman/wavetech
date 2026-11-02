@@ -157,6 +157,35 @@
 </div>
 
 
+<!-- Passenger Trend - last 7 days -->
+<div class="card border-0 shadow-sm mb-4 analytics-trend-card">
+  <div class="card-body">
+
+    <div class="analytics-chart-header">
+      <h6>Passenger Trend - Last 7 Days</h6>
+    </div>
+
+    {% if trend_has_data %}
+    <div class="analytics-chart-wrapper">
+      <canvas
+        id="passengerTrendChart"
+        data-labels='{{ trend_labels|tojson }}'
+        data-values='{{ trend_values|tojson }}'
+      ></canvas>
+    </div>
+    <p class="analytics-chart-caption">
+      Total approved and walk-in passengers per day. Days without data are left blank, not shown as zero.
+    </p>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      No passenger data in the last 7 days.
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+
 <!-- =====================  Manifest Records  ===================== -->
 <div class="card border-0 mb-4 analytics-manifest-card" id="manifest-records">
   <div class="card-body">
@@ -646,6 +675,59 @@
               ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 },
             },
 
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 },
+              title: { display: true, text: "Passengers" },
+            },
+          },
+        },
+      });
+    }
+
+        /* ---------- Passenger trend chart ---------- */
+    const trendCanvas = document.getElementById("passengerTrendChart");
+
+    if (trendCanvas && typeof Chart !== "undefined") {
+      let trendLabels = [];
+      let trendValues = [];
+
+      try {
+        trendLabels = JSON.parse(trendCanvas.dataset.labels);
+        trendValues = JSON.parse(trendCanvas.dataset.values);
+      } catch (err) {
+        console.error("Passenger trend chart data could not be parsed:", err);
+      }
+
+      const existingTrendChart = Chart.getChart(trendCanvas);
+      if (existingTrendChart) existingTrendChart.destroy();
+
+      new Chart(trendCanvas, {
+        type: "line",
+
+        data: {
+          labels: trendLabels,
+          datasets: [
+            {
+              label: "Passengers",
+              data: trendValues,
+              borderColor: "#0f1b3c",
+              backgroundColor: "#0f1b3c",
+              pointRadius: 4,
+              pointHoverRadius: 5,
+              borderWidth: 2,
+              tension: 0.25,
+              spanGaps: false,   // days without data stay blank
+            },
+          ],
+        },
+
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { autoSkip: false } },
             y: {
               beginAtZero: true,
               ticks: { precision: 0 },

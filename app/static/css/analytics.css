@@ -70,6 +70,16 @@
     padding-right: 48px;
 }
 
+.analytics-trend-card {
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(15, 27, 60, 0.12) !important;
+}
+
+.analytics-trend-card .card-body {
+    padding-left: 38px;
+    padding-right: 38px;
+}
+
 .analytics-chart-header {
     margin: 0 0 26px;
     padding: 20px 12px 18px;

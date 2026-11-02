@@ -60,25 +60,7 @@ def _pct(passengers, capacity):
     return round(passengers / capacity * 100, 1)
 
 
-def get_trip_breakdown(day: date = None):
-    """Per-trip rows for the charts. Cancelled trips are excluded."""
-    day = day or ph_today()
-    trips = [t for t in _trips_for_day(day) if t.status != "Cancelled"]
-    counts = _passenger_counts([t.id for t in trips])
-    rows = []
-    for t in trips:
-        capacity = t.boat.capacity if t.boat else None
-        passengers = counts.get(t.id, 0)
-        rows.append({
-            "trip_id": t.id,
-            "departure_ph": t.departure_time,
-            "boat_name": t.boat.name if t.boat else None,
-            "status": t.status,
-            "passengers": passengers,
-            "capacity": capacity,
-            "capacity_pct": _pct(passengers, capacity),
-        })
-    return rows
+
 
 LIVE_STATUSES = ("Open", "Boarding", "Full", "Delayed")
 COUNTED_STATUSES = LIVE_STATUSES + ("Departed",)
@@ -168,6 +150,27 @@ def get_capacity_chart(day: date = None):
             "count_label": count_label,
             "status": t.status,
             "is_full": t.status == "Full",
+        })
+    return rows
+
+TREND_DAYS = 7
+
+
+def get_trend_chart(day: date = None):
+    """One point per day for the last 7 days, oldest first.
+
+    A day with no counted trips has passengers=None (shown as a gap, not zero).
+    A day with counted trips but no passengers is a real 0.
+    """
+    day = day or ph_today()
+    rows = []
+    for offset in range(TREND_DAYS - 1, -1, -1):
+        d = day - timedelta(days=offset)
+        _, counted, _, passengers = _day_totals(d)
+        rows.append({
+            "date": d,
+            "label": f"{d:%b} {d.day}",
+            "passengers": passengers if counted else None,
         })
     return rows
 
