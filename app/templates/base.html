@@ -150,11 +150,16 @@
 
 </header>
 
-        <!-- Flash messages -->
-          {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for
-          category, message in messages %}
-          <div class="alert alert-{{ 'success' if category == 'success' else ('danger' if category in ['danger', 'error'] else 'warning') }} py-2">{{ message }}</div>
-          {% endfor %} {% endif %} {% endwith %}
+                <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+          <div class="alert alert-{{ 'success' if category == 'success' else ('danger' if category in ['danger', 'error'] else 'warning') }} py-2" role="alert">{{ message }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
 
         <!-- Page content -->
         <main class="p-3 p-lg-4 flex-grow-1" style="min-width: 0">
@@ -191,21 +196,10 @@
   updateClock();
   setInterval(updateClock, 1000);
 
-  setTimeout(function () {
-  const alerts = document.querySelectorAll(".flash-messages .alert");
-
-  alerts.forEach(function (alert) {
-    alert.style.opacity = "0";
-
-    setTimeout(function () {
-      alert.remove();
-    }, 300);
-  });
-}, 3000);
 </script>
-    {% block scripts %}{% endblock %}
-  </body>
-  <script>
+  
+{% block scripts %}{% endblock %}
+    <script>
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".flash-messages .alert").forEach(function (el) {
     var delay = el.classList.contains("alert-success") ? 4000 : 8000;
@@ -221,4 +215,5 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 </script>
+  </body>
 </html>

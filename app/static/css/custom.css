@@ -878,11 +878,20 @@ nav.d-lg-flex .sidebar-brand {
     color: #6c757d;
 }
 
+/* Flash banners: align with page content */
 .flash-messages {
-    padding-top: 1rem;
+    margin: 0;
+    padding: 16px 30px 0;
+}
+
+.flash-messages:empty {
+    display: none;
 }
 
 .flash-messages .alert {
-    margin-bottom: 0;
+    margin: 0 0 12px;
+    padding: 12px 18px;
     border-radius: 8px;
+    font-size: 0.92rem;
+    line-height: 1.4;
 }
