@@ -15,6 +15,17 @@
 
 <div class="monitoring-page">
 
+        <nav class="monitoring-jump" aria-label="Jump to section">
+        <span class="monitoring-jump-label">Jump to</span>
+        <a href="#station-weather">Station Weather</a>
+        <a href="#latest-reading">Latest Reading</a>
+        <a href="#baseline">Historical Baseline</a>
+        <a href="#water-trend">Water Level Trend</a>
+        <a href="#weather-trend">Weather Trend</a>
+        <a href="#manual-entry">Enter Readings</a>
+        <a href="#recent-readings">Recent Readings</a>
+    </nav>
+
 
     <!-- =====================================================
          TOP ENVIRONMENT SUMMARY
@@ -398,7 +409,7 @@
          STATION WEATHER (Open-Meteo model values, NOT lake measurements)
          ===================================================== -->
 
-    <section class="monitoring-card monitoring-stations-card">
+    <section class="monitoring-card monitoring-stations-card" id="station-weather">
 
         <div class="monitoring-section-heading">
 
@@ -646,7 +657,7 @@
          LATEST READING
          ===================================================== -->
 
-    <section class="monitoring-card monitoring-latest-card">
+    <section class="monitoring-card monitoring-latest-card" id="latest-reading">
 
         <div class="monitoring-section-heading">
             <div>
@@ -771,7 +782,7 @@
          HISTORICAL BASELINE (reference data, NOT a current reading)
          ===================================================== -->
 
-    <section class="monitoring-card monitoring-baseline-card">
+    <section class="monitoring-card monitoring-baseline-card" id="baseline">
 
         <div class="monitoring-section-heading">
 
@@ -885,7 +896,7 @@
          WATER LEVEL TREND (lake-wide; historical reference + recorded)
          ===================================================== -->
 
-    <section class="monitoring-card monitoring-trends-card">
+    <section class="monitoring-card monitoring-trends-card" id="water-trend">
 
         <div class="monitoring-section-heading">
 
@@ -957,7 +968,7 @@
          STATION WEATHER TREND (Open-Meteo model values, per station)
          ===================================================== -->
 
-    <section class="monitoring-card monitoring-trends-card">
+    <section class="monitoring-card monitoring-trends-card" id="weather-trend">
 
         <div class="monitoring-section-heading">
 
@@ -1094,7 +1105,7 @@
          MANUAL ENTRY
          ===================================================== -->
 
-    <section class="monitoring-card monitoring-manual-card">
+    <section class="monitoring-card monitoring-manual-card" id="manual-entry">
 
         <div class="monitoring-section-heading">
 
@@ -1258,7 +1269,7 @@
          RECENT READINGS
          ===================================================== -->
 
-    <section class="monitoring-card monitoring-history-card">
+    <section class="monitoring-card monitoring-history-card" id="recent-readings">
 
         <div class="monitoring-section-heading">
 
