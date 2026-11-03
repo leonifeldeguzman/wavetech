@@ -8,7 +8,7 @@ ph_today() (app/utils/ph_clock.py) converts.
 """
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import and_, case, not_, select
 
 from app.extensions import db
 from app.models.manifest_entry import ManifestEntry
@@ -241,6 +241,17 @@ def _date_label(d):
     """June 8, 2026 (no leading zero on the day)."""
     return f"{d:%B} {d.day}, {d.year}"
 
+def _expired_condition():
+    """SQL version of 'expired': still live, and past its effective time.
+
+    A Delayed trip is judged by its new departure time, like in _real_trips().
+    """
+    effective = case(
+        (and_(Trip.status == "Delayed", Trip.new_departure_time.isnot(None)),
+         Trip.new_departure_time),
+        else_=Trip.departure_time,
+    )
+    return and_(Trip.status.in_(LIVE_STATUSES), effective < ph_now())
 
 def get_manifest_records(search=None, date_from=None, date_to=None,
                          boat_id=None, status=None, today=None):
@@ -252,6 +263,7 @@ def get_manifest_records(search=None, date_from=None, date_to=None,
       the TRIPS that contain at least one match.
     - Within a date, trips are ordered by departure time (earliest first).
     - show_date is True only on the first row of each date, as in the mockup.
+    - Unassigned (no boat) and expired trips are hidden.
     """
     today = today or ph_today()
     if date_from is None and date_to is None:
@@ -260,7 +272,8 @@ def get_manifest_records(search=None, date_from=None, date_to=None,
     if date_from and date_to and date_from > date_to:
         date_from, date_to = date_to, date_from
 
-    query = Trip.query
+    # Hide unassigned slots (no boat) and expired slots (past time, never departed).
+    query = Trip.query.filter(Trip.boat_id.isnot(None), not_(_expired_condition()))
     if date_from:
         query = query.filter(Trip.departure_time >= day_bounds(date_from)[0])
     if date_to:

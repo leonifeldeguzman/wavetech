@@ -379,3 +379,42 @@ def test_trend_chart_ignores_cancelled_and_unassigned():
     _pax(_trip(None, 12, "Open"), 3)
     by_date = {r["date"]: r["passengers"] for r in svc.get_trend_chart(DAY)}
     assert by_date[DAY] is None
+
+def test_records_hide_unassigned_trips():
+    b = _boat()
+    kept = _trip(b, 9, "Departed")
+    _trip(None, 10, "Open")
+    _trip(None, 11, "Cancelled", cancel_reason="Weather")
+    ids = [r["trip_id"] for r in svc.get_manifest_records(today=DAY)["rows"]]
+    assert ids == [kept.id]
+
+
+def test_records_hide_expired_but_keep_departed_and_cancelled():
+    b = _boat()
+    _trip(b, 6, "Open")                                    # expired (clock is 8:00 AM)
+    _trip(b, 7, "Full")                                    # expired
+    _trip(b, 5, "Departed")                                # kept
+    _trip(b, 4, "Cancelled", cancel_reason="Weather")      # kept
+    _trip(b, 15, "Open")                                   # upcoming, kept
+    rows = svc.get_manifest_records(today=DAY)["rows"]
+    assert [(r["time_label"], r["status"]) for r in rows] == [
+        ("4:00 AM", "Cancelled"),
+        ("5:00 AM", "Departed"),
+        ("3:00 PM", "Open"),
+    ]
+
+
+def test_records_hide_open_trip_from_a_past_day():
+    b = _boat()
+    _trip(b, 9, "Open", day=DAY - timedelta(days=1))       # never departed
+    kept = _trip(b, 9, "Departed", day=DAY - timedelta(days=1), ph_minute=30)
+    ids = [r["trip_id"] for r in svc.get_manifest_records(today=DAY)["rows"]]
+    assert ids == [kept.id]
+
+
+def test_records_delayed_trip_expires_at_its_new_time(monkeypatch):
+    b = _boat()
+    _trip(b, 6, "Delayed", new_departure_time=datetime(2026, 5, 29, 13, 0))
+    assert len(svc.get_manifest_records(today=DAY)["rows"]) == 1   # 8:00 AM, new time is 1 PM
+    monkeypatch.setattr(svc, "ph_now", lambda: datetime(2026, 5, 29, 14, 0))
+    assert svc.get_manifest_records(today=DAY)["rows"] == []       # 2:00 PM, expired

@@ -330,11 +330,21 @@
     </form>
 
 
-    {% if not filters.date_from and not filters.date_to %}
-    <div class="text-muted small mb-2 analytics-record-note">
-      Showing the last 30 days. Use the filter to pick a date range.
+        <div class="text-muted small mb-2 analytics-record-note">
+      {% if filters.date_from and filters.date_to %}
+        Showing records from {{ records.date_from.strftime('%b') }} {{ records.date_from.day }}, {{ records.date_from.year }}
+        to {{ records.date_to.strftime('%b') }} {{ records.date_to.day }}, {{ records.date_to.year }}.
+      {% elif filters.date_from %}
+        Showing records from {{ records.date_from.strftime('%b') }} {{ records.date_from.day }}, {{ records.date_from.year }} onward.
+      {% elif filters.date_to %}
+        Showing records up to {{ records.date_to.strftime('%b') }} {{ records.date_to.day }}, {{ records.date_to.year }}.
+      {% else %}
+        Showing the last 30 days. Use the filter to pick a date range.
+      {% endif %}
+      {% if filters.q %} Search: "{{ filters.q }}".{% endif %}
+      {% if filters.boat_id %} Boat filter applied.{% endif %}
+      {% if filters.status %} Status: {{ filters.status }}.{% endif %}
     </div>
-    {% endif %}
 
     {% if records.truncated %}
     <div class="alert alert-warning py-2 small">
@@ -346,7 +356,7 @@
 
     <!-- Records table -->
     <div class="analytics-table-container">
-      <div class="table-responsive">
+      <div class="table-responsive table-scroll-y">
 
         <table
           id="manifestRecordsTable"
@@ -357,25 +367,30 @@
               <th>Date</th>
               <th>Schedule</th>
               <th>Boat Name</th>
-              <th>Passengers</th>
+              <th>Passengers / Capacity</th>
+              <th>Status</th>
               <th class="text-end">Actions</th>
             </tr>
           </thead>
 
-          <tbody>
+                    <tbody>
             {% for r in records.rows %}
-            <tr class="{% if selected_trip_id == r.trip_id %}table-active{% endif %}">
+            <tr class="{% if r.show_date and not loop.first %}analytics-date-start{% endif %}{% if selected_trip_id == r.trip_id %} table-active{% endif %}">
 
-              <td class="fw-bold">
-                {% if r.show_date %}{{ r.date_label }}{% endif %}
-              </td>
+              <td class="fw-bold">{{ r.date_label }}</td>
 
               <td>{{ r.time_label }}</td>
 
               <td>{{ r.boat_name or '—' }}</td>
 
               <td>
-                {{ r.passengers }}/{{ r.capacity if r.capacity is not none else '—' }}
+                {{ r.passengers }} / {{ r.capacity if r.capacity is not none else '—' }}
+              </td>
+
+              <td>
+                <span class="status-pill {{ r.status|lower|replace(' ', '-') }}">
+                  {{ r.status }}
+                </span>
               </td>
 
               <td class="text-end">
@@ -400,8 +415,12 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="5" class="text-center text-muted py-4">
-                No manifest records match your search.
+              <td colspan="6" class="text-center text-muted py-4">
+                {% if filters.q %}
+                No records match your search.
+                {% else %}
+                No records match these filters.
+                {% endif %}
               </td>
             </tr>
             {% endfor %}
@@ -608,8 +627,8 @@
             tbody.appendChild(noResults);
           }
 
-          noResults.querySelector("td").textContent =
-            'No results found for "' + this.value + '"';
+        noResults.querySelector("td").textContent =
+            "No records match your search.";
           noResults.style.display = "";
         } else if (noResults) {
           noResults.style.display = "none";
@@ -620,7 +639,7 @@
     const manifestTable = document.getElementById("manifestRecordsTable");
 
     if (manifestTable) {
-      setupLiveSearch("manifestSearch", manifestTable, [0, 1, 2, 3]);
+        setupLiveSearch("manifestSearch", manifestTable, [0, 1, 2, 3, 4]);
     }
 
     /* ---------- Capacity bar widths (from data-width) ---------- */
