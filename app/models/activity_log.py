@@ -1,5 +1,5 @@
 from app.extensions import db
-
+from app.utils.timezone import utc_now_naive
 
 class ActivityLog(db.Model):
     """Admin-only audit trail of important administrative actions.
@@ -21,7 +21,12 @@ class ActivityLog(db.Model):
     action = db.Column(db.String(100), nullable=False)
     details = db.Column(db.Text, nullable=True)
 
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    created_at = db.Column(
+        db.DateTime,
+        nullable=True,
+        default=utc_now_naive,
+        server_default=db.func.now(),
+    )
 
     user = db.relationship("User")
 

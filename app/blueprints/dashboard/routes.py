@@ -73,7 +73,7 @@ def index():
             # Only offered for CAUTION/DELAY and UNSAFE results — see
             # scheduling_service.build_safety_alert(). This never creates
             # an Announcement itself; it only supplies the text used to
-            # prefill the existing Create Announcement form.
+            # prefill the existing Create Notice form.
             safety_alert_action = scheduling_service.build_safety_alert(
                 scheduling_assessment, selected_trip
             )

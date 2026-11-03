@@ -32,8 +32,9 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
 
-    from app.utils.timezone import format_ph_time
+    from app.utils.timezone import format_ph_input, format_ph_time
     app.jinja_env.filters["ph_time"] = format_ph_time
+    app.jinja_env.filters["ph_input"] = format_ph_input
 
     from app import models
 

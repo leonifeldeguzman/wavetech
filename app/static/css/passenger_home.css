@@ -633,7 +633,7 @@
 
 
 /* =========================================================
-   ANNOUNCEMENTS
+   NOTICES
    ========================================================= */
 
 .announcements-page {
@@ -735,14 +735,39 @@
     font-size: 0.9rem;
 }
 
+/* Notice type emphasis. Safety Alert is the most prominent; Cancellation
+   next; Delay amber; General Notice neutral. */
 .home-announcement.safety {
-    border-color: #edd1d1;
-    background: #fffdfd;
+    border-color: #efc4c0;
+    border: 1px solid #efc4c0;
+    background: #fff5f5;
 }
 
 .home-announcement.safety .home-announcement-icon {
-    background: #fff1f1;
-    color: #c43d3d;
+    background: #b42318;
+    color: #ffffff;
+}
+
+.home-announcement.safety h3 {
+    color: #7a1b13;
+}
+
+.home-announcement.cancellation {
+    border: 1px solid #e2c4c4;
+}
+
+.home-announcement.cancellation .home-announcement-icon {
+    background: #7a1212;
+    color: #ffffff;
+}
+
+.home-announcement.delay {
+    border: 1px solid #ead9b8;
+}
+
+.home-announcement.delay .home-announcement-icon {
+    background: #fff1d6;
+    color: #7a4100;
 }
 
 .home-announcement-content {
@@ -784,22 +809,49 @@
 .home-announcement-type {
     display: inline-flex;
     align-items: center;
+    gap: 5px;
     flex-shrink: 0;
     min-height: 22px;
-    padding: 3px 8px;
-    border: 1px solid #dbe2e9;
+    padding: 3px 9px;
+    border: 1px solid #c9d8e6;
     border-radius: 999px;
-    background: #f7f9fb;
-    color: #5f6b78 !important;
+    background: #eaf2f9;
+    color: #2c5272 !important;
     font-size: 0.66rem !important;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.2;
 }
 
+/* Type badge colours (all text/background pairs meet WCAG AA >= 4.5:1). */
 .home-announcement-type.safety {
-    border-color: #efc8c8;
-    background: #fff1f1;
-    color: #bd3b3b !important;
+    border-color: #b42318;
+    background: #b42318;
+    color: #ffffff !important;
+}
+
+.home-announcement-type.delay {
+    border-color: #e9b45f;
+    background: #fff1d6;
+    color: #7a4100 !important;
+}
+
+.home-announcement-type.cancellation {
+    border-color: #7a1212;
+    background: #7a1212;
+    color: #ffffff !important;
+}
+
+.home-announcement-type.general {
+    border-color: #c9d8e6;
+    background: #eaf2f9;
+    color: #2c5272 !important;
+}
+
+.home-announcement-expiry {
+    margin-top: 3px;
+    color: #5f6b78;
+    font-size: 0.71rem;
+    line-height: 1.4;
 }
 
 .home-announcement-content p {
@@ -1037,4 +1089,35 @@
         width: auto;
     }
 
+}
+
+/* =========================================================
+   NOTICE CARDS — PASSENGER VIEW
+   Minimal 1px full-border treatment
+   ========================================================= */
+
+.home-announcement {
+    border: 1px solid #e1e7ed;
+    border-radius: 9px;
+    background: #ffffff;
+}
+
+.home-announcement.safety {
+    border: 1px solid #efc4c0;
+    background: #fffafa;
+}
+
+.home-announcement.cancellation {
+    border: 1px solid #e2c4c4;
+    background: #fffafa;
+}
+
+.home-announcement.delay {
+    border: 1px solid #ead9b8;
+    background: #fffdf8;
+}
+
+.home-announcement.general {
+    border: 1px solid #dfe5eb;
+    background: #ffffff;
 }

@@ -27,7 +27,8 @@ from app.extensions import db
 from app.models.trip import Trip
 from app.models.pending_registration import PendingRegistration, generate_reference_code
 from app.utils.api_responses import success_response, error_response
-from app.models.announcement import Announcement
+from app.models.announcement import Announcement  # noqa: F401
+from app.services import announcement_service
 from app.services import semaphore_service, unisms_service
 from app.services.activity_log_service import log_action, ACTION_REGISTRATION_SMS_SENT, ACTION_PASSENGER_CANCELLED
 from app.models.environmental_reading import EnvironmentalReading
@@ -737,12 +738,9 @@ def home():
         current_trip_date = shown_departure.strftime("%B %d, %Y")
         current_trip_time = shown_departure.strftime("%I:%M%p").lstrip("0")
 
-    announcements = (
-        Announcement.query
-        .filter_by(status=Announcement.STATUS_ACTIVE)
-        .order_by(Announcement.published_at.desc())
-        .limit(2)
-        .all()
+    # Published, non-expired notices only (expiry enforced in the service).
+    announcements = announcement_service.get_active_announcements_for_passengers(
+        limit=2
     )
 
     return render_template(
@@ -770,12 +768,7 @@ def home():
 
 @passenger_bp.route("/passenger/announcements", methods=["GET"])
 def announcements():
-    announcement_rows = (
-        Announcement.query
-        .filter_by(status=Announcement.STATUS_ACTIVE)
-        .order_by(Announcement.published_at.desc())
-        .all()
-    )
+    announcement_rows = announcement_service.get_active_announcements_for_passengers()
 
     return render_template(
         "passenger/announcements.html",

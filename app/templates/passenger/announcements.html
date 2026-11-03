@@ -1,6 +1,6 @@
 {% extends "passenger/base.html" %}
 
-{% block title %}Announcements{% endblock %}
+{% block title %}Notices{% endblock %}
 
 {% block content %}
 
@@ -21,7 +21,7 @@
             <div class="home-card-heading">
                 <div class="home-card-title">
                     <i class="bi bi-megaphone"></i>
-                    <h2>All Announcements</h2>
+                    <h2>All Notices</h2>
                 </div>
             </div>
 
@@ -29,14 +29,10 @@
 
                 {% for announcement in announcements %}
 
-                <div class="home-announcement{% if announcement.type == 'Safety Alert' %} safety{% endif %}">
+                <div class="home-announcement {{ announcement.type_slug }}">
 
-                    <div class="home-announcement-icon">
-                        {% if announcement.type == 'Safety Alert' %}
-                            <i class="bi bi-exclamation-triangle"></i>
-                        {% else %}
-                            <i class="bi bi-bell"></i>
-                        {% endif %}
+                    <div class="home-announcement-icon" aria-hidden="true">
+                        <i class="bi {{ announcement.type_icon }}"></i>
                     </div>
 
                     <div class="home-announcement-content">
@@ -55,7 +51,7 @@
 
                             </div>
 
-                            <span class="home-announcement-type{% if announcement.type == 'Safety Alert' %} safety{% endif %}">
+                            <span class="home-announcement-type {{ announcement.type_slug }}">
                                 {{ announcement.type }}
                             </span>
 
@@ -73,10 +69,10 @@
 
                     <i class="bi bi-megaphone"></i>
 
-                    <h3>No announcements</h3>
+                    <h3>No notices</h3>
 
                     <p>
-                        There are currently no active announcements or safety alerts.
+                        There are currently no active notices.
                     </p>
 
                 </div>

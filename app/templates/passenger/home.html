@@ -43,7 +43,7 @@
                 </a>
 
                 <a
-                    href="#announcements"
+                    href="#notices"
                     class="home-secondary-btn"
                 >
                     View Notices
@@ -417,19 +417,19 @@
 
 
         <!-- =====================================================
-             ANNOUNCEMENTS
+             NOTICES
              ===================================================== -->
 
         <section
             class="home-card announcements-card"
-            id="announcements"
+            id="notices"
         >
 
             <div class="home-card-heading">
 
                 <div class="home-card-title">
                     <i class="bi bi-megaphone"></i>
-                    <h2>Latest Announcements</h2>
+                    <h2>Latest Notices</h2>
                 </div>
 
             </div>
@@ -439,19 +439,11 @@
 
                 {% for announcement in announcements %}
 
-                <article class="home-announcement
-                    {% if announcement.type == 'Safety Alert' %}
-                        safety
-                    {% endif %}
-                ">
+                <article class="home-announcement {{ announcement.type_slug }}">
 
                     <div class="home-announcement-icon" aria-hidden="true">
 
-                        {% if announcement.type == 'Safety Alert' %}
-                            <i class="bi bi-exclamation-triangle"></i>
-                        {% else %}
-                            <i class="bi bi-bell"></i>
-                        {% endif %}
+                        <i class="bi {{ announcement.type_icon }}"></i>
 
                     </div>
 
@@ -475,7 +467,7 @@
 
                             </div>
 
-                            <span class="home-announcement-type {% if announcement.type == 'Safety Alert' %}safety{% endif %}">
+                            <span class="home-announcement-type {{ announcement.type_slug }}">
                                 {{ announcement.type }}
                             </span>
 
@@ -496,10 +488,10 @@
 
                     <i class="bi bi-megaphone"></i>
 
-                    <h3>No announcements</h3>
+                    <h3>No notices</h3>
 
                     <p>
-                        There are currently no active announcements or safety alerts.
+                        There are currently no active notices.
                     </p>
 
                 </div>
@@ -514,7 +506,7 @@
                 class="home-view-announcements"
             >
                 <i class="bi bi-arrow-right"></i>
-                View All Announcements
+                View All Notices
             </a>
 
         </section>

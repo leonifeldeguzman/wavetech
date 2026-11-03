@@ -231,7 +231,7 @@ def test_publishing_generated_safety_alert_uses_existing_announcement_flow(app, 
         follow_redirects=True,
     )
     assert response.status_code == 200
-    assert b"Announcement published successfully" in response.data
+    assert b"Notice published successfully" in response.data
 
     with app.app_context():
         announcement = Announcement.query.filter_by(title=generated["title"]).first()
@@ -241,7 +241,7 @@ def test_publishing_generated_safety_alert_uses_existing_announcement_flow(app, 
         assert announcement.content == generated["content"]
 
         # Activity Log entry recorded through the existing mechanism.
-        logs = ActivityLog.query.filter_by(action="Published Announcement").all()
+        logs = ActivityLog.query.filter_by(action="Published Notice").all()
         assert len(logs) == 1
         assert generated["title"] in logs[0].details
 

@@ -67,3 +67,14 @@ def format_ph_time(dt: datetime | None, fmt: str = "%B %d, %Y %I:%M %p") -> str:
     if ph_dt is None:
         return "—"
     return f"{ph_dt.strftime(fmt)} PHT"
+
+
+def format_ph_input(dt: datetime | None) -> str:
+    """Jinja filter: format a stored UTC timestamp as the Philippine Time
+    value an <input type="datetime-local"> expects (YYYY-MM-DDTHH:MM).
+    The admin forms read these inputs back as Philippine Time, so the value
+    shown must be PHT too, otherwise editing would shift the time by 8h."""
+    ph_dt = to_ph_time(dt)
+    if ph_dt is None:
+        return ""
+    return ph_dt.strftime("%Y-%m-%dT%H:%M")

@@ -1,4 +1,8 @@
-"""Safety Alerts / Announcement Management — business logic.
+"""Notice Management (Safety Alert / Delay / Cancellation / General Notice)
+— business logic.
+
+User-facing terminology is "Notice"; module, model and table names keep
+their original "announcement" names to avoid a risky rename migration.
 
 This is the single place Announcement rows are created/validated/updated,
 mirroring how app/services/settings_service.py centralizes Admin Settings
@@ -43,7 +47,7 @@ from app.services import unisms_service
 from app.services.activity_log_service import log_action
 from app.utils.timezone import utc_now_naive, PH_TZ
 
-VALID_TYPES = {Announcement.TYPE_ANNOUNCEMENT, Announcement.TYPE_SAFETY_ALERT}
+VALID_TYPES = set(Announcement.ALL_TYPES)
 VALID_STATUSES = {Announcement.STATUS_ACTIVE, Announcement.STATUS_INACTIVE}
 
 SCHEDULE_DATETIME_FORMAT = "%Y-%m-%dT%H:%M"  # matches <input type="datetime-local">
@@ -52,7 +56,11 @@ TITLE_MAX_LENGTH = 200
 
 DEFAULT_SCHEDULER_INTERVAL_SECONDS = 30
 
-ACTION_ANNOUNCEMENT_SMS_SENT = "Announcement SMS Sent"
+ACTION_ANNOUNCEMENT_SMS_SENT = "Notice SMS Sent"
+
+# Sentinel: "the caller did not submit an expiry field at all" (as opposed
+# to submitting an empty one, which means "no expiry").
+UNSET = object()
 
 
 class AnnouncementValidationError(ValueError):
@@ -66,7 +74,7 @@ class AnnouncementValidationError(ValueError):
 def _clean_title(raw) -> str:
     title = (raw or "").strip()
     if not title:
-        raise AnnouncementValidationError("Title is required.")
+        raise AnnouncementValidationError("Notice title is required.")
     if len(title) > TITLE_MAX_LENGTH:
         raise AnnouncementValidationError(
             f"Title must be {TITLE_MAX_LENGTH} characters or fewer."
@@ -77,15 +85,19 @@ def _clean_title(raw) -> str:
 def _clean_content(raw) -> str:
     content = (raw or "").strip()
     if not content:
-        raise AnnouncementValidationError("Message is required.")
+        raise AnnouncementValidationError("Notice message is required.")
     return content
 
 
 def _clean_type(raw) -> str:
     value = (raw or "").strip()
+    if value == Announcement.LEGACY_TYPE_ANNOUNCEMENT:
+        value = Announcement.TYPE_GENERAL
     if value not in VALID_TYPES:
         raise AnnouncementValidationError(
-            "Type must be one of: " + ", ".join(sorted(VALID_TYPES)) + "."
+            "Notice type must be one of: "
+            + ", ".join(Announcement.ALL_TYPES)
+            + "."
         )
     return value
 
@@ -127,6 +139,50 @@ def _parse_schedule_datetime(raw) -> datetime:
     return scheduled_at
 
 
+def _parse_expiry_datetime(raw, *, after: datetime | None = None) -> datetime | None:
+    """Parse the optional Expiry Date & Time field.
+
+    Returns None when the field is blank (no expiry). Otherwise returns a
+    naive UTC datetime. The admin enters Philippine Time, same convention
+    as the schedule field. Raises AnnouncementValidationError if the value
+    is malformed, already in the past, or not after `after` (the scheduled
+    publish time, when there is one).
+    """
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+
+    try:
+        ph_datetime = datetime.strptime(raw, SCHEDULE_DATETIME_FORMAT)
+    except ValueError:
+        raise AnnouncementValidationError("Expiry date/time is invalid.")
+
+    expires_at = (
+        ph_datetime.replace(tzinfo=PH_TZ)
+        .astimezone(timezone.utc)
+        .replace(tzinfo=None)
+    )
+
+    if expires_at <= utc_now_naive():
+        raise AnnouncementValidationError(
+            "Expiry date/time must be in the future."
+        )
+
+    if after is not None and expires_at <= after:
+        raise AnnouncementValidationError(
+            "Expiry date/time must be after the scheduled publish time."
+        )
+
+    return expires_at
+
+
+def _is_expired_now(announcement: Announcement) -> bool:
+    return (
+        announcement.expires_at is not None
+        and announcement.expires_at <= utc_now_naive()
+    )
+
+
 # ---------------------------------------------------------------------------
 # Automatic scheduled publishing
 # ---------------------------------------------------------------------------
@@ -158,8 +214,12 @@ def publish_due_announcements() -> int:
     if due:
         due_ids = [a.id for a in due]
         db.session.commit()
-        for announcement_id in due_ids:
-            dispatch_announcement_sms(announcement_id)
+        for announcement in due:
+            # A notice whose expiry already passed (e.g. the server was
+            # down past both times) is published for the record but never
+            # texted out: it is Expired the moment it goes live.
+            if not _is_expired_now(announcement):
+                dispatch_announcement_sms(announcement.id)
 
     return len(due)
 
@@ -279,8 +339,13 @@ def _get_broadcast_numbers() -> list[str]:
 
 def _build_sms_text(announcement: Announcement) -> str:
     label = (
-        "Safety Alert"
-        if announcement.type == Announcement.TYPE_SAFETY_ALERT
+        announcement.type
+        if announcement.type
+        in (
+            Announcement.TYPE_SAFETY_ALERT,
+            Announcement.TYPE_DELAY,
+            Announcement.TYPE_CANCELLATION,
+        )
         else "Notice"
     )
     text = f"Talim Ferry {label}: {announcement.title} - {announcement.content}"
@@ -374,9 +439,14 @@ def create_announcement(
     type_,
     publish_now: bool,
     scheduled_at_raw=None,
+    expires_at_raw=None,
+    save_draft: bool = False,
     created_by_user_id=None,
 ) -> Announcement:
-    """Validate and create a new Announcement.
+    """Validate and create a new notice.
+
+    Exactly one publishing mode applies: `publish_now`, `save_draft`, or
+    (neither) schedule for `scheduled_at_raw`.
 
     Raises AnnouncementValidationError on any invalid input; nothing is
     written to the database in that case.
@@ -393,11 +463,21 @@ def create_announcement(
     )
 
     if publish_now:
+        announcement.expires_at = _parse_expiry_datetime(expires_at_raw)
         announcement.status = Announcement.STATUS_ACTIVE
         announcement.published_at = utc_now_naive()
         announcement.scheduled_at = None
+    elif save_draft:
+        announcement.expires_at = _parse_expiry_datetime(expires_at_raw)
+        announcement.status = Announcement.STATUS_INACTIVE
+        announcement.published_at = None
+        announcement.scheduled_at = None
     else:
-        announcement.scheduled_at = _parse_schedule_datetime(scheduled_at_raw)
+        scheduled_at = _parse_schedule_datetime(scheduled_at_raw)
+        announcement.expires_at = _parse_expiry_datetime(
+            expires_at_raw, after=scheduled_at
+        )
+        announcement.scheduled_at = scheduled_at
         announcement.status = Announcement.STATUS_INACTIVE
         announcement.published_at = None
 
@@ -421,18 +501,65 @@ def update_announcement(
     content,
     type_,
     scheduled_at_raw=None,
+    expires_at_raw=UNSET,
 ) -> Announcement:
-    """Update title/content/type. If the announcement hasn't published yet
-    (still Scheduled) and a new scheduled_at_raw is supplied, it is
-    re-validated and updated too — this is how an admin edits a Scheduled
-    announcement's date/time. Already-published announcements keep their
-    original scheduled_at/published_at as history."""
-    announcement.title = _clean_title(title)
-    announcement.content = _clean_content(content)
-    announcement.type = _clean_type(type_)
+    """Update title/content/type/expiry. If the notice hasn't published yet
+    (Draft or Scheduled) and a new scheduled_at_raw is supplied, it is
+    re-validated and updated too. Already-published notices keep their
+    original scheduled_at/published_at as history.
 
+    `expires_at_raw` left as UNSET means "don't touch the expiry". An empty
+    string clears it. A changed, non-empty value must be in the future (an
+    unchanged value is accepted as-is so an already-expired notice can
+    still have its text corrected).
+    """
+    clean_title = _clean_title(title)
+    clean_content = _clean_content(content)
+    clean_type = _clean_type(type_)
+
+    new_scheduled_at = announcement.scheduled_at
     if announcement.published_at is None and scheduled_at_raw:
-        announcement.scheduled_at = _parse_schedule_datetime(scheduled_at_raw)
+        new_scheduled_at = _parse_schedule_datetime(scheduled_at_raw)
+
+    new_expires_at = announcement.expires_at
+    if expires_at_raw is not UNSET:
+        raw = (expires_at_raw or "").strip()
+        if not raw:
+            new_expires_at = None
+        else:
+            # Same minute as what is already stored -> unchanged; skip the
+            # "must be in the future" check.
+            current = announcement.expires_at
+            unchanged = False
+            if current is not None:
+                current_ph = current.replace(tzinfo=timezone.utc).astimezone(PH_TZ)
+                unchanged = current_ph.strftime(SCHEDULE_DATETIME_FORMAT) == raw
+            if not unchanged:
+                new_expires_at = _parse_expiry_datetime(
+                    raw,
+                    after=(
+                        new_scheduled_at
+                        if announcement.published_at is None
+                        else None
+                    ),
+                )
+
+    # A (re)scheduled time must still land before an existing expiry.
+    if (
+        announcement.published_at is None
+        and new_scheduled_at is not None
+        and new_expires_at is not None
+        and new_expires_at <= new_scheduled_at
+    ):
+        raise AnnouncementValidationError(
+            "Expiry date/time must be after the scheduled publish time."
+        )
+
+    announcement.title = clean_title
+    announcement.content = clean_content
+    announcement.type = clean_type
+    announcement.scheduled_at = new_scheduled_at
+    announcement.expires_at = new_expires_at
 
     db.session.commit()
     return announcement
@@ -442,25 +569,49 @@ def update_announcement(
 # Activate / Deactivate / Delete
 # ---------------------------------------------------------------------------
 
-def deactivate_announcement(announcement: Announcement) -> Announcement:
-    """Deactivate a Published announcement, or cancel a still-Scheduled one.
-    Either way this just flips status to Inactive; scheduled_at/
-    published_at are left untouched so the row's history is preserved."""
+def unpublish_announcement(announcement: Announcement) -> Announcement:
+    """Unpublish a Published notice, or cancel a still-Scheduled one.
+
+    - Published -> Unpublished: status flips to Inactive; published_at and
+      scheduled_at are kept so the row's history is preserved.
+    - Scheduled (never published) -> Draft: the schedule is cleared so the
+      background publisher can no longer pick it up.
+    """
     announcement.status = Announcement.STATUS_INACTIVE
+    if announcement.published_at is None:
+        announcement.scheduled_at = None
     db.session.commit()
     return announcement
 
 
-def activate_announcement(announcement: Announcement) -> Announcement:
-    """Manually (re)activate an announcement. If it was never actually
-    published (e.g. a scheduled one that was cancelled before its time),
-    stamp published_at now."""
+# Backwards-compatible name (older callers/tests).
+deactivate_announcement = unpublish_announcement
+
+
+def publish_announcement(announcement: Announcement) -> Announcement:
+    """Manually publish a Draft / Unpublished notice (or re-publish).
+
+    Refuses to publish a notice whose expiry has already passed: the admin
+    must first set a new expiry (or clear it) via Edit.
+    """
+    if _is_expired_now(announcement):
+        raise AnnouncementValidationError(
+            "This notice's expiry date/time has already passed. "
+            "Update the expiry before publishing it."
+        )
+
     announcement.status = Announcement.STATUS_ACTIVE
     if announcement.published_at is None:
         announcement.published_at = utc_now_naive()
-        db.session.commit()
+    # A manually published notice is live now; drop any pending schedule.
+    announcement.scheduled_at = None
+    db.session.commit()
     dispatch_announcement_sms(announcement.id)
     return announcement
+
+
+# Backwards-compatible name (older callers/tests).
+activate_announcement = publish_announcement
 
 
 def delete_announcement(announcement: Announcement) -> None:
@@ -472,19 +623,35 @@ def delete_announcement(announcement: Announcement) -> None:
 # Queries used by the admin management page and the passenger-facing page
 # ---------------------------------------------------------------------------
 
-def get_published_announcements():
-    """Currently Active/live announcements, most recently published first."""
-    return (
-        Announcement.query.filter(
-            Announcement.status == Announcement.STATUS_ACTIVE
-        )
-        .order_by(Announcement.published_at.desc())
-        .all()
+def _not_expired_clause():
+    """SQL clause: no expiry set, or the expiry is still in the future.
+
+    This is the backend enforcement of expiry: every query that feeds the
+    passenger side goes through it, so an expired notice can never be
+    returned as an active/public notice regardless of the UI.
+    """
+    return db.or_(
+        Announcement.expires_at.is_(None),
+        Announcement.expires_at > utc_now_naive(),
     )
 
 
+def get_published_announcements(limit: int | None = None):
+    """Currently live notices: Active AND not expired, newest first."""
+    query = (
+        Announcement.query.filter(
+            Announcement.status == Announcement.STATUS_ACTIVE,
+            _not_expired_clause(),
+        )
+        .order_by(Announcement.published_at.desc())
+    )
+    if limit is not None:
+        query = query.limit(limit)
+    return query.all()
+
+
 def get_scheduled_announcements():
-    """Announcements waiting for their scheduled time (not yet published)."""
+    """Notices waiting for their scheduled time (not yet published)."""
     return (
         Announcement.query.filter(
             Announcement.status == Announcement.STATUS_INACTIVE,
@@ -496,10 +663,22 @@ def get_scheduled_announcements():
     )
 
 
+def get_draft_announcements():
+    """Notices saved as Draft: never published and not scheduled."""
+    return (
+        Announcement.query.filter(
+            Announcement.status == Announcement.STATUS_INACTIVE,
+            Announcement.scheduled_at.is_(None),
+            Announcement.published_at.is_(None),
+        )
+        .order_by(Announcement.updated_at.desc())
+        .all()
+    )
+
+
 def get_inactive_announcements():
-    """Previously-published announcements an admin has since deactivated
-    (i.e. Inactive, but with published_at already set). Kept separate from
-    "Scheduled" so the two sections in Announcement Management never mix."""
+    """Previously-published notices an admin has since unpublished
+    (Inactive with published_at already set)."""
     return (
         Announcement.query.filter(
             Announcement.status == Announcement.STATUS_INACTIVE,
@@ -510,9 +689,26 @@ def get_inactive_announcements():
     )
 
 
-def get_active_announcements_for_passengers():
-    """What passengers should see: only currently Active announcements.
-    Publishes any due Scheduled announcements first, so a passenger never
-    misses one just because no admin happened to open the management page."""
+get_unpublished_announcements = get_inactive_announcements
+
+
+def get_expired_announcements():
+    """Notices that went live and whose expiry has since passed. Kept for
+    Admin history; never shown to passengers."""
+    return (
+        Announcement.query.filter(
+            Announcement.status == Announcement.STATUS_ACTIVE,
+            Announcement.expires_at.isnot(None),
+            Announcement.expires_at <= utc_now_naive(),
+        )
+        .order_by(Announcement.expires_at.desc())
+        .all()
+    )
+
+
+def get_active_announcements_for_passengers(limit: int | None = None):
+    """What passengers should see: only Published, non-expired notices.
+    Publishes any due Scheduled notices first, so a passenger never misses
+    one just because no admin happened to open the management page."""
     publish_due_announcements()
-    return get_published_announcements()
+    return get_published_announcements(limit=limit)

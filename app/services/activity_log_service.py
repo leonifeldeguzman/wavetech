@@ -21,13 +21,17 @@ ACTION_REPORT_GENERATED = "Report generation"
 ACTION_MANIFEST_EDITED = "Edited Passenger Manifest"
 ACTION_MANIFEST_DELETED = "Deleted Passenger Manifest"
 
-ACTION_ANNOUNCEMENT_PUBLISHED = "Published Announcement"
-ACTION_ANNOUNCEMENT_SCHEDULED = "Scheduled Announcement"
-ACTION_ANNOUNCEMENT_EDITED = "Edited Announcement"
-ACTION_ANNOUNCEMENT_ACTIVATED = "Activated Announcement"
-ACTION_ANNOUNCEMENT_DEACTIVATED = "Deactivated Announcement"
-ACTION_ANNOUNCEMENT_CANCELLED = "Cancelled Announcement"
-ACTION_ANNOUNCEMENT_DELETED = "Deleted Announcement"
+ACTION_ANNOUNCEMENT_PUBLISHED = "Published Notice"
+ACTION_ANNOUNCEMENT_SCHEDULED = "Scheduled Notice"
+ACTION_ANNOUNCEMENT_DRAFTED = "Saved Notice Draft"
+ACTION_ANNOUNCEMENT_EDITED = "Edited Notice"
+ACTION_ANNOUNCEMENT_ACTIVATED = "Published Notice"
+ACTION_ANNOUNCEMENT_UNPUBLISHED = "Unpublished Notice"
+# Old constant name kept so existing imports keep working; the logged
+# wording is now "Unpublished Notice".
+ACTION_ANNOUNCEMENT_DEACTIVATED = ACTION_ANNOUNCEMENT_UNPUBLISHED
+ACTION_ANNOUNCEMENT_CANCELLED = "Cancelled Scheduled Notice"
+ACTION_ANNOUNCEMENT_DELETED = "Deleted Notice"
 ACTION_PASSENGER_CANCELLED = "Passenger cancellation"
 
 
@@ -63,7 +67,10 @@ def log_action(*, user_id, admin_name: str, action: str, details=None) -> Activi
 
 def get_recent_logs(limit: int = 50):
     return (
-        ActivityLog.query.order_by(ActivityLog.created_at.desc())
+        ActivityLog.query.order_by(
+            ActivityLog.created_at.desc(),
+            ActivityLog.id.desc(),
+        )
         .limit(limit)
         .all()
     )

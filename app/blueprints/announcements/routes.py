@@ -22,11 +22,11 @@ def _log(action, details=None):
 
 
 # ---------------------------------------------------------------------------
-# Announcement Management (shared Admin/Operator access)
+# Notice Management (shared Admin/Operator access)
 #
-# Admin and Operator accounts have identical Announcement/Safety Alert
-# management access. Every route below that creates, publishes, schedules,
-# edits, activates, deactivates/cancels, or deletes an announcement only
+# Admin and Operator accounts have identical Notice management access.
+# Every route below that creates, publishes, schedules, edits,
+# unpublishes/cancels, or deletes a notice only
 # requires an authenticated session (see app/utils/decorators.py) — the
 # same as the full Announcement Management view in `index()` below.
 # ---------------------------------------------------------------------------
@@ -35,33 +35,37 @@ def _log(action, details=None):
 @announcements_bp.route("/announcements")
 @login_required
 def index():
-    # Requirement 9: no scheduler/cron — a Scheduled announcement becomes
-    # Active the next time this (or the passenger-facing) page is loaded.
+    # Fallback for the background scheduler: a Scheduled notice becomes
+    # Published the next time this (or the passenger-facing) page loads.
     announcement_service.publish_due_announcements()
 
-    # Active announcements — the "Published Announcements" section below.
+    # Live (published, not expired) notices.
     published = announcement_service.get_published_announcements()
 
     scheduled = announcement_service.get_scheduled_announcements()
+    drafts = announcement_service.get_draft_announcements()
     inactive = announcement_service.get_inactive_announcements()
+    expired = announcement_service.get_expired_announcements()
 
     # Optional prefill coming from the Scheduling Decision-Support "Create
     # Safety Alert" reference link on the dashboard (requirement 7). Never
-    # persisted here — it only pre-fills the Create Announcement form so an
+    # persisted here — it only pre-fills the Create Notice form so an
     # admin can review/edit before submitting.
     prefill = {
         "title": request.args.get("prefill_title", ""),
         "content": request.args.get("prefill_content", ""),
-        "type": request.args.get("prefill_type", Announcement.TYPE_ANNOUNCEMENT),
+        "type": request.args.get("prefill_type", Announcement.TYPE_GENERAL),
     }
 
     return render_template(
         "announcements/index.html",
         published=published,
         scheduled=scheduled,
+        drafts=drafts,
         inactive=inactive,
+        expired=expired,
         prefill=prefill,
-        types=[Announcement.TYPE_ANNOUNCEMENT, Announcement.TYPE_SAFETY_ALERT],
+        types=list(Announcement.ALL_TYPES),
         active_page="announcements",
     )
 
@@ -70,8 +74,9 @@ def index():
 @login_required
 def create():
     form = request.form
-    action = form.get("action")  # "publish_now" or "schedule"
+    action = form.get("action")  # "publish_now", "schedule" or "save_draft"
     publish_now = action == "publish_now"
+    save_draft = action == "save_draft"
 
     try:
         announcement = announcement_service.create_announcement(
@@ -79,7 +84,9 @@ def create():
             content=form.get("content"),
             type_=form.get("type"),
             publish_now=publish_now,
+            save_draft=save_draft,
             scheduled_at_raw=form.get("scheduled_at"),
+            expires_at_raw=form.get("expires_at"),
             created_by_user_id=session.get("user_id"),
         )
     except AnnouncementValidationError as exc:
@@ -91,7 +98,13 @@ def create():
             activity_log_service.ACTION_ANNOUNCEMENT_PUBLISHED,
             details=f"'{announcement.title}' ({announcement.type})",
         )
-        flash("Announcement published successfully.", "success")
+        flash("Notice published successfully.", "success")
+    elif save_draft:
+        _log(
+            activity_log_service.ACTION_ANNOUNCEMENT_DRAFTED,
+            details=f"'{announcement.title}' ({announcement.type})",
+        )
+        flash("Notice saved as a draft.", "success")
     else:
         _log(
             activity_log_service.ACTION_ANNOUNCEMENT_SCHEDULED,
@@ -100,7 +113,7 @@ def create():
                 f"scheduled for {announcement.scheduled_at}"
             ),
         )
-        flash("Announcement scheduled successfully.", "success")
+        flash("Notice scheduled successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
@@ -124,6 +137,11 @@ def edit(announcement_id):
             content=form.get("content"),
             type_=form.get("type"),
             scheduled_at_raw=form.get("scheduled_at"),
+            expires_at_raw=(
+                form.get("expires_at")
+                if "expires_at" in form
+                else announcement_service.UNSET
+            ),
         )
     except AnnouncementValidationError as exc:
         flash(str(exc), "danger")
@@ -133,7 +151,7 @@ def edit(announcement_id):
         activity_log_service.ACTION_ANNOUNCEMENT_EDITED,
         details=f"'{announcement.title}' ({announcement.type})",
     )
-    flash("Announcement updated successfully.", "success")
+    flash("Notice updated successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
@@ -148,51 +166,57 @@ def delete(announcement_id):
         activity_log_service.ACTION_ANNOUNCEMENT_DELETED,
         details=f"'{title}' ({type_})",
     )
-    flash("Announcement deleted successfully.", "success")
+    flash("Notice deleted successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/activate", methods=["POST"])
 @login_required
 def activate(announcement_id):
+    """Publish a Draft / Unpublished notice (endpoint name kept for
+    compatibility; the user-facing action is "Publish")."""
     announcement = _get_announcement_or_404(announcement_id)
-    announcement_service.activate_announcement(announcement)
+    try:
+        announcement_service.publish_announcement(announcement)
+    except AnnouncementValidationError as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("announcements.index"))
 
     _log(
         activity_log_service.ACTION_ANNOUNCEMENT_ACTIVATED,
         details=f"'{announcement.title}' ({announcement.type})",
     )
-    flash("Announcement activated successfully.", "success")
+    flash("Notice published successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
 @announcements_bp.route("/announcements/<int:announcement_id>/deactivate", methods=["POST"])
 @login_required
 def deactivate(announcement_id):
+    """Unpublish a published notice, or cancel a still-scheduled one
+    (endpoint/URL kept for compatibility; user-facing action is
+    "Unpublish")."""
     announcement = _get_announcement_or_404(announcement_id)
-    # A still-Scheduled announcement (never actually published) is being
-    # cancelled; an already-Published one is being deactivated. Same
-    # service call either way — see announcement_service.deactivate_announcement.
     was_never_published = announcement.published_at is None
-    announcement_service.deactivate_announcement(announcement)
+    announcement_service.unpublish_announcement(announcement)
 
     if was_never_published:
         _log(
             activity_log_service.ACTION_ANNOUNCEMENT_CANCELLED,
             details=f"'{announcement.title}' ({announcement.type})",
         )
-        flash("Scheduled announcement cancelled successfully.", "success")
+        flash("Scheduled notice cancelled. It was moved back to Drafts.", "success")
     else:
         _log(
-            activity_log_service.ACTION_ANNOUNCEMENT_DEACTIVATED,
+            activity_log_service.ACTION_ANNOUNCEMENT_UNPUBLISHED,
             details=f"'{announcement.title}' ({announcement.type})",
         )
-        flash("Announcement deactivated successfully.", "success")
+        flash("Notice unpublished successfully.", "success")
     return redirect(url_for("announcements.index"))
 
 
 # ---------------------------------------------------------------------------
-# Passenger-facing display
+# Passenger-facing display (only Published, non-expired notices)
 #
 # Public, like the rest of the Passenger Portal (app/blueprints/passenger)
 # — no login_required, since passengers have no account/session here.
@@ -215,6 +239,10 @@ def _serialize_announcement(announcement):
         "title": announcement.title,
         "content": announcement.content,
         "type": announcement.type,
+        "type_slug": announcement.type_slug,
+        "expires_at": (
+            announcement.expires_at.isoformat() if announcement.expires_at else None
+        ),
         "published_at": (
             announcement.published_at.isoformat() if announcement.published_at else None
         ),
