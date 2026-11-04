@@ -1365,9 +1365,19 @@ RESPONSIVE
 ACCOUNT CARD SPACING
 ========================================================= */
 
-#settings-page #account-section .settings-card + .settings-card {
+/* Account profile card spacing */
+#settings-page #account-section .settings-card + .settings-card,
+#settings-page #account-section .profile-card ~ .personal-card {
     margin-top: 24px;
 }
+
+/* Smaller screens */
+@media (max-width: 767.98px) {
+    #settings-page #account-section .personal-card {
+        margin-top: 20px;
+    }
+}
+
 /* =========================================================
    SAFETY THRESHOLD EDIT ACTIONS
    ========================================================= */
