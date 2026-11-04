@@ -54,18 +54,37 @@
   </div>
 
   <!-- Trip Status Summary -->
-  <div class="col-6 col-md-3">
-    <div class="stat-card analytics-kpi h-100">
-      <div class="kpi-label">Trip Status Summary</div>
-      <div class="kpi-value kpi-value-sm">
-        Departed {{ summary.departed_trips }} &middot;
-        Delayed {{ summary.delayed_trips }} &middot;
-        Cancelled {{ summary.cancelled_trips }}
-      </div>
-      <div class="kpi-sub kpi-muted">Today's trips by final or current status.</div>
+<div class="col-6 col-md-3">
+  <div class="stat-card analytics-kpi trip-status-summary h-100">
+    <div class="trip-status-heading">
+        <div class="kpi-label">Trip Status Summary</div>
+        <i class="bi bi-activity trip-status-icon"></i>
+    </div>
+
+    <div class="trip-status-grid">
+        <div class="trip-status-mini">
+            <span class="trip-status-dot departed"></span>
+            <span class="trip-status-label">Departed</span>
+            <strong>{{ summary.departed_trips }}</strong>
+        </div>
+
+        <div class="trip-status-mini">
+            <span class="trip-status-dot delayed"></span>
+            <span class="trip-status-label">Delayed</span>
+            <strong>{{ summary.delayed_trips }}</strong>
+        </div>
+
+        <div class="trip-status-mini">
+            <span class="trip-status-dot cancelled"></span>
+            <span class="trip-status-label">Cancelled</span>
+            <strong>{{ summary.cancelled_trips }}</strong>
+        </div>
+    </div>
+
+    <div class="kpi-sub kpi-muted">
+        Today's trips by status
     </div>
   </div>
-
 </div>
 
 

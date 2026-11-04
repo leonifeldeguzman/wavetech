@@ -373,7 +373,117 @@
     color: #555555;
 }
 
+/* =========================================
+   TRIP STATUS SUMMARY - COMPACT KPI
+   Scoped only to the Trip Status card
+========================================= */
 
+.analytics-kpi.trip-status-summary {
+    min-height: 112px;
+    height: 100%;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.trip-status-summary .trip-status-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.trip-status-summary .kpi-label {
+    margin-bottom: 0;
+}
+
+.trip-status-summary .trip-status-icon {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.trip-status-summary .trip-status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.trip-status-summary .trip-status-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+}
+
+.trip-status-summary .trip-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.trip-status-summary .trip-status-dot.departed {
+    background: #4ade80;
+}
+
+.trip-status-summary .trip-status-dot.delayed {
+    background: #fbbf24;
+}
+
+.trip-status-summary .trip-status-dot.cancelled {
+    background: #f87171;
+}
+
+.trip-status-summary .trip-status-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.trip-status-summary .trip-status-mini strong {
+    color: #ffffff;
+    font-size: 17px;
+    line-height: 1;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.trip-status-summary .kpi-sub {
+    font-size: 10px;
+    margin: 0;
+    min-height: 0;
+}
+
+@media (max-width: 767.98px) {
+    .analytics-kpi.trip-status-summary {
+        padding: 16px;
+    }
+
+    .trip-status-summary .trip-status-grid {
+        gap: 4px;
+    }
+
+    .trip-status-summary .trip-status-label {
+        font-size: 9px;
+    }
+
+    .trip-status-summary .trip-status-mini strong {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .analytics-kpi.trip-status-summary {
+        min-height: 100px;
+        padding: 14px;
+    }
+
+    .trip-status-summary .trip-status-label {
+        font-size: 8px;
+    }
+}
 /* =========================================================
    MANIFEST DETAILS
    ========================================================= */
