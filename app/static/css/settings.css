@@ -1793,3 +1793,82 @@ html.pfc-open {
         flex-basis: 100%;
     }
 }
+
+/* Profile picture preview modal */
+.profile-picture-preview {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+}
+
+.profile-picture-preview.active {
+    display: flex;
+}
+
+.profile-picture-preview-content {
+    position: relative;
+    max-width: min(90vw, 650px);
+    max-height: 85vh;
+    animation: profilePictureZoom 0.2s ease;
+}
+
+.profile-picture-preview-content img {
+    display: block;
+    max-width: 100%;
+    max-height: 85vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.profile-picture-preview-close {
+    position: absolute;
+    top: -42px;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    font-size: 25px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-picture-preview-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Only the actual profile image is clickable */
+.profile-avatar-img {
+    cursor: zoom-in;
+}
+
+@keyframes profilePictureZoom {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .profile-picture-preview-content {
+        animation: none;
+    }
+}

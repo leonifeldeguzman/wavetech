@@ -60,10 +60,13 @@ page_title %}Settings{% endblock %} {% block extra_css %}
               <div class="profile-avatar">
                 {% if profile_picture_version %}
                 <img
-                  class="profile-avatar-img"
-                  src="{{ url_for('settings.profile_picture', v=profile_picture_version) }}"
-                  alt="Profile picture"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='';"
+                    class="profile-avatar-img"
+                    src="{{ url_for('settings.profile_picture', v=profile_picture_version) }}"
+                    alt="Profile picture"
+                    title="Click to view profile picture"
+                    role="button"
+                    tabindex="0"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='';"
                 />
                 {% if avatar_initial %}
                 <span class="profile-avatar-fallback" style="display: none">{{ avatar_initial }}</span>
@@ -139,6 +142,33 @@ page_title %}Settings{% endblock %} {% block extra_css %}
             hidden
           ></form>
         </div>
+
+        {% if profile_picture_version %}
+        <div
+            class="profile-picture-preview"
+            id="profile-picture-preview"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Profile picture preview"
+        >
+            <div class="profile-picture-preview-content">
+                <button
+                    type="button"
+                    class="profile-picture-preview-close"
+                    id="profile-picture-preview-close"
+                    aria-label="Close preview"
+                >
+                    &times;
+                </button>
+
+                <img
+                    src="{{ url_for('settings.profile_picture', v=profile_picture_version) }}"
+                    alt="Profile picture enlarged"
+                />
+            </div>
+        </div>
+        {% endif %}
+
         <!-- PERSONAL INFORMATION -->
         <div class="settings-card personal-card">
           <div class="settings-card-heading">
@@ -1201,7 +1231,7 @@ page_title %}Settings{% endblock %} {% block extra_css %}
     }
   })();
 
-  /* =====================================================
+    /* =====================================================
      PASSWORD TOGGLE
   ===================================================== */
 
@@ -1222,6 +1252,77 @@ page_title %}Settings{% endblock %} {% block extra_css %}
     }
   }
 
+  document.addEventListener("DOMContentLoaded", function () {
+    const profileImage = document.querySelector(
+        "#settings-page .profile-avatar-img"
+    );
+
+    const previewModal = document.getElementById(
+        "profile-picture-preview"
+    );
+
+    const closeButton = document.getElementById(
+        "profile-picture-preview-close"
+    );
+
+    if (!profileImage || !previewModal || !closeButton) {
+        return;
+    }
+
+    let previousFocus = null;
+
+    function openProfilePicturePreview() {
+        if (profileImage.style.display === "none") {
+            return;
+        }
+
+        previousFocus = document.activeElement;
+
+        previewModal.classList.add("active");
+        document.body.style.overflow = "hidden";
+
+        closeButton.focus();
+    }
+
+    function closeProfilePicturePreview() {
+        previewModal.classList.remove("active");
+        document.body.style.overflow = "";
+
+        if (previousFocus) {
+            previousFocus.focus();
+        }
+    }
+
+    profileImage.addEventListener("click", function () {
+        openProfilePicturePreview();
+    });
+
+    profileImage.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openProfilePicturePreview();
+        }
+    });
+
+    closeButton.addEventListener("click", function () {
+        closeProfilePicturePreview();
+    });
+
+    previewModal.addEventListener("click", function (event) {
+        if (event.target === previewModal) {
+            closeProfilePicturePreview();
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (
+            event.key === "Escape" &&
+            previewModal.classList.contains("active")
+        ) {
+            closeProfilePicturePreview();
+        }
+    });
+  });
 
   /* =====================================================
      PROFILE PICTURE (camera badge menu)
