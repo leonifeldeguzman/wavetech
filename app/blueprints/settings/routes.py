@@ -1,9 +1,10 @@
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import Response, abort, flash, redirect, render_template, request, session, url_for
 
 from app.blueprints.settings import settings_bp
 from app.extensions import db
 from app.models.user import User
-from app.services import activity_log_service, settings_service
+from app.services import activity_log_service, profile_picture_service, settings_service
+from app.services.profile_picture_service import ProfilePictureError
 from app.services.settings_service import SettingsValidationError
 from app.utils.decorators import login_required
 from app.utils.security import hash_password, verify_password
@@ -104,6 +105,62 @@ def update_display_name():
     db.session.commit()
 
     flash("Display name updated successfully.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@settings_bp.route("/settings/profile-picture")
+@login_required
+def profile_picture():
+    """Serve the logged-in user's own profile picture (404 if none)."""
+    picture = profile_picture_service.get_picture(session["user_id"])
+    if picture is None:
+        abort(404)
+
+    response = Response(picture.image_data, mimetype=picture.content_type)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    # The URL carries ?v=<updated_at>, so a new upload gets a new URL.
+    response.headers["Cache-Control"] = "private, max-age=86400"
+    return response
+
+
+@settings_bp.route("/settings/profile-picture/upload", methods=["POST"])
+@login_required
+def upload_profile_picture():
+    """Upload a new picture, or replace the existing one."""
+    user = db.session.get(User, session["user_id"])
+    if user is None:
+        flash("User account could not be found.", "danger")
+        return redirect(url_for("settings.index"))
+
+    uploaded = request.files.get("profile_picture")
+    if not uploaded or not uploaded.filename:
+        flash("Please choose an image to upload.", "danger")
+        return redirect(url_for("settings.index"))
+
+    try:
+        data, content_type = profile_picture_service.read_and_validate(uploaded)
+    except ProfilePictureError as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("settings.index"))
+
+    profile_picture_service.save_picture(user.id, data, content_type)
+    db.session.commit()
+
+    flash("Profile picture updated successfully.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@settings_bp.route("/settings/profile-picture/remove", methods=["POST"])
+@login_required
+def remove_profile_picture():
+    """Remove the picture; the default first-letter avatar is shown again."""
+    removed = profile_picture_service.delete_picture(session["user_id"])
+    db.session.commit()
+
+    if removed:
+        flash("Profile picture removed.", "success")
+    else:
+        flash("There is no profile picture to remove.", "warning")
     return redirect(url_for("settings.index"))
 
 @settings_bp.route("/settings/update-personal-info", methods=["POST"])

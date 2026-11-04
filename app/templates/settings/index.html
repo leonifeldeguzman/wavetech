@@ -4,8 +4,12 @@ page_title %}Settings{% endblock %} {% block extra_css %}
   rel="stylesheet"
   href="{{ url_for('static', filename='css/settings.css') }}"
 />
+
 {% endblock %} {% block content %}
 {% set full_name = user.full_name if user else session.get('full_name', '') %}
+{% set avatar_initial = (full_name or '').strip()[:1] | upper %}
+{% set role_value = user.role if user else session.get('role') %}
+{% set role_label = 'Admin / Coast Guard' if (role_value or '') | lower == 'admin' else role_value %}
 {% set name_parts = full_name.split() %} 
 {%set first_name = name_parts[0] if name_parts else '—' %} 
 {% set last_name =name_parts[1:] | join(' ') if name_parts|length > 1 else '—' %}
@@ -51,54 +55,89 @@ page_title %}Settings{% endblock %} {% block extra_css %}
         <div class="settings-divider"></div>
         <!-- PROFILE -->
         <div class="settings-card profile-card">
-          <form
-            method="POST"
-            action="{{ url_for('settings.update_display_name') }}"
-            class="profile-edit-form"
-          >
-            <div class="profile-main">
-              <div class="profile-avatar"><i class="bi bi-person"></i></div>
-              <div class="profile-identity">
-                <div class="profile-name">{{ full_name }}</div>
-                <input
-                  type="text"
-                  name="display_name"
-                  class="profile-name-input"
-                  value="{{ full_name }}"
-                  maxlength="100"
-                  aria-label="Display name"
-                  style="display: none"
+          <div class="profile-main">
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar">
+                {% if profile_picture_version %}
+                <img
+                  class="profile-avatar-img"
+                  src="{{ url_for('settings.profile_picture', v=profile_picture_version) }}"
+                  alt="Profile picture"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='';"
                 />
-                <div class="profile-role">
-                  {{ user.role if user else session.get('role') }}
-                </div>
+                {% if avatar_initial %}
+                <span class="profile-avatar-fallback" style="display: none">{{ avatar_initial }}</span>
+                {% else %}
+                <i class="bi bi-person profile-avatar-fallback" style="display: none"></i>
+                {% endif %}
+                {% else %}
+                {% if avatar_initial %}
+                <span class="profile-avatar-fallback">{{ avatar_initial }}</span>
+                {% else %}
+                <i class="bi bi-person profile-avatar-fallback"></i>
+                {% endif %}
+                {% endif %}
+              </div>
+
+              <button
+                type="button"
+                class="profile-avatar-edit"
+                id="profile-picture-trigger"
+                aria-label="Edit profile picture"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="profile-picture-menu"
+              >
+                <i class="bi bi-camera-fill"></i>
+              </button>
+
+              <div
+                class="profile-picture-menu"
+                id="profile-picture-menu"
+                role="menu"
+                hidden
+              >
+                <button type="button" class="profile-picture-menu-item" role="menuitem" data-action="choose">
+                  <i class="bi bi-upload"></i>
+                  {{ 'Change picture' if profile_picture_version else 'Upload picture' }}
+                </button>
+                {% if profile_picture_version %}
+                <button type="button" class="profile-picture-menu-item is-danger" role="menuitem" data-action="remove">
+                  <i class="bi bi-trash"></i> Remove picture
+                </button>
+                {% endif %}
+                <div class="profile-picture-menu-hint">PNG, JPG or WebP, up to 2 MB</div>
               </div>
             </div>
-            <div class="profile-edit-actions">
-              <button
-                type="button"
-                class="settings-edit-btn"
-                onclick="startDisplayNameEdit(this)"
-              >
-                Edit <i class="bi bi-pencil"></i>
-              </button>
-              <button
-                type="submit"
-                class="settings-save-name-btn"
-                style="display: none"
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                class="settings-cancel-name-btn"
-                onclick="cancelDisplayNameEdit(this)"
-                style="display: none"
-              >
-                Cancel
-              </button>
+
+            <div class="profile-identity">
+              <div class="profile-name">{{ full_name }}</div>
+              <div class="profile-role">
+                {{ role_label }}
+              </div>
             </div>
+          </div>
+
+          <form
+            id="profile-picture-upload-form"
+            method="POST"
+            action="{{ url_for('settings.upload_profile_picture') }}"
+            enctype="multipart/form-data"
+            hidden
+          >
+            <input
+              type="file"
+              name="profile_picture"
+              accept="image/png,image/jpeg,image/webp"
+              aria-label="Choose profile picture"
+            />
           </form>
+          <form
+            id="profile-picture-remove-form"
+            method="POST"
+            action="{{ url_for('settings.remove_profile_picture') }}"
+            hidden
+          ></form>
         </div>
         <!-- PERSONAL INFORMATION -->
         <div class="settings-card personal-card">
@@ -193,7 +232,7 @@ page_title %}Settings{% endblock %} {% block extra_css %}
                 <span class="personal-label">Role</span>
 
                 <span class="personal-value">
-                  {{ user.role if user else session.get('role') }}
+                  {{ role_label }}
                 </span>
               </div>
 
@@ -672,6 +711,496 @@ page_title %}Settings{% endblock %} {% block extra_css %}
 </div>
 
 <script>
+    /*
+  * WaveTech — Profile picture cropping (Settings > Account > My Profile)
+  *
+  * How it plugs in
+  * ---------------
+  * The existing profile picture flow is unchanged: a file input named
+  * "profile_picture" inside the profile form, validated/previewed by the
+  * page's own change handler and uploaded by the existing form submit.
+  *
+  * This script sits in front of that handler:
+  *   1. When a valid image (PNG / JPEG / WebP, within the size limit) is
+  *      chosen, the original change event is stopped and a crop dialog opens.
+  *   2. "Apply Crop" renders the chosen square area to a canvas, puts the
+  *      result back into the SAME file input, and re-fires the change event,
+  *      so the existing validation + preview + Save/upload code runs
+  *      exactly as before, but with the cropped square image.
+  *   3. "Cancel" clears the selection and fires a change with no file, which
+  *      the existing code already treats as "keep the current picture".
+  *
+  * Files that fail the type/size checks are NOT intercepted, so the existing
+  * alerts ("Please choose a PNG, JPG, or WebP image.", "...2 MB or smaller.")
+  * still handle them. No library or network access is needed.
+  */
+  (function () {
+    "use strict";
+
+    var INPUT_SELECTOR = 'input[type="file"][name="profile_picture"]';
+    var ALLOWED = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
+    var MAX_INPUT_BYTES = 2 * 1024 * 1024; // same limit the page already enforces
+    var MAX_OUTPUT_BYTES = MAX_INPUT_BYTES - 4096; // stay safely under it
+    var MAX_OUTPUT_PX = 800; // saved picture is at most 800 x 800
+    var MAX_ZOOM = 5; // 1x = whole short side visible, 5x = 20% of it
+    var LOSSY_QUALITY = 0.92;
+
+    var passthrough = false; // true while we re-dispatch change ourselves
+    var ui = null; // dialog elements, built on first use
+    var session = null; // state of the crop currently open
+
+    /* ---------------------------------------------------------------
+      Intercept the file input's change event (capture phase, so we run
+      before the page's own inline/bubbling handlers).
+    --------------------------------------------------------------- */
+    document.addEventListener(
+      "change",
+      function (event) {
+        var input = event.target;
+        if (passthrough || !input || !input.matches || !input.matches(INPUT_SELECTOR)) {
+          return;
+        }
+        var file = input.files && input.files[0];
+        if (!file) return; // cleared: let the existing code reset the preview
+        if (!ALLOWED[file.type] || file.size > MAX_INPUT_BYTES) return; // existing validation shows its alert
+
+        event.stopImmediatePropagation();
+        openCropper(input, file);
+      },
+      true
+    );
+
+    /* ---------------------------------------------------------------
+      Dialog construction
+    --------------------------------------------------------------- */
+    var ICONS = {
+      close: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9m0-9l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>',
+      minus: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>',
+      plus: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M8 3v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>',
+      reset: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v3h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
+    };
+
+    function buildUi() {
+      var root = document.createElement("div");
+      root.className = "pfc-backdrop";
+      root.hidden = true;
+      root.innerHTML =
+        '<div class="pfc-dialog" role="dialog" aria-modal="true" aria-labelledby="pfc-title">' +
+        '  <div class="pfc-header">' +
+        '    <h3 class="pfc-title" id="pfc-title">Crop profile picture</h3>' +
+        '    <button type="button" class="pfc-icon-btn pfc-close" aria-label="Cancel">' + ICONS.close + "</button>" +
+        "  </div>" +
+        '  <div class="pfc-body">' +
+        '    <div class="pfc-stage" tabindex="0" aria-label="Crop area. Drag to move the picture. Use arrow keys to move and plus or minus to zoom.">' +
+        '      <img class="pfc-image" alt="" draggable="false">' +
+        '      <div class="pfc-guide" aria-hidden="true"></div>' +
+        "    </div>" +
+        '    <div class="pfc-zoom">' +
+        '      <button type="button" class="pfc-icon-btn pfc-zoom-out" aria-label="Zoom out">' + ICONS.minus + "</button>" +
+        '      <input type="range" class="pfc-slider" min="1" max="' + MAX_ZOOM + '" step="0.01" value="1" aria-label="Zoom">' +
+        '      <button type="button" class="pfc-icon-btn pfc-zoom-in" aria-label="Zoom in">' + ICONS.plus + "</button>" +
+        "    </div>" +
+        '    <div class="pfc-preview-row">' +
+        '      <canvas class="pfc-preview" width="144" height="144" aria-hidden="true"></canvas>' +
+        '      <div class="pfc-preview-text"><strong>Preview</strong><span>Profile pictures are shown as a circle. Drag and zoom to frame yourself.</span></div>' +
+        "    </div>" +
+        "  </div>" +
+        '  <div class="pfc-footer">' +
+        '    <button type="button" class="pfc-btn pfc-btn-ghost pfc-reset">' + ICONS.reset + " Reset</button>" +
+        '    <span class="pfc-spacer"></span>' +
+        '    <button type="button" class="pfc-btn pfc-btn-secondary pfc-cancel">Cancel</button>' +
+        '    <button type="button" class="pfc-btn pfc-btn-primary pfc-apply">Apply Crop</button>' +
+        "  </div>" +
+        "</div>";
+      document.body.appendChild(root);
+
+      var q = function (sel) { return root.querySelector(sel); };
+      ui = {
+        root: root,
+        dialog: q(".pfc-dialog"),
+        stage: q(".pfc-stage"),
+        img: q(".pfc-image"),
+        slider: q(".pfc-slider"),
+        preview: q(".pfc-preview"),
+        apply: q(".pfc-apply"),
+        cancel: q(".pfc-cancel"),
+        close: q(".pfc-close"),
+        reset: q(".pfc-reset"),
+        zoomIn: q(".pfc-zoom-in"),
+        zoomOut: q(".pfc-zoom-out")
+      };
+
+      ui.cancel.addEventListener("click", cancelCrop);
+      ui.close.addEventListener("click", cancelCrop);
+      ui.apply.addEventListener("click", applyCrop);
+      ui.reset.addEventListener("click", function () { resetView(); });
+      ui.zoomIn.addEventListener("click", function () { zoomBy(0.25); });
+      ui.zoomOut.addEventListener("click", function () { zoomBy(-0.25); });
+      ui.slider.addEventListener("input", function () {
+        setZoom(parseFloat(ui.slider.value), stageSize() / 2, stageSize() / 2);
+      });
+      // Clicking the dim backdrop cancels (not the dialog itself).
+      ui.root.addEventListener("mousedown", function (e) {
+        if (e.target === ui.root) cancelCrop();
+      });
+      ui.root.addEventListener("keydown", onDialogKey);
+      window.addEventListener("resize", function () { if (session) render(); });
+
+      wireStageGestures();
+    }
+
+    /* ---------------------------------------------------------------
+      View state: zoom factor z (>= 1) and the point of the image (in
+      the image's own pixels) that sits at the centre of the square.
+      Independent of the on-screen size, so it survives rotation/resize.
+    --------------------------------------------------------------- */
+    function stageSize() { return ui.stage.clientWidth || 280; }
+
+    function minScale() {
+      var V = stageSize();
+      return Math.max(V / session.nw, V / session.nh); // "cover" the square
+    }
+
+    function scale() { return minScale() * session.z; }
+
+    function clampCenter() {
+      var V = stageSize();
+      var half = V / (2 * scale());
+      session.cx = Math.min(Math.max(session.cx, half), session.nw - half);
+      session.cy = Math.min(Math.max(session.cy, half), session.nh - half);
+    }
+
+    function resetView() {
+      session.z = 1;
+      session.cx = session.nw / 2;
+      session.cy = session.nh / 2;
+      render();
+    }
+
+    // Zoom keeping the image point under (ax, ay) [stage px] where it is.
+    function setZoom(z, ax, ay) {
+      var V = stageSize();
+      var oldS = scale();
+      var px = session.cx + (ax - V / 2) / oldS;
+      var py = session.cy + (ay - V / 2) / oldS;
+      session.z = Math.min(MAX_ZOOM, Math.max(1, z));
+      var newS = scale();
+      session.cx = px - (ax - V / 2) / newS;
+      session.cy = py - (ay - V / 2) / newS;
+      render();
+    }
+
+    function zoomBy(delta) {
+      var V = stageSize();
+      setZoom(session.z + delta, V / 2, V / 2);
+    }
+
+    function panBy(dxPx, dyPx) {
+      var s = scale();
+      session.cx -= dxPx / s;
+      session.cy -= dyPx / s;
+      render();
+    }
+
+    function cropRect() {
+      var V = stageSize();
+      var s = scale();
+      var sw = V / s;
+      return {
+        sw: sw,
+        sx: Math.min(Math.max(session.cx - sw / 2, 0), session.nw - sw),
+        sy: Math.min(Math.max(session.cy - sw / 2, 0), session.nh - sw)
+      };
+    }
+
+    var rafId = 0;
+    function render() {
+      if (!session) return;
+      clampCenter();
+      var V = stageSize();
+      var s = scale();
+      var tx = V / 2 - session.cx * s;
+      var ty = V / 2 - session.cy * s;
+      ui.img.style.width = session.nw + "px";
+      ui.img.style.height = session.nh + "px";
+      ui.img.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + s + ")";
+      ui.slider.value = session.z;
+      ui.slider.setAttribute("aria-valuetext", Math.round(session.z * 100) + "%");
+      ui.zoomOut.disabled = session.z <= 1.0001;
+      ui.zoomIn.disabled = session.z >= MAX_ZOOM - 0.0001;
+      if (!rafId) {
+        rafId = requestAnimationFrame(function () { rafId = 0; drawPreview(); });
+      }
+    }
+
+    function drawPreview() {
+      if (!session) return;
+      var c = ui.preview;
+      var ctx = c.getContext("2d");
+      var r = cropRect();
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(ui.img, r.sx, r.sy, r.sw, r.sw, 0, 0, c.width, c.height);
+    }
+
+    /* ---------------------------------------------------------------
+      Gestures: drag to move, wheel / pinch to zoom, arrow keys.
+    --------------------------------------------------------------- */
+    function wireStageGestures() {
+      var pointers = {}; // id -> {x, y}
+      var last = null; // previous gesture sample
+
+      function ids() { return Object.keys(pointers); }
+
+      function sample() {
+        var k = ids();
+        if (k.length === 1) {
+          return { n: 1, x: pointers[k[0]].x, y: pointers[k[0]].y, d: 0 };
+        }
+        var a = pointers[k[0]], b = pointers[k[1]];
+        return {
+          n: 2,
+          x: (a.x + b.x) / 2,
+          y: (a.y + b.y) / 2,
+          d: Math.hypot(a.x - b.x, a.y - b.y)
+        };
+      }
+
+      ui.stage.addEventListener("pointerdown", function (e) {
+        if (!session) return;
+        try { ui.stage.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+        last = ids().length <= 2 ? sample() : last;
+        ui.stage.classList.add("is-dragging");
+        ui.stage.focus({ preventScroll: true });
+        e.preventDefault();
+      });
+
+      ui.stage.addEventListener("pointermove", function (e) {
+        if (!session || !pointers[e.pointerId]) return;
+        pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+        if (ids().length > 2) return;
+        var now = sample();
+        if (last && last.n === now.n) {
+          var rect = ui.stage.getBoundingClientRect();
+          panBy(now.x - last.x, now.y - last.y);
+          if (now.n === 2 && last.d > 0) {
+            setZoom(session.z * (now.d / last.d), now.x - rect.left, now.y - rect.top);
+          }
+        }
+        last = now;
+      });
+
+      function end(e) {
+        delete pointers[e.pointerId];
+        last = ids().length && ids().length <= 2 ? sample() : null;
+        if (!ids().length) ui.stage.classList.remove("is-dragging");
+      }
+      ui.stage.addEventListener("pointerup", end);
+      ui.stage.addEventListener("pointercancel", end);
+
+      ui.stage.addEventListener(
+        "wheel",
+        function (e) {
+          if (!session) return;
+          e.preventDefault();
+          var rect = ui.stage.getBoundingClientRect();
+          var unit = e.deltaMode === 1 ? 16 : 1;
+          setZoom(session.z * Math.exp(-e.deltaY * unit * 0.0015), e.clientX - rect.left, e.clientY - rect.top);
+        },
+        { passive: false }
+      );
+
+      ui.stage.addEventListener("keydown", function (e) {
+        if (!session) return;
+        var step = 12;
+        switch (e.key) {
+          case "ArrowLeft": panBy(step, 0); break;
+          case "ArrowRight": panBy(-step, 0); break;
+          case "ArrowUp": panBy(0, step); break;
+          case "ArrowDown": panBy(0, -step); break;
+          case "+": case "=": zoomBy(0.25); break;
+          case "-": case "_": zoomBy(-0.25); break;
+          default: return;
+        }
+        e.preventDefault();
+      });
+    }
+
+    /* ---------------------------------------------------------------
+      Open / close
+    --------------------------------------------------------------- */
+    function openCropper(input, file) {
+      if (!ui) buildUi();
+
+      var url = URL.createObjectURL(file);
+      var probe = new Image();
+      probe.onload = function () {
+        session = {
+          input: input,
+          file: file,
+          url: url,
+          nw: probe.naturalWidth,
+          nh: probe.naturalHeight,
+          z: 1,
+          cx: probe.naturalWidth / 2,
+          cy: probe.naturalHeight / 2,
+          opener: document.activeElement,
+          busy: false
+        };
+        ui.root.hidden = false;
+        document.documentElement.classList.add("pfc-open");
+        ui.apply.disabled = false;
+        ui.apply.textContent = "Apply Crop";
+        // The visible <img> is what the preview and export draw from, so wait
+        // for it to finish loading (and for the stage to be laid out) first.
+        ui.img.onload = function () {
+          ui.img.onload = null;
+          requestAnimationFrame(function () {
+            if (!session) return;
+            resetView();
+            ui.stage.focus({ preventScroll: true });
+          });
+        };
+        ui.img.src = url;
+      };
+      probe.onerror = function () {
+        URL.revokeObjectURL(url);
+        alert("This image could not be read. Please choose a different picture.");
+        input.value = "";
+        fireChange(input);
+      };
+      probe.src = url;
+    }
+
+    function closeCropper() {
+      if (!session) return;
+      var opener = session.opener;
+      URL.revokeObjectURL(session.url);
+      ui.img.removeAttribute("src");
+      ui.root.hidden = true;
+      document.documentElement.classList.remove("pfc-open");
+      session = null;
+      if (opener && opener.focus && document.contains(opener)) {
+        try { opener.focus({ preventScroll: true }); } catch (err) { /* ignore */ }
+      }
+    }
+
+    function cancelCrop() {
+      if (!session || session.busy) return;
+      var input = session.input;
+      closeCropper();
+      // Discard the selection and let the existing handler restore the
+      // saved picture (it treats "no file" as "keep what I had").
+      input.value = "";
+      fireChange(input);
+    }
+
+    function fireChange(input) {
+      passthrough = true;
+      try {
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      } finally {
+        passthrough = false;
+      }
+    }
+
+    function onDialogKey(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancelCrop();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      // Keep keyboard focus inside the dialog.
+      var f = ui.dialog.querySelectorAll("button:not([disabled]), input, [tabindex='0']");
+      if (!f.length) return;
+      var first = f[0], lastEl = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        lastEl.focus();
+      } else if (!e.shiftKey && document.activeElement === lastEl) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    /* ---------------------------------------------------------------
+      Apply: render the square, encode it, hand it to the file input.
+    --------------------------------------------------------------- */
+    function encode(canvasSize, mime, quality, r) {
+      return new Promise(function (resolve) {
+        var c = document.createElement("canvas");
+        c.width = c.height = canvasSize;
+        var ctx = c.getContext("2d");
+        if (mime === "image/jpeg") {
+          ctx.fillStyle = "#ffffff"; // JPEG has no transparency
+          ctx.fillRect(0, 0, canvasSize, canvasSize);
+        }
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(ui.img, r.sx, r.sy, r.sw, r.sw, 0, 0, canvasSize, canvasSize);
+        c.toBlob(resolve, mime, quality);
+      });
+    }
+
+    // Keep the original format. Only shrink if the result would exceed the
+    // upload limit (lower quality first for JPEG/WebP, then fewer pixels).
+    async function renderFitted(mime, r) {
+      var size = Math.max(1, Math.min(MAX_OUTPUT_PX, Math.round(r.sw)));
+      var quality = LOSSY_QUALITY;
+      for (var i = 0; i < 10; i++) {
+        var blob = await encode(size, mime, quality, r);
+        if (!blob) return null;
+        if (blob.size <= MAX_OUTPUT_BYTES) return blob;
+        if (blob.type !== "image/png" && quality > 0.7) {
+          quality -= 0.08;
+        } else {
+          size = Math.max(64, Math.floor(size * 0.85));
+        }
+      }
+      return null;
+    }
+
+    async function applyCrop() {
+      if (!session || session.busy) return;
+      session.busy = true;
+      ui.apply.disabled = true;
+      ui.apply.textContent = "Applying…";
+
+      var input = session.input;
+      var original = session.file;
+      var failed = false;
+      try {
+        var blob = await renderFitted(original.type, cropRect());
+        if (!blob) throw new Error("encode failed");
+
+        var ext = ALLOWED[blob.type] || "png";
+        var cropped = new File([blob], "profile-picture." + ext, {
+          type: blob.type,
+          lastModified: Date.now()
+        });
+
+        var dt = new DataTransfer();
+        dt.items.add(cropped);
+        input.files = dt.files;
+      } catch (err) {
+        failed = true;
+      }
+
+      session.busy = false;
+      closeCropper();
+
+      if (failed) {
+        alert("Sorry, the picture could not be cropped. Please try again or choose a different image.");
+        input.value = "";
+      }
+      // Hand over to the page's existing change handler: it validates and
+      // previews the (now cropped) file, and the normal Save uploads it.
+      fireChange(input);
+    }
+  })();
+
   /* =====================================================
      PASSWORD TOGGLE
   ===================================================== */
@@ -695,46 +1224,85 @@ page_title %}Settings{% endblock %} {% block extra_css %}
 
 
   /* =====================================================
-     DISPLAY NAME EDIT
+     PROFILE PICTURE (camera badge menu)
   ===================================================== */
 
-  function startDisplayNameEdit(button) {
-    const form = button.closest(".profile-edit-form");
-    const name = form.querySelector(".profile-name");
-    const input = form.querySelector(".profile-name-input");
-    const editButton = form.querySelector(".settings-edit-btn");
-    const saveButton = form.querySelector(".settings-save-name-btn");
-    const cancelButton = form.querySelector(".settings-cancel-name-btn");
+  (function () {
+    const trigger = document.getElementById("profile-picture-trigger");
+    const menu = document.getElementById("profile-picture-menu");
+    const uploadForm = document.getElementById("profile-picture-upload-form");
+    const removeForm = document.getElementById("profile-picture-remove-form");
+    if (!trigger || !menu || !uploadForm || !removeForm) return;
 
-    name.style.display = "none";
-    input.style.display = "block";
+    const fileInput = uploadForm.querySelector('input[type="file"]');
+    const MAX_BYTES = 2 * 1024 * 1024;
+    const ALLOWED = ["image/png", "image/jpeg", "image/webp"];
 
-    editButton.style.display = "none";
-    saveButton.style.display = "inline-flex";
-    cancelButton.style.display = "inline-flex";
+    function closeMenu() {
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+    }
 
-    input.focus();
-    input.select();
-  }
+    function openMenu() {
+      menu.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      const first = menu.querySelector("button");
+      if (first) first.focus();
+    }
 
+    trigger.addEventListener("click", function (event) {
+      event.stopPropagation();
+      if (menu.hidden) {
+        openMenu();
+      } else {
+        closeMenu();
+      }
+    });
 
-  function cancelDisplayNameEdit(button) {
-    const form = button.closest(".profile-edit-form");
-    const name = form.querySelector(".profile-name");
-    const input = form.querySelector(".profile-name-input");
-    const editButton = form.querySelector(".settings-edit-btn");
-    const saveButton = form.querySelector(".settings-save-name-btn");
-    const cancelButton = form.querySelector(".settings-cancel-name-btn");
+    document.addEventListener("click", function (event) {
+      if (!menu.hidden && !menu.contains(event.target)) closeMenu();
+    });
 
-    input.value = name.textContent.trim();
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !menu.hidden) {
+        closeMenu();
+        trigger.focus();
+      }
+    });
 
-    name.style.display = "block";
-    input.style.display = "none";
+    menu.addEventListener("click", function (event) {
+      const item = event.target.closest("[data-action]");
+      if (!item) return;
+      closeMenu();
 
-    editButton.style.display = "inline-flex";
-    saveButton.style.display = "none";
-    cancelButton.style.display = "none";
-  }
+      if (item.dataset.action === "choose") {
+        fileInput.click();
+      } else if (item.dataset.action === "remove") {
+        if (confirm("Remove your profile picture? Your initial will be shown instead.")) {
+          removeForm.submit();
+        }
+      }
+    });
+
+    fileInput.addEventListener("change", function () {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+
+      if (file.type && ALLOWED.indexOf(file.type) === -1) {
+        alert("Please choose a PNG, JPG, or WebP image.");
+        fileInput.value = "";
+        return;
+      }
+      if (file.size > MAX_BYTES) {
+        alert("Profile picture must be 2 MB or smaller.");
+        fileInput.value = "";
+        return;
+      }
+
+      // Saved immediately; the page reloads showing the new picture.
+      uploadForm.submit();
+    });
+  })();
 
 
   /* =====================================================

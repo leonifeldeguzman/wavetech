@@ -84,6 +84,28 @@ def create_app():
             session.permanent = True
             app.permanent_session_lifetime = timedelta(minutes=timeout_minutes)
 
+    @app.context_processor
+    def _inject_header_profile_picture():
+        # Makes `profile_picture_version` available to every template (top header
+        # in base.html, Settings > My Profile). None = no custom picture.
+        user_id = session.get("user_id")
+        if not user_id:
+            return {}
+        try:
+            from app.services import profile_picture_service
+
+            return {
+                "profile_picture_version":
+                    profile_picture_service.get_picture_version(user_id)
+            }
+        except Exception:
+            # e.g. the user_profile_pictures table hasn't been migrated yet:
+            # never let the header break a page, but do log why the picture
+            # could not be loaded instead of failing silently.
+            app.logger.exception("Could not load the profile picture")
+            db.session.rollback()
+            return {}
+
     @app.route("/")
     def index():
         return redirect(url_for("passenger.home"))
@@ -115,4 +137,3 @@ def create_app():
         return "ok", 200
 
     return app
-

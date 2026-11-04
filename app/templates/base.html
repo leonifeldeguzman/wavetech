@@ -37,6 +37,130 @@
     <link rel="stylesheet"
       href="{{ url_for('static', filename='css/dashboard.css') }}">
 
+    <style>
+      /* Header profile picture (falls back to the icon when none is set) */
+      .app-user-avatar {
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .app-user-avatar-initial {
+        font-weight: 600;
+        font-size: 1rem;
+        line-height: 1;
+        text-transform: uppercase;
+        user-select: none;
+      }
+      .app-user-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        border-radius: 50%;
+      }
+
+      /* Header account menu (avatar / name opens Profile, Settings, Logout) */
+      .app-user-toggle {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        color: inherit;
+        text-decoration: none;
+        cursor: pointer;
+        border-radius: 999px;
+      }
+      .app-user-toggle:hover {
+        color: inherit;
+      }
+      .app-user-toggle:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 3px;
+      }
+      .app-user-toggle .app-user-avatar {
+        transition: box-shadow 0.15s ease;
+      }
+      .app-user-toggle:hover .app-user-avatar,
+      .app-user-toggle[aria-expanded="true"] .app-user-avatar {
+        box-shadow: 0 0 0 3px rgba(15, 27, 60, 0.15);
+      }
+
+      /* Always rendered (so it can fade), hidden until Bootstrap adds .show */
+      .app-user-menu .dropdown-menu.app-user-dropdown {
+        display: block;
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-6px);
+        transition: opacity 0.16s ease, transform 0.16s ease,
+          visibility 0s linear 0.16s;
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        left: auto;
+        margin: 0;
+        min-width: 190px;
+        padding: 6px;
+        z-index: 1050;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+      .app-user-menu .dropdown-menu.app-user-dropdown.show {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        transition-delay: 0s;
+      }
+      .app-user-dropdown .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        color: #1f2937;
+        font-size: 0.875rem;
+        transition: background-color 0.15s ease;
+      }
+      .app-user-dropdown .dropdown-item i {
+        font-size: 1rem;
+        width: 1.1rem;
+        text-align: center;
+      }
+      .app-user-dropdown .dropdown-item:hover,
+      .app-user-dropdown .dropdown-item:focus-visible {
+        background: #f3f4f6;
+        color: #1f2937;
+        outline: none;
+      }
+      .app-user-dropdown .dropdown-item:active {
+        background: #e5e7eb;
+        color: #1f2937;
+      }
+      .app-user-dropdown .dropdown-item.is-danger,
+      .app-user-dropdown .dropdown-item.is-danger:active {
+        color: #b91c1c;
+      }
+      .app-user-dropdown .dropdown-item.is-danger:hover,
+      .app-user-dropdown .dropdown-item.is-danger:focus-visible {
+        background: #fef2f2;
+        color: #b91c1c;
+      }
+      .app-user-dropdown .dropdown-divider {
+        margin: 6px 4px;
+        border-color: #e5e7eb;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-user-menu .dropdown-menu.app-user-dropdown,
+        .app-user-toggle .app-user-avatar,
+        .app-user-dropdown .dropdown-item {
+          transition: none;
+        }
+      }
+    </style>
+
     {% block extra_css %}{% endblock %}
   </head>
   <body>
@@ -121,22 +245,67 @@
         </div>
       </div>
 
-      <!-- User -->
-      <div class="app-user">
+      <!-- User (click the avatar / name to open the account menu) -->
+      <div class="app-user app-user-menu dropdown">
 
-        <div class="app-user-avatar">
-          <i class="bi bi-person-fill"></i>
-        </div>
-
-        <div class="app-user-info">
-          <div class="app-user-name">
-            {{ session.get('full_name') }}
+        <a
+          href="#"
+          class="app-user-toggle"
+          id="appUserToggle"
+          role="button"
+          data-bs-toggle="dropdown"
+          data-bs-display="static"
+          aria-expanded="false"
+          aria-haspopup="true"
+          aria-label="Open account menu"
+        >
+          <div class="app-user-avatar">
+            {% if profile_picture_version %}
+            <img
+              class="app-user-avatar-img"
+              src="{{ url_for('settings.profile_picture', v=profile_picture_version) }}"
+              alt="Profile picture"
+            />
+            {% else %}
+            {% set header_initial = (session.get('full_name') or '').strip()[:1] | upper %}
+            {% if header_initial %}
+            <span class="app-user-avatar-initial">{{ header_initial }}</span>
+            {% else %}
+            <i class="bi bi-person-fill"></i>
+            {% endif %}
+            {% endif %}
           </div>
 
-          <div class="app-user-role">
-            {{ session.get('role') }}
+          <div class="app-user-info">
+            <div class="app-user-name">
+              {{ session.get('full_name') }}
+            </div>
+
+            <div class="app-user-role">
+              {% set header_role = session.get('role') %}
+              {{ 'Admin / Coast Guard' if (header_role or '') | lower == 'admin' else header_role }}
+            </div>
           </div>
-        </div>
+        </a>
+
+        <ul
+          class="dropdown-menu dropdown-menu-end app-user-dropdown"
+          aria-labelledby="appUserToggle"
+        >
+          <li>
+            <a class="dropdown-item" href="{{ url_for('settings.index') }}">
+              <i class="bi bi-person"></i>
+              <span>Profile</span>
+            </a>
+          </li>
+          <li><hr class="dropdown-divider" /></li>
+          <li>
+            <a class="dropdown-item is-danger" href="{{ url_for('auth.logout') }}">
+              <i class="bi bi-box-arrow-right"></i>
+              <span>Logout</span>
+            </a>
+          </li>
+        </ul>
 
       </div>
 
