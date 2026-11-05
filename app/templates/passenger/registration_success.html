@@ -2,231 +2,180 @@
 
 {% block title %}Registration Status{% endblock %}
 
+{# Status result is a standalone page: no top navigation bar. It has its
+   own "Back to Home" button. #}
+{% block navbar %}{% endblock %}
+
 {% block content %}
+<div class="passenger-register-page">
 
-<div class="schedule-page">
+  {# Dedicated status page: deliberately has no pre-registration hero or
+     1-2-3 stepper, so it never looks like Step 3 of registration. #}
 
-    <div class="registration-panel registration-visible">
+  <section class="registration-panel registration-visible">
+    <div class="registration-step-content">
 
-        <div class="registration-step-content">
-
-            {# Status comes from the database; normalize it, then pick the view #}
-            {% set raw_status = (registration.status or '')|trim|lower|replace(' ', '-')|replace('_', '-') %}
-            {% set state = 'pending' if raw_status.startswith('pending')
-                           else (raw_status if raw_status in ['approved', 'rejected'] else 'other') %}
-
-            {% set view = {
-                'pending': {
-                    'icon': 'bi-check-lg',
-                    'icon_class': '',
-                    'heading': 'Registration Successful',
-                    'message': 'Your registration has been submitted and is currently awaiting verification.'
-                },
-                'approved': {
-                    'icon': 'bi-check-lg',
-                    'icon_class': '',
-                    'heading': 'Registration Approved',
-                    'message': 'Your registration has been approved.'
-                },
-                'rejected': {
-                    'icon': 'bi-x-lg',
-                    'icon_class': 'success-icon-rejected',
-                    'heading': 'Registration Rejected',
-                    'message': 'Your registration has been rejected.'
-                },
-                'other': {
-                    'icon': 'bi-info-circle',
-                    'icon_class': 'success-icon-neutral',
-                    'heading': 'Registration Status',
-                    'message': 'Here are the details of your registration.'
-                },
-                'cancelled': {
-                    'icon': 'bi-x-lg', 'icon_class': 'success-icon-neutral',
-                    'heading': 'Registration Cancelled',
-                    'message': 'Your registration was cancelled.'
-                }
-            }[state] %}
-
-            <div class="registration-card success-card">
-
-                <div class="success-icon {{ view.icon_class }}">
-                    <i class="bi {{ view.icon }}"></i>
-                </div>
-
-                <h3>{{ view.heading }}</h3>
-
-                <p class="success-message">
-                    {{ view.message }}
-                </p>
-
-                <div class="reference-box">
-                    <span>Reference Code</span>
-                    <strong>{{ registration.reference_code }}</strong>
-                    <button type="button" class="copy-code-btn" id="copyCodeBtn"
-                            data-code="{{ registration.reference_code }}">
-                        <i class="bi bi-clipboard"></i> <span>Copy</span>
-                    </button>
-                </div>
-
-                    <div class="registration-details-card">
-
-                    <div class="registration-detail-row">
-                        <span>Passenger Name</span>
-                        <strong>{{ masked_name }}</strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Contact</span>
-                        <strong>{{ masked_phone }}</strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Trip</span>
-                        <strong>
-                            {% if trip %}
-                                {{ trip.route_origin }} → {{ trip.route_destination }}
-                            {% else %}
-                                Trip details unavailable
-                            {% endif %}
-                        </strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Schedule</span>
-                        <strong>
-                            {{ trip.departure_time if trip and trip.departure_time else "—" }}
-                        </strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Date</span>
-                        <strong>
-                            {{ trip.departure_date if trip and trip.departure_date else "—" }}
-                        </strong>
-                    </div>
-
-                    <div class="registration-detail-row">
-                        <span>Status</span>
-                        <strong class="registration-status status-{{ state if state != 'other' else raw_status }}">
-                            {{ status_label or registration.status }}
-                        </strong>
-                    </div>
-
-                </div>
-
-                <div class="registration-important">
-                    <strong>IMPORTANT:</strong>
-                    Present this Reference Code to the operator before boarding.
-                </div>
-
-                <div class="success-actions">
-                    {% if can_cancel %}
-                    <button type="button" class="registration-cancel-btn" id="cancelToggleBtn">Cancel Registration</button>
-                    {% endif %}
-                    <a href="{{ url_for('passenger.home') }}#registration-status" class="success-btn">Check Status</a>
-                </div>
-
-                {% if can_cancel %}
-                <div class="cancel-panel" id="cancelPanel" hidden>
-                    <p>To cancel, enter the mobile number you registered with.</p>
-                    <input type="tel" id="cancelPhone" class="registration-input" placeholder="09XXXXXXXXX">
-                    <input type="text" id="cancelReason" class="registration-input" maxlength="200"
-                        placeholder="Reason (optional)">
-                    <div class="registration-lookup-error" id="cancelError" hidden></div>
-                    <button type="button" class="registration-next-btn" id="confirmCancelBtn">
-                        Yes, cancel my registration
-                    </button>
-                </div>
-                {% endif %}
-
-            </div>
-           
-
+{% if not registration %}
+      <div class="registration-card rs-card">
+        <h3 class="rs-title">Registration Status</h3>
+        <p class="rs-lead">{{ lookup_error or "No registration found for that reference code." }}</p>
+        <div class="rs-actions rs-actions-center">
+          <a href="{{ url_for('passenger.home') }}#registration-status" class="success-btn">Back to Home</a>
         </div>
+      </div>
+{% else %}
+
+{% set raw_status = (parent_status or registration.status or '')|trim|lower|replace('_', '-') %}
+{% set state = raw_status if raw_status in ['pending', 'approved', 'rejected', 'cancelled', 'partial'] else 'other' %}
+{% set counts = status_counts or {} %}
+{% set n_total = counts.get('total', 0) %}
+{% set n_approved = counts.get('approved', 0) %}
+{% set n_pending = counts.get('pending', 0) %}
+{% set n_rejected = counts.get('rejected', 0) %}
+{% set partial_msg %}{{ n_approved }} of {{ n_total }} passengers {{ 'is' if n_approved == 1 else 'are' }} approved. Only approved passengers can board. {% if n_rejected == 0 %}The others are still awaiting approval.{% elif n_pending == 0 %}The others were not approved. Please visit the terminal for assistance.{% else %}{{ n_pending }} {{ 'is' if n_pending == 1 else 'are' }} still awaiting approval (we'll text you when their status changes) and {{ n_rejected }} {{ 'was' if n_rejected == 1 else 'were' }} not approved. Please visit the terminal for assistance.{% endif %}{% endset %}
+{% set notices = {
+    'pending':   ['rs-notice-warn', 'bi-clock', 'Your registration is awaiting terminal approval. Please bring a valid ID for verification.'],
+    'partial':   ['rs-notice-warn', 'bi-hourglass-split', partial_msg|trim],
+    'approved':  ['rs-notice-ok', 'bi-check-circle', 'Your registration is approved. Present your reference code to the operator before boarding.'],
+    'rejected':  ['rs-notice-bad', 'bi-x-circle', 'Your registration was not approved. Please visit the terminal for assistance.'],
+    'cancelled': ['rs-notice-neutral', 'bi-info-circle', 'This registration has been cancelled.'],
+    'other':     ['rs-notice-neutral', 'bi-info-circle', 'Here are the details of your registration.']
+}[state] %}
+{% set n_active = active_passengers|length %}
+
+      <div id="rsRoot"
+           data-ref="{{ registration.reference_code }}"
+           data-date="{{ trip.display_date if trip and trip.display_date else '—' }}"
+           data-time="{{ trip.display_time if trip and trip.display_time else '—' }}"
+           data-origin="{{ trip.route_origin if trip else '' }}"
+           data-dest="{{ trip.route_destination if trip else '' }}"
+           data-verify-url="{{ url_for('passenger.verify_registration_identity', reference_code=registration.reference_code) }}"
+           data-cancel-url="{{ url_for('passenger.cancel_registration', reference_code=registration.reference_code) }}"
+           data-home-url="{{ url_for('passenger.home') }}"
+           data-register-url="{{ url_for('passenger.register_page') }}">
+
+        <!-- ============ 1. STATUS ============ -->
+        <section class="registration-card rs-card" id="rsStatus" aria-labelledby="rsStatusTitle">
+          <h3 class="rs-title" id="rsStatusTitle" tabindex="-1">Registration Status</h3>
+
+          <div class="rs-panel">
+            <div class="rs-row rs-row-ref">
+              <span>Your Reference Code</span>
+              <strong>{{ registration.reference_code }}</strong>
+            </div>
+            <div class="rs-row">
+              <span>Status</span>
+              <div class="rs-status-wrap">
+                <span class="rs-pill rs-pill-{{ state }}">{{ status_label or registration.status }}</span>
+                {% if state == 'partial' %}<small class="rs-count">{{ n_approved }} of {{ n_total }} approved</small>{% endif %}
+              </div>
+            </div>
+
+            <div class="rs-notice {{ notices[0] }}">
+              <i class="bi {{ notices[1] }}" aria-hidden="true"></i>
+              <p>{{ notices[2] }}</p>
+            </div>
+
+            <h4 class="rs-section">Trip Details</h4>
+            <div class="rs-row"><span>Date</span><strong>{{ trip.display_date if trip and trip.display_date else '—' }}</strong></div>
+            <div class="rs-row"><span>Departure</span><strong>{{ trip.display_time if trip and trip.display_time else '—' }}</strong></div>
+            <div class="rs-row rs-row-stack">
+              <span>Route</span>
+              <strong>{% if trip %}{{ trip.route_origin }} <i class="bi bi-arrow-right rs-arrow" aria-hidden="true"></i> {{ trip.route_destination }}{% else %}Trip details unavailable{% endif %}</strong>
+            </div>
+            {% if trip %}
+            <div class="rs-row">
+              <span>Trip Status</span>
+              <span class="status-pill {{ trip.status|lower }}">{{ trip.status }}</span>
+            </div>
+            {% endif %}
+
+            {% if passenger_rows %}
+            <h4 class="rs-section">Passengers ({{ passenger_rows|length }})</h4>
+            {% for p in passenger_rows %}
+            <div class="rs-row rs-row-pax">
+              <span>{{ loop.index }}</span>
+              <strong>{{ p.name }}</strong>
+              {% if passenger_rows|length > 1 %}<span class="rs-pill rs-pill-{{ p.status }}">{{ p.label }}</span>{% endif %}
+            </div>
+            {% endfor %}
+            {% endif %}
+          </div>
+
+          <div class="rs-actions">
+            {% if can_cancel %}
+            <button type="button" class="rs-btn rs-btn-danger-outline" id="rsStartCancel">Cancel Registration</button>
+            {% else %}<span></span>{% endif %}
+            <a href="{{ url_for('passenger.home') }}" class="rs-btn rs-btn-primary">Back to Home</a>
+          </div>
+        </section>
+
+{% if can_cancel %}
+        {# "Confirm It Is You" and "Cancel Registration" open as floating cards over this page #}
+        {% include "passenger/_cancel_flow.html" %}
+{% endif %}
+
+      </div>
+{% endif %}
 
     </div>
-
+  </section>
 </div>
-
 {% endblock %}
 
 
 {% block scripts %}
+{% if registration and can_cancel %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    var copyBtn = document.getElementById("copyCodeBtn");
+(function () {
+  var root = document.getElementById("rsRoot");
+  if (!root || !window.WTCancelFlow) return;
+  var D = root.dataset;
 
-    if (copyBtn) {
-        copyBtn.addEventListener("click", function () {
-            var code = copyBtn.dataset.code;
-            var label = copyBtn.querySelector("span");
-
-            function done() {
-                label.textContent = "Copied";
-                setTimeout(function () {
-                    label.textContent = "Copy";
-                }, 1800);
-            }
-
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(code).then(done);
-            } else {
-                var t = document.createElement("textarea");
-                t.value = code;
-                document.body.appendChild(t);
-                t.select();
-                document.execCommand("copy");
-                t.remove();
-                done();
-            }
-        });
+  // After a successful cancellation the card closes and the status block is
+  // refreshed from the server, so it shows what is actually in the database.
+  function refreshStatus(d) {
+    function notice() {
+      var cur = document.getElementById("rsStatus");
+      var title = cur && cur.querySelector(".rs-title");
+      if (!title) return;
+      var f = WTCancelFlow.flash(d);
+      title.insertAdjacentElement("afterend", f);
+      f.focus({ preventScroll: true });
     }
+    fetch(location.pathname, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { if (!r.ok) throw new Error(); return r.text(); })
+      .then(function (html) {
+        var fresh = new DOMParser().parseFromString(html, "text/html").getElementById("rsStatus");
+        var cur = document.getElementById("rsStatus");
+        if (!fresh || !cur) { location.reload(); return; }
+        cur.innerHTML = fresh.innerHTML;
+        notice();
+      })
+      .catch(function () { location.reload(); });
+  }
 
-    var toggle = document.getElementById("cancelToggleBtn");
-    var panel = document.getElementById("cancelPanel");
+  WTCancelFlow.init({
+    ref: D.ref,
+    verifyUrl: D.verifyUrl,
+    cancelUrl: D.cancelUrl,
+    date: D.date,
+    time: D.time,
+    route: D.origin + " \u2192 " + D.dest,
+    onCancelled: refreshStatus
+  });
 
-    if (toggle && panel) {
-        toggle.addEventListener("click", function () {
-            panel.hidden = !panel.hidden;
-        });
-    }
+  // The button is inside the block that gets refreshed, so listen on document.
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest("#rsStartCancel")) WTCancelFlow.open();
+  });
 
-    var confirmBtn = document.getElementById("confirmCancelBtn");
-
-    if (confirmBtn) {
-        confirmBtn.addEventListener("click", function () {
-            var err = document.getElementById("cancelError");
-            var btn = this;
-            var body = new FormData();
-
-            body.append("contact_number", document.getElementById("cancelPhone").value);
-            body.append("reason", document.getElementById("cancelReason").value);
-
-            btn.disabled = true;
-            err.hidden = true;
-
-            fetch("{{ url_for('passenger.cancel_registration', reference_code=registration.reference_code) }}", {
-                method: "POST",
-                body: body
-            })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                if (d.success) {
-                    window.location.reload();
-                    return;
-                }
-
-                err.textContent = d.message;
-                err.hidden = false;
-                btn.disabled = false;
-            })
-            .catch(function () {
-                err.textContent = "Something went wrong. Please try again.";
-                err.hidden = false;
-                btn.disabled = false;
-            });
-        });
-    }
-});
+  // Old link from the registration success card (non-JS fallback): open the card directly.
+  if (/[?&]cancel=1(&|$)/.test(location.search)) {
+    if (window.history && history.replaceState) { history.replaceState(null, "", location.pathname); }
+    WTCancelFlow.open();
+  }
+})();
 </script>
+{% endif %}
 {% endblock %}

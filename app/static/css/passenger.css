@@ -64,6 +64,8 @@ body {
 }
 
 .registration-input::placeholder,
+.phone-input input::placeholder,
+.pt-selected,
 #passengerTypeSelected {
     color: #9aa3ad;
     font-size: 0.85rem;
@@ -1296,13 +1298,15 @@ body {
    Direct Registration Card Only
 ========================================= */
 
-#passengerTypeDropdown {
+#passengerTypeDropdown,
+.pt-dropdown {
     position: relative;
     width: 100%;
 }
 
 
-#passengerTypeToggle {
+#passengerTypeToggle,
+.pt-dropdown .manifest-boat-toggle {
     width: 100%;
     height: 44px;
     padding: 0 15px;
@@ -1324,34 +1328,40 @@ body {
 }
 
 /* Placeholder */
-#passengerTypeSelected {
+#passengerTypeSelected,
+.pt-selected {
     color: #8fa2bb;
 }
 
 /* Selected passenger type */
-#passengerTypeToggle.has-value #passengerTypeSelected {
+#passengerTypeToggle.has-value #passengerTypeSelected,
+.pt-dropdown .manifest-boat-toggle.has-value .pt-selected {
     color: #263d59;
 }
 
-#passengerTypeToggle:hover {
+#passengerTypeToggle:hover,
+.pt-dropdown .manifest-boat-toggle:hover {
     border-color: #aebfd3;
 }
 
 
-#passengerTypeToggle:focus {
+#passengerTypeToggle:focus,
+.pt-dropdown .manifest-boat-toggle:focus {
     outline: none;
     border-color: #9db5d0;
 }
 
 
-#passengerTypeToggle i {
+#passengerTypeToggle i,
+.pt-dropdown .manifest-boat-toggle i {
     color: #5f7188;
     font-size: 0.85rem;
     transition: transform 0.2s ease;
 }
 
 
-#passengerTypeToggle[aria-expanded="true"] i {
+#passengerTypeToggle[aria-expanded="true"] i,
+.pt-dropdown .manifest-boat-toggle[aria-expanded="true"] i {
     transform: rotate(180deg);
 }
 
@@ -1360,7 +1370,8 @@ body {
    DROPDOWN MENU
 ========================================= */
 
-#passengerTypeMenu {
+#passengerTypeMenu,
+.pt-dropdown .manifest-boat-menu {
     display: none;
 
     position: absolute;
@@ -1386,7 +1397,8 @@ body {
    DROPDOWN OPTIONS
 ========================================= */
 
-#passengerTypeMenu .manifest-boat-option {
+#passengerTypeMenu .manifest-boat-option,
+.pt-dropdown .manifest-boat-option {
     width: 100%;
 
     display: block;
@@ -1409,12 +1421,14 @@ body {
 }
 
 
-#passengerTypeMenu .manifest-boat-option:hover {
+#passengerTypeMenu .manifest-boat-option:hover,
+.pt-dropdown .manifest-boat-option:hover {
     background: #f3f7fb;
 }
 
 
-#passengerTypeMenu .manifest-boat-option.selected {
+#passengerTypeMenu .manifest-boat-option.selected,
+.pt-dropdown .manifest-boat-option.selected {
     background: #eef5fc;
     color: #123b6d;
     font-weight: 500;
@@ -1424,12 +1438,14 @@ body {
    PASSENGER TYPE DROPDOWN
 ========================================= */
 
-#passengerTypeDropdown {
+#passengerTypeDropdown,
+.pt-dropdown {
     position: relative;
     width: 100%;
 }
 
-#passengerTypeDropdown .manifest-boat-toggle {
+#passengerTypeDropdown .manifest-boat-toggle,
+.pt-dropdown .manifest-boat-toggle {
     width: 100%;
     min-height: 43px;
 
@@ -1453,11 +1469,13 @@ body {
     transition: 0.2s ease;
 }
 
-#passengerTypeDropdown .manifest-boat-toggle:hover {
+#passengerTypeDropdown .manifest-boat-toggle:hover,
+.pt-dropdown .manifest-boat-toggle:hover {
     border-color: #9bbce0;
 }
 
-#passengerTypeDropdown .manifest-boat-toggle:focus {
+#passengerTypeDropdown .manifest-boat-toggle:focus,
+.pt-dropdown .manifest-boat-toggle:focus {
     outline: none;
 
     border-color: #9bbce0;
@@ -1466,21 +1484,24 @@ body {
         0 0 0 3px rgba(90, 140, 190, 0.08);
 }
 
-#passengerTypeDropdown .manifest-boat-chevron {
+#passengerTypeDropdown .manifest-boat-chevron,
+.pt-dropdown .manifest-boat-chevron {
     font-size: 0.9rem;
     color: #6b7280;
 
     transition: transform 0.2s ease;
 }
 
-#passengerTypeDropdown.open .manifest-boat-chevron {
+#passengerTypeDropdown.open .manifest-boat-chevron,
+.pt-dropdown.open .manifest-boat-chevron {
     transform: rotate(180deg);
 }
 
 
 /* Dropdown menu */
 
-#passengerTypeDropdown .manifest-boat-menu {
+#passengerTypeDropdown .manifest-boat-menu,
+.pt-dropdown .manifest-boat-menu {
     position: absolute;
 
     top: calc(100% + 5px);
@@ -1501,14 +1522,16 @@ body {
     box-shadow: 0 8px 20px rgba(15, 32, 55, 0.10);
 }
 
-#passengerTypeDropdown.open .manifest-boat-menu {
+#passengerTypeDropdown.open .manifest-boat-menu,
+.pt-dropdown.open .manifest-boat-menu {
     display: block;
 }
 
 
 /* Options */
 
-#passengerTypeDropdown .manifest-boat-option {
+#passengerTypeDropdown .manifest-boat-option,
+.pt-dropdown .manifest-boat-option {
     width: 100%;
 
     display: flex;
@@ -1532,33 +1555,40 @@ body {
     transition: background-color 0.15s ease;
 }
 
-#passengerTypeDropdown .manifest-boat-option:hover {
+#passengerTypeDropdown .manifest-boat-option:hover,
+.pt-dropdown .manifest-boat-option:hover {
     background: #f1f6fb;
 }
 
-#passengerTypeDropdown .manifest-boat-option.selected {
+#passengerTypeDropdown .manifest-boat-option.selected,
+.pt-dropdown .manifest-boat-option.selected {
     background: #eef5fc;
 }
 
-#passengerTypeDropdown .manifest-boat-option-info {
+#passengerTypeDropdown .manifest-boat-option-info,
+.pt-dropdown .manifest-boat-option-info {
     display: flex;
     align-items: center;
 }
 
-#passengerTypeDropdown .manifest-boat-name {
+#passengerTypeDropdown .manifest-boat-name,
+.pt-dropdown .manifest-boat-name {
     font-weight: 400;
 }
 
-#passengerTypeDropdown .manifest-boat-check {
+#passengerTypeDropdown .manifest-boat-check,
+.pt-dropdown .manifest-boat-check {
     color: var(--navy);
     font-size: 1.1rem;
 }
 
-#passengerTypeDropdown .passenger-type-placeholder {
+#passengerTypeDropdown .passenger-type-placeholder,
+.pt-dropdown .passenger-type-placeholder {
     color: #9aa3ad;
 }
 
-#passengerTypeDropdown .passenger-type-selected {
+#passengerTypeDropdown .passenger-type-selected,
+.pt-dropdown .passenger-type-selected {
     color: #333333;
 }
 /* =========================================
@@ -2557,35 +2587,1268 @@ text-align: center;
 }
 
 }
+.register-start-btn {
+    display: inline-block;
+    text-decoration: none;
+}
 
-.register-start-btn { display: inline-block; text-decoration: none; }
-.register-hours, .register-walkin { margin: 0 0 18px !important; font-size: 0.95rem !important; }
-.who-group { border: 0; margin: 0 0 22px; padding: 0; }
-.who-group legend { margin-bottom: 10px; font-size: 1rem; font-weight: 600; }
-.who-group label { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; }
-.person-card { margin-bottom: 16px; padding: 22px; border: 1px solid #d9e3ed; border-radius: 10px; background: #fff; }
-.person-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.person-head h4 { margin: 0; font-size: 1rem; font-weight: 600; }
-.person-remove { border: 0; background: none; color: #b42318; font-size: 0.85rem; }
-.phone-input { display: flex; overflow: hidden; border: 1px solid #d3dfeb; border-radius: 8px; background: #fff; }
-.phone-input span { padding: 9px 12px; border-right: 1px solid #d3dfeb; background: #f1f6fb; color: #36516d; }
-.phone-input input { flex: 1; min-width: 0; padding: 9px 14px; border: 0; outline: 0; font-size: 1rem; }
-.registration-field small, #seatLimitNote { margin-top: 6px; color: #777; font-size: 0.78rem; }
-#seatLimitNote { margin-left: 12px; }
-.same-addr { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; color: #555; font-size: 0.88rem; }
-.guardian-block { margin-top: 16px; padding-top: 16px; border-top: 1px dashed #cbd7e3; }
-.guardian-block p { margin-bottom: 12px; color: #8a6100; font-size: 0.85rem; }
-.trip-crew { margin-left: 10px; color: #777; font-size: 0.82rem; font-weight: 400; }
-.trip-top-right { display: flex; align-items: center; gap: 12px; }
-.trip-delay-note { margin-top: 12px; color: #a16207; font-size: 0.85rem; }
-.consent-box { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; font-size: 0.88rem; line-height: 1.5; text-align: left; }
-.consent-box input { margin-top: 5px; }
-.privacy-notice { margin-top: 6px; font-size: 0.82rem; }
-.review-section { margin-bottom: 18px; text-align: left; }
-.review-section h4 { margin-bottom: 8px; color: #8a94a3; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; }
-.review-section .registration-details-card { margin: 0; max-width: none; box-shadow: none; border: 1px solid #e5eaf0; }
-.code-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef2f6; }
-.code-row:last-child { border-bottom: 0; }
-.code-row strong { color: var(--navy); }
-#editDetailsBtn { margin-top: 8px; }
-@media (max-width: 767px) { .code-row { flex-wrap: wrap; } }
+.register-hours,
+.register-walkin {
+    margin: 0 0 18px !important;
+    font-size: 0.95rem !important;
+}
+
+/* =========================================
+   STEP 2 — WHO IS TRAVELING
+========================================= */
+
+#step2 .who-group {
+    border: 0;
+    margin: 0 0 24px;
+    padding: 0;
+    min-width: 0;
+}
+
+#step2 .who-group legend {
+    margin-bottom: 10px;
+    padding: 0;
+    color: #263d59;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+#step2 .who-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+#step2 .who-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 58px;
+    margin: 0;
+    padding: 11px 14px;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    background: #ffffff;
+
+    cursor: pointer;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+#step2 .who-option:hover {
+    border-color: #b8c9da;
+}
+
+#step2 .who-option:focus-within {
+    outline: 2px solid rgba(54, 93, 131, 0.15);
+    outline-offset: 2px;
+}
+
+#step2 .who-option:has(input:checked) {
+    border-color: #426b94;
+    background: #f5f8fc;
+}
+
+#step2 .who-option:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#step2 .who-option input {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: var(--navy);
+    cursor: pointer;
+}
+
+#step2 .who-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+#step2 .who-option-text strong {
+    color: #263d59;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#step2 .who-option-text small {
+    color: #7b8795;
+    font-size: 0.74rem;
+    font-weight: 400;
+}
+
+
+/* Passenger Information Cards */
+
+.person-card {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.person-card + .person-card {
+    margin-top: 28px;
+    padding-top: 28px;
+    border-top: 1px solid #d3dfeb;
+}
+
+.person-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.person-head h4 {
+    margin: 0;
+    color: #111;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.person-remove {
+    border: 0;
+    background: none;
+    color: #b42318;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+/* Phone Number Input */
+
+.phone-input {
+    display: flex;
+    align-items: stretch;
+    min-height: 43px;
+    overflow: hidden;
+    border: 1px solid #d3dfeb;
+    border-radius: 8px;
+    background: #fff;
+    transition: 0.2s ease;
+}
+
+.phone-input:focus-within {
+    border-color: #9bbce0;
+    box-shadow: 0 0 0 3px rgba(90, 140, 190, 0.08);
+}
+
+.phone-input span {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-right: 1px solid #d3dfeb;
+    background: #f1f6fb;
+    color: #36516d;
+}
+
+.phone-input input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 14px;
+    border: 0;
+    outline: 0;
+    font-size: 1rem;
+}
+
+/* Registration Field Notes */
+
+.registration-field small,
+#seatLimitNote {
+    margin-top: 6px;
+    color: #777;
+    font-size: 0.78rem;
+}
+
+#seatLimitNote {
+    margin-left: 12px;
+}
+
+/* Passenger Group Controls */
+
+#groupControls:not([hidden]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 0;
+    margin-top: 24px;
+}
+
+.same-addr {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #555;
+    font-size: 0.88rem;
+}
+
+/* Guardian Information */
+
+.guardian-block {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed #cbd7e3;
+}
+
+.guardian-block p {
+    margin-bottom: 12px;
+    color: #8a6100;
+    font-size: 0.85rem;
+}
+
+/* Trip Information */
+
+.trip-crew {
+    margin-left: 10px;
+    color: #777;
+    font-size: 0.82rem;
+    font-weight: 400;
+}
+
+.trip-top-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.trip-delay-note {
+    margin-top: 12px;
+    color: #a16207;
+    font-size: 0.85rem;
+}
+
+/* Responsive Layout */
+
+/* Mobile */
+@media (max-width: 767px) {
+    #step2 .who-options {
+        grid-template-columns: 1fr;
+        gap: 9px;
+    }
+
+    #step2 .who-option {
+        min-height: 54px;
+        padding: 10px 13px;
+    }
+}
+
+/* =========================================
+   STEP 3 — REGISTRATION REVIEW
+========================================= */
+
+/* Review content spacing */
+#step3 #reviewBody {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+#step3 .review-section {
+    margin: 0;
+    text-align: left;
+}
+
+#step3 .review-section h4 {
+    margin: 0 0 10px;
+    color: #36516d;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+/* Passenger and trip information cards */
+#step3 .review-section .registration-details-card {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 18px 22px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #ffffff;
+    box-shadow: none;
+}
+
+/* Individual information rows */
+#step3 .registration-detail-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 11px 0;
+    border-bottom: 1px solid #eef1f5;
+    font-size: 0.9rem;
+}
+
+#step3 .registration-detail-row:last-child {
+    border-bottom: none;
+}
+
+#step3 .registration-detail-row span {
+    flex: 0 0 125px;
+    color: #737d8b;
+    text-align: left;
+}
+
+#step3 .registration-detail-row strong {
+    flex: 1;
+    color: #263445;
+    font-weight: 500;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+/* Edit Details button */
+#step3 .review-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 125px;
+    min-height: 40px;
+    margin: 20px 0 4px;
+    padding: 9px 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #263d59;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+#step3 .review-edit-btn:hover {
+    background: #f5f8fc;
+    border-color: #9bbce0;
+}
+
+/* Consent section */
+#step3 .review-consents {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-top: 20px;
+}
+
+#step3 .review-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    color: #555f6d;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    cursor: pointer;
+}
+
+#step3 .review-consent input {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin: 4px 0 0;
+    accent-color: var(--navy);
+    cursor: pointer;
+}
+
+#step3 .review-consent-content {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+#step3 .review-consent-title {
+    color: #263d59;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#step3 .review-consent-title span {
+    color: #dc5454;
+}
+
+#step3 .review-privacy-notice {
+    margin-top: 5px;
+    color: #36516d;
+    font-size: 0.78rem;
+}
+
+#step3 .review-privacy-notice summary {
+    width: fit-content;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+#step3 .review-privacy-notice p {
+    margin: 8px 0 0;
+    color: #737d8b;
+    line-height: 1.5;
+}
+
+/* Error messages */
+#step3 .registration-error {
+    margin-top: 16px;
+}
+
+/* Bottom action buttons */
+#step3 .review-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+    #step3 #reviewBody {
+        gap: 18px;
+    }
+
+    #step3 .review-section .registration-details-card {
+        padding: 14px 16px;
+    }
+
+    #step3 .registration-detail-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    #step3 .registration-detail-row span {
+        flex: none;
+    }
+
+    #step3 .registration-detail-row strong {
+        text-align: left;
+    }
+
+    #step3 .review-edit-btn {
+        width: 100%;
+        margin-top: 16px;
+    }
+
+    #step3 .review-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    #step3 .review-actions button {
+        width: 100%;
+    }
+}
+/* =========================================
+   REGISTRATION STATUS + CANCELLATION FLOW
+   (registration_success.html) — all classes prefixed rs-
+========================================= */
+
+.rs-card { max-width: 760px; margin-left: auto; margin-right: auto; }
+.rs-card[hidden] { display: none; }
+
+.rs-title {
+    margin: 0 0 24px;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #111111;
+    outline: none;
+}
+
+.rs-lead {
+    max-width: 440px;
+    margin: -8px auto 24px;
+    text-align: center;
+    color: #555555;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+/* Details panel */
+.rs-panel {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 22px 32px;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(15, 32, 55, 0.12);
+}
+.rs-panel-plain { box-shadow: none; padding-top: 0; padding-bottom: 0; }
+
+.rs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 5px 0;
+    font-size: 0.92rem;
+}
+.rs-row > span { color: #666666; text-align: left; }
+.rs-row > strong { color: #111111; font-weight: 500; text-align: right; }
+.rs-row > strong.rs-removed { color: #b42318; font-weight: 600; }
+.rs-row-ref > strong { font-weight: 700; }
+
+/* Status with a small count underneath ("1 of 3 approved") */
+.rs-status-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.rs-count { color: #36516d; font-size: 0.78rem; }
+
+/* Passenger list: number, masked name, then that passenger's own status */
+.rs-row-pax { gap: 12px; }
+.rs-row-pax > span:first-child { flex: none; min-width: 1.4em; color: #98a2b3; }
+.rs-row-pax > strong { flex: 1; min-width: 0; text-align: left; }
+.rs-row-pax .rs-pill { flex: none; padding: 2px 10px; font-size: 0.75rem; }
+.rs-arrow { font-size: 0.8rem; margin: 0 6px; }
+
+.rs-section {
+    margin: 22px 0 6px;
+    color: #36516d;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* Status pills */
+.rs-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 4px 12px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+
+    box-sizing: border-box;
+}
+/* Pending — Soft Gold */
+.rs-pill-pending,
+.rs-pill-pending span {
+    background: #f8edcf !important;
+    color: #8a5b12 !important;
+    border-color: #ead9a7 !important;
+}
+
+/* Partially Approved — Muted Blue */
+.rs-pill-partial {
+    background: #e5edf7;
+    color: #315b86;
+    border-color: #cbd9e9;
+}
+
+/* Approved — Sage Green */
+.rs-pill-approved,
+.rs-pill-approved span {
+    background-color: #e2f0e8 !important;
+    color: #246b45 !important;
+    border-color: #c5dfcf !important;
+}
+
+/* Rejected — Muted Red */
+.rs-pill-rejected {
+    background-color: #F5DDDA !important;
+    color: #A3332D !important;
+    border-color: #E5BDB8 !important;
+}
+
+/* Cancelled / Other — Slate Gray */
+.rs-pill-cancelled,
+.rs-pill-other {
+    background: #e9edf2;
+    color: #526174;
+    border-color: #d5dce5;
+}
+
+/* =========================================
+   EQUAL-WIDTH PASSENGER STATUS PILLS
+========================================= */
+
+.rs-row-pax .rs-pill {
+    flex: 0 0 116px;
+    width: 110px;
+    min-width: 116px;
+    max-width: 116px;
+
+    padding: 4px 8px;
+    text-align: center;
+    justify-content: center;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+/* Notice under the status */
+.rs-notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 14px 0 4px;
+    padding: 12px 16px;
+    border: 1px solid;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+.rs-notice p { margin: 0; }
+.rs-notice i { font-size: 1.05rem; }
+.rs-notice-warn    { background: #fffaf0; border-color: #f3d78b; color: #8a6100; }
+.rs-notice-ok      { background: #f0fdf4; border-color: #b7e4c7; color: #15803d; }
+.rs-notice-bad     { background: #fef3f2; border-color: #fda29b; color: #b42318; }
+.rs-notice-neutral { background: #f4f7fb; border-color: #d3dfeb; color: #36516d; }
+
+/* Buttons */
+.rs-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 600px;
+    margin: 32px auto 0;
+}
+.rs-actions-center { justify-content: center; }
+
+.rs-btn {
+    min-width: 140px;
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--navy);
+    font-size: 0.92rem;
+    font-family: inherit;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease, background 0.2s ease;
+}
+.rs-btn:hover { opacity: 0.92; }
+.rs-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.rs-btn-primary { background: var(--navy); color: #ffffff; }
+.rs-btn-outline { background: #ffffff; color: var(--navy); }
+.rs-btn-danger-outline { background: #ffffff; color: #b42318; border-color: #d92d20; }
+.rs-btn-danger { background: #c0261b; color: #ffffff; border-color: #c0261b; }
+
+.rs-btn:focus-visible,
+.rs-digit:focus-visible,
+.rs-select:focus-visible,
+.rs-option input:focus-visible,
+.rs-check input:focus-visible {
+    outline: 2px solid #2f6fb3;
+    outline-offset: 2px;
+}
+
+/* 4-digit verification */
+.rs-digits {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 8px 0 14px;
+}
+.rs-digit {
+    width: 44px;
+    height: 50px;
+    border: 1px solid #9ca3af;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #111111;
+    background: #ffffff;
+}
+.rs-digit:focus { border-color: var(--navy); }
+
+.rs-hint {
+    margin: 0;
+    text-align: center;
+    color: #777777;
+    font-size: 0.8rem;
+}
+.rs-error {
+    margin: 12px auto 0;
+    max-width: 440px;
+    text-align: center;
+    color: #b42318;
+    font-size: 0.85rem;
+}
+.rs-error[hidden] { display: none; }
+
+/* Who to cancel */
+.rs-options { max-width: 460px; margin: 0 auto 14px; display: flex; flex-direction: column; gap: 10px; }
+.rs-option {
+    display: block;
+    padding: 12px 16px;
+    border: 1px solid #d3dfeb;
+    border-radius: 8px;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 0.92rem;
+}
+.rs-option.is-selected { border-color: var(--navy); background: #eef4fb; }
+.rs-option input[type="radio"] { margin-right: 10px; accent-color: var(--navy); }
+.rs-option-head { display: block; cursor: pointer; }
+.rs-checks { margin-top: 12px; padding: 4px 0 2px 26px; display: flex; flex-direction: column; gap: 8px; }
+.rs-checks[hidden] { display: none; }
+.rs-check { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.rs-check input { accent-color: var(--navy); }
+
+/* Confirm */
+.rs-warning {
+    max-width: 600px;
+    margin: 22px auto 0;
+    padding: 12px 18px;
+    border: 1px solid #fda29b;
+    border-radius: 8px;
+    background: #fef3f2;
+    color: #b42318;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+.rs-warning p { margin: 0; }
+
+.rs-reason { max-width: 600px; margin: 20px auto 0; }
+.rs-reason label { display: block; margin-bottom: 6px; color: #666666; font-size: 0.85rem; }
+.rs-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23333' stroke-width='1.6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+}
+
+/* Done */
+.rs-done .success-icon { margin-bottom: 14px; }
+.rs-refbig { text-align: center; margin: 0 auto 20px; }
+.rs-refbig span { display: block; color: #36516d; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 4px; }
+.rs-refbig strong { display: block; color: var(--navy); font-size: 1.5rem; font-weight: 700; }
+.rs-sms {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    max-width: 600px;
+    margin: 22px auto 0;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: #eef1f5;
+    color: #475467;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 640px) {
+    .rs-card { padding: 32px 20px; }
+    .rs-panel { padding: 16px 18px; }
+    .rs-actions { flex-direction: column-reverse; }
+    .rs-btn { width: 100%; }
+    .rs-row { font-size: 0.88rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rs-btn { transition: none; }
+}
+
+
+/* =========================================
+   REGISTRATION STEP 3 (SUCCESS) — register.html #step4
+   Reuses rs-row, rs-pill, rs-btn from the block above.
+========================================= */
+
+.rs3-card { max-width: 760px; margin-left: auto; margin-right: auto; }
+
+.rs3-panel {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 36px 38px 30px;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(15, 32, 55, 0.12);
+    text-align: left;
+}
+
+.rs3-ref {
+    padding: 22px 20px 18px;
+    border-radius: 10px;
+    background: #f1f7fd;
+    text-align: center;
+}
+.rs3-ref > span {
+    display: block;
+    margin-bottom: 4px;
+    color: #36516d;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.rs3-ref > strong {
+    display: block;
+    color: var(--navy);
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.rs3-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px auto 0;
+    padding: 5px 18px;
+    border: 0;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #111111;
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+.rs3-copy:focus-visible { outline: 2px solid #2f6fb3; outline-offset: 2px; }
+.rs3-sms {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 18px 0 0;
+    color: #666666;
+    font-size: 0.82rem;
+}
+
+.rs3-block {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e5eaf0;
+}
+.rs3-block h4 {
+    margin: 0 0 6px;
+    color: #36516d;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.rs3-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.rs3-status > span:first-child {
+    color: #36516d;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.rs3-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 12px 16px;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+.rs3-info p { margin: 0; }
+.rs3-info i { font-size: 1.05rem; }
+
+.rs3-actions { max-width: 620px; }
+
+@media (max-width: 640px) {
+    .rs3-panel { padding: 24px 18px 22px; }
+}
+
+/* =========================================
+   FLOATING CARDS (modals)
+   "Confirm It Is You" + "Cancel Registration"
+   Markup: passenger/_cancel_flow.html
+========================================= */
+
+body.rs-modal-open { overflow: hidden; }
+
+.rs-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1080;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+    background: rgba(15, 32, 55, 0.45);
+}
+.rs-modal[hidden] { display: none; }
+
+.rs-modal-card {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 32px 28px 28px;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 20px 50px rgba(15, 32, 55, 0.28);
+}
+.rs-modal-card[hidden] { display: none; }
+
+.rs-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #667085;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.rs-modal-close:hover { background: #f2f4f7; color: #111111; }
+.rs-modal-close:focus-visible { outline: 2px solid #2f6fb3; outline-offset: 2px; }
+
+.rs-modal-card .rs-title { margin-bottom: 20px; padding: 0 24px; }
+.rs-modal-card .rs-panel { padding: 12px 16px; box-shadow: none; border: 1px solid #e3e8ef; }
+.rs-modal-card .rs-actions { margin-top: 24px; }
+.rs-modal-card .rs-reason { margin-top: 16px; }
+.rs-modal-card .rs-btn { min-width: 120px; }
+
+/* Confirmation shown on the page after a cancellation */
+.rs-flash {
+    max-width: 600px;
+    margin: 0 auto 18px;
+    padding: 12px 16px;
+    border: 1px solid #b7e4c7;
+    border-radius: 10px;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 0.9rem;
+    text-align: center;
+    outline: none;
+}
+
+@media (max-width: 640px) {
+    .rs-modal { align-items: flex-end; padding: 12px; }
+    .rs-modal-card { padding: 28px 18px 20px; }
+}
+
+/* Passenger Type dropdown in Step 2: chosen value uses the reference "selected" colour */
+.pt-dropdown .pt-selected { color: #263d59; font-weight: 400; }
+
+
+/* =========================================
+   REGISTRATION STATUS PAGE - MOBILE SPACING
+   Scoped to #rsStatus so the cancel pop-up cards are unaffected.
+   Removes the card-inside-a-card padding, gives every row room,
+   and stacks long values (reference code, route) under their label.
+========================================= */
+
+@media (max-width: 640px) {
+
+    .registration-panel:has(#rsStatus) {
+        margin-bottom: 40px;
+        padding: 0 14px;
+    }
+
+    #rsStatus {
+        margin-top: 16px;
+        padding: 28px 18px 24px;
+    }
+
+    #rsStatus .rs-title {
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+    }
+
+    /* The details sit directly in the card: no second box, no second shadow. */
+    #rsStatus .rs-panel {
+        max-width: none;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    #rsStatus .rs-row {
+        align-items: flex-start;
+        gap: 4px 16px;
+        padding: 12px 0;
+        border-bottom: 1px solid #eef2f6;
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+
+    #rsStatus .rs-row > span { flex: none; }
+
+    #rsStatus .rs-row > strong {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    /* Pills stay vertically centred with their label */
+    #rsStatus .rs-row:has(.rs-pill),
+    #rsStatus .rs-row:has(.status-pill) {
+        align-items: center;
+    }
+
+    /* Reference code: label on top, code large underneath */
+    #rsStatus .rs-row-ref {
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        text-align: center;
+        margin-bottom: 8px;
+        padding: 16px;
+        border: 0;
+        border-radius: 10px;
+        background: #f1f7fd;
+    }
+
+    #rsStatus .rs-row-ref > span {
+        color: #36516d;
+        font-size: 0.82rem;
+    }
+
+    #rsStatus .rs-row-ref > strong {
+        color: var(--navy);
+        font-size: 1.3rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-align: center;
+    }
+
+    /* Long values (route) read better under their label */
+    #rsStatus .rs-row-stack {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    #rsStatus .rs-row-stack > strong { text-align: left; }
+
+    #rsStatus .rs-row-pax { align-items: center; gap: 10px; }
+
+    #rsStatus .rs-notice {
+        align-items: flex-start;
+        margin: 16px 0 6px;
+        padding: 12px 14px;
+    }
+
+    #rsStatus .rs-notice i {
+        flex: none;
+        margin-top: 1px;
+    }
+
+    #rsStatus .rs-section {
+        margin: 28px 0 6px;
+    }
+
+    #rsStatus .rs-section + .rs-row {
+        border-top: 1px solid #eef2f6;
+    }
+
+    #rsStatus .rs-actions {
+        gap: 10px;
+        max-width: none;
+        margin-top: 24px;
+    }
+
+    #rsStatus .rs-actions > span:empty { display: none; }
+
+    #rsStatus .rs-btn { padding: 11px 20px; }
+}
+
+
+/* =========================================
+   CANCELLATION POP-UP CARDS - MORE ROOM
+   "Confirm It Is You", "Who do you want to cancel?" and
+   "Cancel Registration?". Only affects .rs-modal-card.
+========================================= */
+
+.rs-modal-card {
+    max-width: 560px;
+    padding: 40px 44px 34px;
+}
+
+.rs-modal-close {
+    top: 14px;
+    right: 14px;
+}
+
+.rs-modal-card .rs-title {
+    margin: 0 0 12px;
+    padding: 0 28px;
+    line-height: 1.3;
+}
+
+.rs-modal-card .rs-lead {
+    max-width: 440px;
+    margin: 0 auto 28px;
+    line-height: 1.6;
+}
+
+/* 4-digit check */
+.rs-modal-card .rs-digits {
+    gap: 14px;
+    margin: 4px 0 18px;
+}
+
+.rs-modal-card .rs-hint {
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+.rs-modal-card .rs-error {
+    margin-top: 16px;
+    line-height: 1.5;
+}
+
+/* Who to cancel */
+.rs-modal-card .rs-options {
+    max-width: none;
+    gap: 12px;
+    margin: 20px auto 18px;
+}
+
+.rs-modal-card .rs-option {
+    padding: 16px 18px;
+    line-height: 1.45;
+}
+
+.rs-modal-card .rs-checks {
+    gap: 12px;
+    margin-top: 14px;
+    padding: 6px 0 2px 28px;
+}
+
+.rs-modal-card .rs-check {
+    line-height: 1.4;
+}
+
+/* Cancel Registration? (summary panel keeps its original look) */
+.rs-modal-card .rs-warning {
+    margin: 20px 0 0;
+    padding: 14px 18px;
+    line-height: 1.55;
+}
+
+.rs-modal-card .rs-warning p + p {
+    margin-top: 4px;
+}
+
+.rs-modal-card .rs-reason {
+    margin-top: 22px;
+}
+
+.rs-modal-card .rs-reason label {
+    margin-bottom: 8px;
+}
+
+.rs-modal-card .rs-select {
+    min-height: 44px;
+}
+
+/* Reason dropdown: same look as the Type dropdown on the registration form */
+.rs-modal-card .pt-dropdown .manifest-boat-toggle {
+    min-height: 44px;
+    font-size: 0.92rem;
+}
+
+.rs-modal-card .pt-dropdown .pt-selected {
+    font-size: 0.92rem;
+}
+
+.rs-modal-card .pt-dropdown .pt-selected.is-placeholder {
+    color: #8a94a3;
+}
+
+.rs-modal-card .pt-dropdown.open .manifest-boat-toggle {
+    border-color: #9bbce0;
+    box-shadow: 0 0 0 3px rgba(90, 140, 190, 0.08);
+}
+
+.rs-modal-card .pt-dropdown .manifest-boat-menu {
+    z-index: 5;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.rs-modal-card .pt-dropdown .manifest-boat-option {
+    font-size: 0.92rem;
+}
+
+.rs-modal-card .pt-dropdown .manifest-boat-option[data-value=""] {
+    color: #8a94a3;
+}
+
+.rs-modal-card .pt-dropdown .manifest-boat-option.selected {
+    color: var(--navy);
+    font-weight: 600;
+}
+
+.rs-modal-card .pt-dropdown .manifest-boat-option:focus-visible {
+    outline: 2px solid #2f6fb3;
+    outline-offset: -2px;
+}
+
+/* Opens upward when there is no room below inside the card */
+.rs-modal-card .pt-dropdown.drop-up .manifest-boat-menu {
+    top: auto;
+    bottom: calc(100% + 5px);
+}
+
+/* Buttons: equal width, clear gap from the content above */
+.rs-modal-card .rs-actions {
+    gap: 12px;
+    max-width: none;
+    margin-top: 32px;
+}
+
+.rs-modal-card .rs-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 11px 16px;
+}
+
+@media (max-width: 640px) {
+
+    .rs-modal-card {
+        padding: 36px 20px 22px;
+    }
+
+    .rs-modal-card .rs-title {
+        padding: 0 20px;
+    }
+
+    .rs-modal-card .rs-lead {
+        margin-bottom: 24px;
+    }
+
+    .rs-modal-card .rs-digits {
+        gap: 10px;
+    }
+
+    .rs-modal-card .rs-actions {
+        gap: 10px;
+        margin-top: 28px;
+    }
+
+    .rs-modal-card .rs-btn {
+        flex: none;
+        width: 100%;
+        padding: 12px 16px;
+    }
+}

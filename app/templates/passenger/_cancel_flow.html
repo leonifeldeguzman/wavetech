@@ -1,0 +1,493 @@
+{# Floating cards for "Confirm It's You" (identity check) and
+   "Cancel Registration" (who + confirm). Shared by registration_success.html
+   and register.html. The markup is moved to <body> by the script below so the
+   page behind it can be made inert while a card is open.
+
+   Backend is unchanged: the script posts to the existing verify and cancel
+   routes passed in through WTCancelFlow.init(). #}
+<div class="rs-modal" id="rsModal" hidden>
+
+  <!-- ============ Confirm It's You ============ -->
+  <section class="rs-modal-card" id="rsVerify" role="dialog" aria-modal="true" aria-labelledby="rsVerifyTitle" hidden>
+    <button type="button" class="rs-modal-close" data-rs-close aria-label="Close">&times;</button>
+    <h3 class="rs-title" id="rsVerifyTitle" tabindex="-1">Confirm It Is You</h3>
+    <p class="rs-lead">For your safety, enter the last 4 digits of the contact number used in this registration.</p>
+
+    <div class="rs-digits" role="group" aria-label="Last 4 digits of contact number">
+      <input class="rs-digit" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 1">
+      <input class="rs-digit" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 2">
+      <input class="rs-digit" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 3">
+      <input class="rs-digit" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 4">
+    </div>
+    <p class="rs-hint">Example: 6789 for 0912 345 6789</p>
+    <p class="rs-error" id="rsVerifyError" role="alert" hidden></p>
+
+    <div class="rs-actions">
+      <button type="button" class="rs-btn rs-btn-outline" data-rs-close>Close</button>
+      <button type="button" class="rs-btn rs-btn-primary" id="rsVerifyGo">Continue</button>
+    </div>
+  </section>
+
+  <!-- ============ Who to cancel (groups) ============ -->
+  <section class="rs-modal-card" id="rsScope" role="dialog" aria-modal="true" aria-labelledby="rsScopeTitle" hidden>
+    <button type="button" class="rs-modal-close" data-rs-close aria-label="Close">&times;</button>
+    <h3 class="rs-title" id="rsScopeTitle" tabindex="-1">Who do you want to cancel?</h3>
+
+    <div class="rs-options">
+      <label class="rs-option" id="rsOptAll">
+        <input type="radio" name="rsScope" value="all" checked>
+        <span id="rsOptAllLabel">The whole group</span>
+      </label>
+      <div class="rs-option" id="rsOptSome">
+        <label class="rs-option-head">
+          <input type="radio" name="rsScope" value="some">
+          <span>Only some passengers</span>
+        </label>
+        <div class="rs-checks" id="rsChecks" hidden></div>
+      </div>
+    </div>
+    <p class="rs-hint">If you select every passenger, the whole registration is cancelled.</p>
+    <p class="rs-error" id="rsScopeError" role="alert" hidden></p>
+
+    <div class="rs-actions">
+      <button type="button" class="rs-btn rs-btn-outline" data-rs-close>Close</button>
+      <button type="button" class="rs-btn rs-btn-primary" id="rsScopeGo">Continue</button>
+    </div>
+  </section>
+
+  <!-- ============ Cancel Registration ============ -->
+  <section class="rs-modal-card" id="rsConfirm" role="alertdialog" aria-modal="true" aria-labelledby="rsConfirmTitle" hidden>
+    <button type="button" class="rs-modal-close" data-rs-close aria-label="Close">&times;</button>
+    <h3 class="rs-title" id="rsConfirmTitle" tabindex="-1">Cancel Registration?</h3>
+
+    <div class="rs-panel" id="rsConfirmRows"></div>
+
+    <div class="rs-warning" role="note">
+      <p id="rsWarnLine1">Your seat will be released and cannot be restored.</p>
+      <p>You will need to register again if you change your mind.</p>
+    </div>
+
+    <div class="rs-reason">
+      <label id="rsReasonLabel">Reason (Optional)</label>
+      <div class="pt-dropdown" id="rsReasonDropdown">
+        <button type="button" class="manifest-boat-toggle" id="rsReasonToggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="rsReasonLabel rsReasonText">
+          <span class="pt-selected is-placeholder" id="rsReasonText">Select Reason</span>
+          <i class="bi bi-chevron-down manifest-boat-chevron" aria-hidden="true"></i>
+        </button>
+        <div class="manifest-boat-menu" role="listbox" aria-labelledby="rsReasonLabel">
+          <button type="button" class="manifest-boat-option selected" data-value="" role="option" aria-selected="true">Select Reason</button>
+          <button type="button" class="manifest-boat-option" data-value="Change of plans" role="option" aria-selected="false">Change of plans</button>
+          <button type="button" class="manifest-boat-option" data-value="Schedule conflict" role="option" aria-selected="false">Schedule conflict</button>
+          <button type="button" class="manifest-boat-option" data-value="Registered by mistake" role="option" aria-selected="false">Registered by mistake</button>
+          <button type="button" class="manifest-boat-option" data-value="Emergency" role="option" aria-selected="false">Emergency</button>
+          <button type="button" class="manifest-boat-option" data-value="Other" role="option" aria-selected="false">Other</button>
+        </div>
+        <input type="hidden" id="rsReason" value="">
+      </div>
+    </div>
+    <p class="rs-error" id="rsConfirmError" role="alert" hidden></p>
+
+    <div class="rs-actions">
+      <button type="button" class="rs-btn rs-btn-outline" id="rsKeep">Keep Registration</button>
+      <button type="button" class="rs-btn rs-btn-danger" id="rsConfirmGo">Yes, Cancel Registration</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var overlay = document.getElementById("rsModal");
+  if (!overlay || window.WTCancelFlow) return;
+  document.body.appendChild(overlay);   // outside <main>, so the page can be made inert
+
+  var $ = function (id) { return document.getElementById(id); };
+  var cardIds = ["rsVerify", "rsScope", "rsConfirm"];
+  var cfg = null, inFlight = false, isOpen = false, lastFocus = null, bg = [];
+  var st = fresh();
+
+  function fresh() {
+    return { token: null, type: null, people: [], hasApproved: false, mode: null, selected: [] };
+  }
+
+  /* ---------- helpers ---------- */
+  function err(id, msg) { var e = $(id); e.textContent = msg || ""; e.hidden = !msg; }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function row(label, value, valueClass) {
+    var r = el("div", "rs-row");
+    r.appendChild(el("span", null, label));
+    r.appendChild(el("strong", valueClass || null, value));
+    return r;
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  function busy(btn, on) { btn.disabled = on; }
+
+  /* ---------- reason dropdown ----------
+     The chosen reason lives in the hidden #rsReason input, so the cancel
+     request reads it exactly as it read the old <select>. */
+  var rd = (function () {
+    var dd = $("rsReasonDropdown");
+    if (!dd) return null;
+    var toggle = $("rsReasonToggle"), label = $("rsReasonText"), value = $("rsReason");
+    var menu = dd.querySelector(".manifest-boat-menu");
+    var options = Array.prototype.slice.call(dd.querySelectorAll(".manifest-boat-option"));
+
+    function isOpen() { return dd.classList.contains("open"); }
+
+    // Open upward when the menu would not fit below the field inside the card.
+    function place() {
+      dd.classList.remove("drop-up");
+      var card = dd.closest(".rs-modal-card");
+      if (!card) return;
+      var cr = card.getBoundingClientRect(), tr = toggle.getBoundingClientRect();
+      var need = menu.offsetHeight + 8;
+      var below = cr.bottom - tr.bottom, above = tr.top - cr.top;
+      if (below < need && above > below) dd.classList.add("drop-up");
+      else if (below < need) menu.scrollIntoView({ block: "nearest" });
+    }
+    function setOpen(on) {
+      dd.classList.toggle("open", on);
+      toggle.setAttribute("aria-expanded", on ? "true" : "false");
+      if (on) place(); else dd.classList.remove("drop-up");
+    }
+    function choose(opt) {
+      var v = opt.getAttribute("data-value") || "";
+      value.value = v;
+      label.textContent = v || "Select Reason";
+      label.classList.toggle("is-placeholder", !v);
+      options.forEach(function (o) {
+        var on = (o === opt);
+        o.classList.toggle("selected", on);
+        o.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    }
+
+    toggle.addEventListener("click", function (e) { e.preventDefault(); setOpen(!isOpen()); });
+    options.forEach(function (opt) {
+      opt.addEventListener("click", function (e) {
+        e.preventDefault();
+        choose(opt); setOpen(false); toggle.focus();
+      });
+    });
+    document.addEventListener("click", function (e) {
+      if (isOpen() && !dd.contains(e.target)) setOpen(false);
+    });
+    dd.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      e.preventDefault();
+      if (!isOpen()) setOpen(true);
+      var i = options.indexOf(document.activeElement);
+      var next = i === -1 ? (e.key === "ArrowDown" ? 0 : options.length - 1)
+                          : Math.max(0, Math.min(options.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)));
+      options[next].focus();
+    });
+
+    return {
+      isOpen: isOpen,
+      close: function (refocus) { setOpen(false); if (refocus) toggle.focus(); },
+      reset: function () { choose(options[0]); setOpen(false); }
+    };
+  })();
+
+  function csrfHeaders() {
+    var h = { "Content-Type": "application/json" };
+    var m = document.querySelector('meta[name="csrf-token"]');
+    if (m && m.content) h["X-CSRFToken"] = m.content;   // only if the site ever adds one
+    return h;
+  }
+  function postJson(url, payload) {
+    inFlight = true;
+    return fetch(url, {
+      method: "POST", credentials: "same-origin",
+      headers: csrfHeaders(),
+      body: JSON.stringify(payload)
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        inFlight = false;
+        return { ok: r.ok && d.success, status: r.status, data: d };
+      });
+    }).catch(function (e) { inFlight = false; throw e; });
+  }
+
+  /* ---------- open / close ---------- */
+  function lockBackground(on) {
+    if (on) {
+      bg = Array.prototype.filter.call(document.body.children, function (n) {
+        return n !== overlay && n.tagName !== "SCRIPT" && !n.inert;
+      });
+      bg.forEach(function (n) { n.inert = true; n.setAttribute("aria-hidden", "true"); });
+      document.body.classList.add("rs-modal-open");
+    } else {
+      bg.forEach(function (n) { n.inert = false; n.removeAttribute("aria-hidden"); });
+      bg = [];
+      document.body.classList.remove("rs-modal-open");
+    }
+  }
+
+  function showCard(id) {
+    if (rd) rd.close();
+    cardIds.forEach(function (c) { $(c).hidden = (c !== id); });
+    overlay.scrollTop = 0;
+    if (id === "rsVerify") { digits[0].focus(); }
+    else { $(id).querySelector("h3").focus({ preventScroll: true }); }
+  }
+
+  function open() {
+    if (isOpen || !cfg) return;
+    lastFocus = document.activeElement;
+    st = fresh();
+    resetDigits();
+    overlay.hidden = false;
+    lockBackground(true);
+    isOpen = true;
+    showCard("rsVerify");
+  }
+
+  function close() {
+    if (!isOpen || inFlight) return;   // never close while a request is running
+    if (rd) rd.close();
+    overlay.hidden = true;
+    lockBackground(false);
+    isOpen = false;
+    st = fresh();
+    resetDigits();
+    if (lastFocus && document.body.contains(lastFocus) && lastFocus.focus) lastFocus.focus();
+  }
+
+  Array.prototype.forEach.call(overlay.querySelectorAll("[data-rs-close]"),
+    function (b) { b.addEventListener("click", close); });
+
+  // Click outside the card closes it (press and release must both be on the backdrop).
+  var downOnBackdrop = false;
+  overlay.addEventListener("mousedown", function (e) { downOnBackdrop = (e.target === overlay); });
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay && downOnBackdrop) close();
+    downOnBackdrop = false;
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (!isOpen) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      if (rd && rd.isOpen()) { rd.close(true); return; }   // first Escape only closes the list
+      close(); return;
+    }
+    if (e.key !== "Tab") return;
+    var card = cardIds.map($).filter(function (c) { return !c.hidden; })[0];
+    if (!card) return;
+    var f = Array.prototype.filter.call(
+      card.querySelectorAll('button, input, select, [tabindex]:not([tabindex="-1"])'),
+      function (n) { return !n.disabled && !n.hidden && n.offsetParent !== null; });
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !card.contains(document.activeElement))) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  });
+
+  /* ---------- 1. Confirm It's You ---------- */
+  var digits = Array.prototype.slice.call(overlay.querySelectorAll(".rs-digit"));
+
+  function resetDigits() {
+    digits.forEach(function (d) { d.value = ""; });
+    err("rsVerifyError", "");
+  }
+  digits.forEach(function (box, i) {
+    box.addEventListener("input", function () {
+      box.value = box.value.replace(/\D/g, "").slice(-1);
+      if (box.value && digits[i + 1]) digits[i + 1].focus();
+    });
+    box.addEventListener("keydown", function (e) {
+      if (e.key === "Backspace" && !box.value && digits[i - 1]) digits[i - 1].focus();
+      if (e.key === "Enter") $("rsVerifyGo").click();
+    });
+    box.addEventListener("paste", function (e) {
+      var t = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(-4);
+      if (!t) return;
+      e.preventDefault();
+      digits.forEach(function (d, k) { d.value = t[k] || ""; });
+      (digits[Math.min(t.length, 4) - 1] || box).focus();
+    });
+  });
+
+  $("rsVerifyGo").addEventListener("click", function () {
+    var btn = this;
+    var code = digits.map(function (d) { return d.value; }).join("");
+    if (!/^\d{4}$/.test(code)) { err("rsVerifyError", "Please enter all 4 digits."); return; }
+    err("rsVerifyError", "");
+    busy(btn, true);
+
+    postJson(cfg.verifyUrl, { last_four: code }).then(function (r) {
+      busy(btn, false);
+      if (!r.ok) {
+        err("rsVerifyError", r.data.message || "Verification failed.");
+        digits.forEach(function (d) { d.value = ""; });
+        digits[0].focus();
+        return;
+      }
+      var d = r.data.data;
+      st.token = d.verification_token;
+      st.type = d.registration_type;
+      st.hasApproved = d.passengers.some(function (p) { return !p.cancellable; });
+      st.people = d.passengers.filter(function (p) { return p.cancellable; });
+
+      if (st.type === "group" && st.people.length > 1) {
+        buildScope(); showCard("rsScope");
+      } else {
+        st.mode = "all"; st.selected = st.people.slice();
+        buildConfirm(); showCard("rsConfirm");
+      }
+    }).catch(function () {
+      busy(btn, false);
+      err("rsVerifyError", "Something went wrong. Please try again.");
+    });
+  });
+
+  /* ---------- 2. Who to cancel ---------- */
+  function buildScope() {
+    var n = st.people.length;
+    $("rsOptAllLabel").textContent = st.hasApproved
+      ? "All pending passengers (" + n + ")"
+      : "The whole group (" + n + " passengers)";
+
+    var box = $("rsChecks");
+    box.textContent = "";
+    st.people.forEach(function (p) {
+      var lab = el("label", "rs-check");
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.value = p.id;
+      lab.appendChild(cb);
+      lab.appendChild(el("span", null, p.name));
+      box.appendChild(lab);
+    });
+    overlay.querySelector('input[name="rsScope"][value="all"]').checked = true;
+    syncScope();
+    err("rsScopeError", "");
+  }
+  function syncScope() {
+    var some = overlay.querySelector('input[name="rsScope"]:checked').value === "some";
+    $("rsChecks").hidden = !some;
+    $("rsOptAll").classList.toggle("is-selected", !some);
+    $("rsOptSome").classList.toggle("is-selected", some);
+  }
+  Array.prototype.forEach.call(overlay.querySelectorAll('input[name="rsScope"]'),
+    function (r) { r.addEventListener("change", function () { syncScope(); err("rsScopeError", ""); }); });
+
+  $("rsScopeGo").addEventListener("click", function () {
+    var some = overlay.querySelector('input[name="rsScope"]:checked').value === "some";
+    if (!some) {
+      st.mode = "all"; st.selected = st.people.slice();
+    } else {
+      var ids = Array.prototype.map.call($("rsChecks").querySelectorAll("input:checked"),
+                  function (c) { return parseInt(c.value, 10); });
+      if (!ids.length) { err("rsScopeError", "Select at least one passenger."); return; }
+      st.selected = st.people.filter(function (p) { return ids.indexOf(p.id) !== -1; });
+      st.mode = (st.selected.length === st.people.length) ? "all" : "some";
+    }
+    buildConfirm(); showCard("rsConfirm");
+  });
+
+  /* ---------- 3. Cancel Registration ---------- */
+  function buildConfirm() {
+    var rows = $("rsConfirmRows");
+    rows.textContent = "";
+    var partial = st.mode === "some";
+    var n = st.selected.length;
+
+    if (rd) rd.reset(); else $("rsReason").value = "";
+    err("rsConfirmError", "");
+    $("rsConfirmTitle").textContent = partial ? "Cancel " + plural(n, "Passenger", "Passengers") + "?"
+                                              : "Cancel Registration?";
+    $("rsConfirmGo").textContent = partial ? "Yes, Cancel " + plural(n, "Passenger", "Passengers")
+                                           : "Yes, Cancel Registration";
+    $("rsWarnLine1").textContent = n === 1 ? "The seat will be released and cannot be restored."
+                                           : "The seats will be released and cannot be restored.";
+
+    rows.appendChild(row("Reference Code", cfg.ref));
+    rows.appendChild(row("Date", cfg.date));
+    rows.appendChild(row("Departure", cfg.time));
+    rows.appendChild(row("Route", cfg.route));
+    if (partial) {
+      rows.appendChild(row("Passenger removed",
+        st.selected.map(function (p) { return p.name; }).join(", "), "rs-removed"));
+      rows.appendChild(row("Passengers staying", String(st.people.length - n)));
+    } else {
+      rows.appendChild(row(n === 1 ? "Passenger" : "Passengers", String(n)));
+    }
+  }
+
+  $("rsKeep").addEventListener("click", close);
+
+  $("rsConfirmGo").addEventListener("click", function () {
+    var btn = this;
+    var payload = { reason: $("rsReason").value, verification_token: st.token };
+    if (st.mode === "some") {
+      payload.passenger_ids = st.selected.map(function (p) { return p.id; });
+    } else if (st.type === "group") {
+      payload.cancel_type = "full";
+    }
+    err("rsConfirmError", "");
+    busy(btn, true);
+
+    postJson(cfg.cancelUrl, payload).then(function (r) {
+      if (r.ok) {
+        busy(btn, false);
+        var data = r.data.data;
+        close();                                  // card closes, page updates in place
+        if (cfg.onCancelled) cfg.onCancelled(data);
+        return;
+      }
+      busy(btn, false);
+      if (r.data.error_code === "VERIFICATION_REQUIRED") {
+        resetDigits();
+        err("rsVerifyError", "Your verification expired. Please enter the digits again.");
+        showCard("rsVerify");
+        return;
+      }
+      err("rsConfirmError", r.data.message || "Cancellation failed. Please try again.");
+    }).catch(function () {
+      busy(btn, false);
+      err("rsConfirmError", "Something went wrong. Please try again.");
+    });
+  });
+
+  /* ---------- public API ---------- */
+  var LABELS = { pending: "Pending Approval", approved: "Approved",
+                 rejected: "Rejected", cancelled: "Cancelled by passenger" };
+
+  window.WTCancelFlow = {
+    // cfg: { ref, verifyUrl, cancelUrl, date, time, route, onCancelled(data) }
+    init: function (c) { cfg = c; },
+    open: open,
+    close: close,
+    statusLabel: function (s) {
+      var k = String(s || "").toLowerCase();
+      return LABELS[k] || String(s || "").replace(/_/g, " ");
+    },
+    statusKey: function (s) {
+      var k = String(s || "").toLowerCase();
+      return LABELS[k] ? k : "other";
+    },
+    message: function (d) {
+      if (d.registration_status === "cancelled") {
+        return "Registration cancelled. " + plural(d.seats_released || 0, "seat", "seats") +
+               " released. A confirmation was sent to your registered mobile number.";
+      }
+      return plural(d.cancelled_count || 0, "passenger", "passengers") + " removed. " +
+             (d.remaining_count || 0) + " still registered.";
+    },
+    flash: function (d) {
+      var f = el("div", "rs-flash", this.message(d));
+      f.setAttribute("role", "status");
+      f.tabIndex = -1;
+      return f;
+    }
+  };
+})();
+</script>

@@ -93,15 +93,22 @@
     <div class="registration-step-content" id="step2" hidden>
       <div class="registration-card">
         <div class="registration-card-header">
-          <h3>Your Details</h3>
-          <p>* required</p>
+          <h3>Passenger Information</h3>
         </div>
         <hr>
 
         <fieldset class="who-group">
           <legend>Who is traveling?</legend>
-          <label><input type="radio" name="mode" value="solo" checked> Just me</label>
-          <label><input type="radio" name="mode" value="group" id="modeGroup"> Me and others (family or group)</label>
+          <div class="who-options">
+            <label class="who-option">
+              <input type="radio" name="mode" value="solo" checked>
+              <span class="who-option-text"><strong>Just me</strong><small>One passenger</small></span>
+            </label>
+            <label class="who-option">
+              <input type="radio" name="mode" value="group" id="modeGroup">
+              <span class="who-option-text"><strong>Me and others</strong><small>Family or group</small></span>
+            </label>
+          </div>
         </fieldset>
 
         <div id="peopleList"></div>
@@ -120,70 +127,141 @@
       </div>
     </div>
 
-    <!-- STEP 3: REVIEW & CONFIRM -->
-    <div class="registration-step-content" id="step3" hidden>
-      <div class="registration-card">
-        <div class="registration-card-header"><h3>Review Your Registration</h3></div>
-        <hr>
-        <div id="reviewBody"></div>
-        <button type="button" class="registration-cancel-btn" id="editDetailsBtn">Edit details</button>
+<!-- STEP 3: REVIEW & CONFIRM -->
+<div class="registration-step-content" id="step3" hidden>
+  <div class="registration-card review-registration-card">
 
-        <label class="consent-box">
-          <input type="checkbox" id="consentPrivacy">
-          <span>
-            <strong>DATA PRIVACY CONSENT *</strong><br>
-            <span id="privacySolo">I agree that WaveTech may collect and use the information above for the trip manifest and for sending SMS about my trip, in line with the Data Privacy Act of 2012 (RA 10173).</span>
-            <span id="privacyGroup" hidden>I agree that WaveTech may collect and use the information of all passengers listed above for the trip manifest and for sending SMS about this trip, in line with the Data Privacy Act of 2012 (RA 10173).</span>
-            <details class="privacy-notice">
-              <summary>Read Privacy Notice</summary>
-              <p>Replace this text with your official privacy notice.</p>
-            </details>
-          </span>
-        </label>
-
-        <label class="consent-box">
-          <input type="checkbox" id="consentTruth">
-          <span>
-            <strong>TRUTHFULNESS DECLARATION *</strong><br>
-            <span id="truthSolo">I declare that all information I submitted is true and correct. I understand that giving false or fake information may subject me to penalties under applicable laws.</span>
-            <span id="truthGroup" hidden>As the contact person, I declare that all information submitted for every passenger listed is true and correct. For passengers under 18, I confirm that I am their parent or guardian, or that I have the guardian's permission. I understand that giving false or fake information may subject me to penalties under applicable laws.</span>
-          </span>
-        </label>
-
-        <div class="registration-error" id="reviewError" hidden></div>
-
-        <div class="registration-actions">
-          <button type="button" class="registration-cancel-btn" id="backToStep2Btn">Back</button>
-          <button type="button" class="registration-next-btn" id="confirmBtn" disabled>Confirm Registration</button>
-        </div>
-      </div>
+    <div class="registration-card-header">
+      <h3>Review Your Registration</h3>
     </div>
 
-    <!-- SUCCESS -->
+    <hr>
+
+    <div class="review-body" id="reviewBody"></div>
+
+    <button type="button"
+            class="review-edit-btn"
+            id="editDetailsBtn">
+      Edit Details
+    </button>
+
+    <div class="review-consents">
+
+      <label class="review-consent">
+        <input type="checkbox" id="consentPrivacy">
+
+        <span class="review-consent-content">
+          <span class="review-consent-title">Data Privacy Consent <span>*</span></span>
+
+          <span id="privacySolo">
+            I agree that WaveTech may collect and use the information above for the trip manifest and for sending SMS about my trip, in line with the Data Privacy Act of 2012 (RA 10173).
+          </span>
+
+          <span id="privacyGroup" hidden>
+            I agree that WaveTech may collect and use the information of all passengers listed above for the trip manifest and for sending SMS about this trip, in line with the Data Privacy Act of 2012 (RA 10173).
+          </span>
+
+          <details class="review-privacy-notice">
+            <summary>Read Privacy Notice</summary>
+            <p>Replace this text with your official privacy notice.</p>
+          </details>
+        </span>
+      </label>
+
+      <label class="review-consent">
+        <input type="checkbox" id="consentTruth">
+
+        <span class="review-consent-content">
+          <span class="review-consent-title">Truthfulness Declaration <span>*</span></span>
+
+          <span id="truthSolo">
+            I declare that all information I submitted is true and correct. I understand that giving false or fake information may subject me to penalties under applicable laws.
+          </span>
+
+          <span id="truthGroup" hidden>
+            As the contact person, I declare that all information submitted for every passenger listed is true and correct. For passengers under 18, I confirm that I am their parent or guardian, or that I have the guardian's permission. I understand that giving false or fake information may subject me to penalties under applicable laws.
+          </span>
+        </span>
+      </label>
+
+    </div>
+
+    <div class="registration-error" id="reviewError" hidden></div>
+
+    <div class="registration-error" id="reviewUncertain" hidden>
+      <strong>We couldn't confirm your registration on this page.</strong>
+      Your registration may already have been received, so please
+      <strong>do not submit again</strong>.
+
+      <span id="uncertainCodeLine" hidden>
+        Your reference code is <strong id="uncertainCode"></strong>.
+      </span>
+
+      <a id="uncertainLink" href="{{ url_for('passenger.home') }}#registration-status">
+        Check your registration
+      </a>
+      using the reference code sent to your mobile number by SMS.
+    </div>
+
+    <div class="registration-actions review-actions">
+      <button type="button"
+              class="registration-cancel-btn"
+              id="backToStep2Btn">
+        Back
+      </button>
+
+      <button type="button"
+              class="registration-next-btn"
+              id="confirmBtn"
+              disabled>
+        Confirm Registration
+      </button>
+    </div>
+
+  </div>
+</div>
+
+    <!-- STEP 3 (SUCCESS) -->
     <div class="registration-step-content" id="step4" hidden>
-      <div class="registration-card success-card">
+      <div class="registration-card success-card rs3-card">
         <div class="success-icon"><i class="bi bi-check-lg"></i></div>
-        <h3 id="successHeading">Registration Successful!</h3>
-        <p class="success-message">Your registration has been submitted successfully.</p>
+        <h3 id="successHeading">Registration Successful</h3>
+        <p class="success-message" id="successMessage">Your registration has been submitted successfully.</p>
 
-        <div class="registration-details-card" id="codeList"></div>
+        <div class="rs3-panel">
+          <div class="rs3-ref">
+            <span>Your Reference Code</span>
+            <strong id="successCode">—</strong>
+            <button type="button" class="rs3-copy" id="successCopy"><i class="bi bi-clipboard"></i> <span>Copy</span></button>
+            <p class="rs3-sms"><i class="bi bi-envelope"></i> A confirmation has been sent to your registered mobile number.</p>
+          </div>
 
-        <div class="registration-details-card">
-          <div class="registration-detail-row"><span>Route</span><strong id="successRoute">—</strong></div>
-          <div class="registration-detail-row"><span>Schedule</span><strong id="successTime">—</strong></div>
-          <div class="registration-detail-row"><span>Date</span><strong id="successDate">—</strong></div>
-          <div class="registration-detail-row"><span>Status</span>
-            <strong class="registration-status">Pending Verification</strong></div>
+          <div class="rs3-block rs3-status">
+            <span>Status</span>
+            <span class="rs-pill rs-pill-pending">Pending Approval</span>
+          </div>
+
+          <div class="rs3-block">
+            <h4>Trip Details</h4>
+            <div class="rs-row"><span>Date</span><strong id="successDate">—</strong></div>
+            <div class="rs-row"><span>Departure</span><strong id="successTime">—</strong></div>
+            <div class="rs-row"><span>Route</span><strong id="successRoute">—</strong></div>
+          </div>
+
+          <div class="rs3-block">
+            <h4 id="successPaxTitle">Passenger</h4>
+            <div id="successPax"></div>
+          </div>
+
+          <div class="rs3-info">
+            <i class="bi bi-info-circle"></i>
+            <p>Present your reference code to the operator and bring a valid ID before boarding.</p>
+          </div>
         </div>
 
-        <div class="registration-important">
-          <strong>IMPORTANT:</strong>
-          Present your Reference Code to the operator before boarding. Bring also a valid ID at the terminal. Fare discounts are verified there.
-        </div>
-
-        <div class="success-actions">
-          <a href="#" class="registration-cancel-btn" id="cancelLink">Cancel Registration</a>
-          <a href="{{ url_for('passenger.home') }}#registration-status" class="success-btn">Check Status</a>
+        <div class="rs-actions rs3-actions">
+          <a href="#" class="rs-btn rs-btn-danger-outline" id="cancelLink">Cancel Registration</a>
+          <a href="#" class="rs-btn rs-btn-primary" id="checkStatusLink">Check Status</a>
         </div>
       </div>
     </div>
@@ -208,27 +286,36 @@
         <label>Age *</label>
         <input type="number" class="registration-input f-age" min="1" max="120" placeholder="Age">
       </div>
-      <div class="registration-field">
-        <label>Type *</label>
-        <select class="registration-input f-type">
-          {% for pt in passenger_types %}<option value="{{ pt }}"{% if pt == 'Regular' %} selected{% endif %}>{{ pt }}</option>{% endfor %}
-        </select>
+      <label class="same-addr only-extra">
+        <input type="checkbox" class="f-same"> Same address and contact number as contact person
+      </label>
+      <div class="registration-field full-width f-address-wrap">
+        <label>Address *</label>
+        <input type="text" class="registration-input f-address" maxlength="100" placeholder="Barangay, City/Municipality">
       </div>
-      <div class="registration-field only-contact">
+      <div class="registration-field f-contact-wrap">
         <label>Contact Number *</label>
         <div class="phone-input">
           <span>+63</span>
           <input type="tel" class="f-phone" inputmode="numeric" maxlength="13" placeholder="9XXXXXXXXX">
         </div>
-        <small>We'll send your confirmation by SMS.</small>
+        <small class="only-contact">We'll send your confirmation by SMS.</small>
       </div>
-      <div class="registration-field full-width f-address-wrap">
-        <label>Address *</label>
-        <input type="text" class="registration-input f-address" maxlength="100" placeholder="Barangay, City/Municipality">
+      <div class="registration-field">
+        <label>Type *</label>
+        <div class="pt-dropdown">
+          <button type="button" class="manifest-boat-toggle" aria-haspopup="listbox" aria-expanded="false">
+            <span class="pt-selected">Regular</span>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="manifest-boat-menu" role="listbox">
+            {% for pt in passenger_types %}
+            <button type="button" class="manifest-boat-option{% if pt == 'Regular' %} selected{% endif %}" data-value="{{ pt }}" role="option">{{ pt }}</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" class="f-type" value="Regular">
+        </div>
       </div>
-      <label class="same-addr only-extra">
-        <input type="checkbox" class="f-same"> Same address and contact number as contact person
-      </label>
     </div>
     <div class="guardian-block only-contact" hidden>
       <p>You are under 18, so a parent or guardian's details are required.</p>
@@ -245,6 +332,9 @@
     </div>
   </div>
 </template>
+
+{# Floating cards for Confirm It Is You / Cancel Registration #}
+{% include "passenger/_cancel_flow.html" %}
 {% endif %}
 {% endblock %}
 
@@ -326,6 +416,50 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
   });
 
   /* ---------- step 2 ---------- */
+  function closeTypeDropdowns(except) {
+    document.querySelectorAll(".pt-dropdown.open").forEach(function (d) {
+      if (d === except) return;
+      d.classList.remove("open");
+      d.querySelector(".manifest-boat-toggle").setAttribute("aria-expanded", "false");
+    });
+  }
+  // Passenger Type dropdown. The chosen value lives in the hidden .f-type input,
+  // so collect() reads it exactly as it read the old <select>.
+  function initTypeDropdown(node) {
+    var dd = node.querySelector(".pt-dropdown");
+    if (!dd) return;
+    var toggle = dd.querySelector(".manifest-boat-toggle");
+    var label = dd.querySelector(".pt-selected");
+    var value = dd.querySelector(".f-type");
+    var options = dd.querySelectorAll(".manifest-boat-option");
+    function setOpen(open) {
+      dd.classList.toggle("open", open);
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    toggle.addEventListener("click", function (e) {
+      e.preventDefault();
+      closeTypeDropdowns(dd);
+      setOpen(!dd.classList.contains("open"));
+    });
+    options.forEach(function (opt) {
+      opt.addEventListener("click", function (e) {
+        e.preventDefault();
+        value.value = opt.getAttribute("data-value");
+        label.textContent = opt.textContent.trim();
+        options.forEach(function (o) { o.classList.remove("selected"); });
+        opt.classList.add("selected");
+        setOpen(false);
+        toggle.focus();
+      });
+    });
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".pt-dropdown")) closeTypeDropdowns();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeTypeDropdowns();
+  });
+
   function makePerson(isContact) {
     var node = el("personTpl").content.firstElementChild.cloneNode(true);
     node.querySelectorAll(isContact ? ".only-extra" : ".only-contact")
@@ -336,10 +470,13 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
       node.querySelector(".person-remove").addEventListener("click", function () {
         node.remove(); renumber(); updateAddBtn();
       });
+      // Same address and contact number as the contact person: hide both fields.
       node.querySelector(".f-same").addEventListener("change", function () {
         node.querySelector(".f-address-wrap").hidden = this.checked;
+        node.querySelector(".f-contact-wrap").hidden = this.checked;
       });
     }
+    initTypeDropdown(node);
     return node;
   }
 
@@ -399,6 +536,11 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
         var ad = c.querySelector(".f-address");
         if (!ad.value.trim()) return fail(prefix + "Barangay and city/municipality are required.", ad);
       }
+      if (i > 0 && !(same && same.checked)) {
+        var ph2 = c.querySelector(".f-phone"), d2 = phoneDigits(ph2.value);
+        if (!(d2.length === 10 && d2.charAt(0) === "9"))
+          return fail(prefix + "Enter a valid mobile number, e.g. 9XXXXXXXXX.", ph2);
+      }
       if (i === 0) {
         var ph = c.querySelector(".f-phone"), d = phoneDigits(ph.value);
         if (!(d.length === 10 && d.charAt(0) === "9"))
@@ -432,7 +574,11 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
         }
       } else {
         var same = c.querySelector(".f-same");
-        if (same && same.checked) { p.same_as_contact = true; p.address = list[0].address; }
+        if (same && same.checked) {
+          p.same_as_contact = true; p.address = list[0].address;
+        } else {
+          p.contact_number = "0" + phoneDigits(c.querySelector(".f-phone").value);
+        }
       }
       list.push(p);
     });
@@ -494,34 +640,18 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
   el("consentTruth").addEventListener("change", syncConfirm);
 
   /* ---------- submit ---------- */
-  el("confirmBtn").addEventListener("click", function () {
-    var btn = this, err = el("reviewError");
-    err.hidden = true; btn.disabled = true; btn.textContent = "Submitting...";
+  // submitting: a request is in flight or its outcome is still unknown.
+  // submitted:  the server confirmed the registration.
+  // Neither flag is cleared after a success or an uncertain outcome, so the
+  // same registration cannot be sent twice from this page. They are cleared
+  // only when the server answered with a definite "nothing was saved".
+  var submitting = false, submitted = false;
 
-    function reset() { btn.textContent = "Confirm Registration"; syncConfirm(); }
+  function statusUrlFor(code) {
+    return "{{ url_for('passenger.registration_status_page', reference_code='REF') }}"
+      .replace("REF", encodeURIComponent(code));
+  }
 
-    fetch("{{ url_for('passenger.submit_party_registration') }}", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        trip_id: trip.id, mode: mode, people: collect(),
-        consent_privacy: el("consentPrivacy").checked,
-        consent_truth: el("consentTruth").checked
-      })
-    })
-      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-      .then(function (res) {
-        if (!res.ok || !res.d.success) {
-          if (res.d.fields) { setStep(2); showError(el("detailsError"), res.d.message); }
-          else { showError(err, res.d.message || "Unable to complete registration."); }
-          reset(); return;
-        }
-        showSuccess(res.d.data.registrations);
-      })
-      .catch(function () { showError(err, "Something went wrong. Please try again."); reset(); });
-  });
-
-  /* ---------- success ---------- */
   function copyText(text, btn) {
     var label = btn.querySelector("span");
     function done() { label.textContent = "Copied"; setTimeout(function () { label.textContent = "Copy"; }, 1800); }
@@ -533,27 +663,247 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
     }
   }
 
-  function showSuccess(regs) {
-    var list = el("codeList"); list.textContent = "";
-    regs.forEach(function (r) {
-      var d = document.createElement("div"); d.className = "code-row";
-      var who = document.createElement("span"); who.textContent = r.full_name;
-      var code = document.createElement("strong"); code.textContent = r.reference_code;
-      var btn = document.createElement("button"); btn.type = "button"; btn.className = "copy-code-btn";
-      btn.innerHTML = '<i class="bi bi-clipboard"></i> <span>Copy</span>';
-      btn.addEventListener("click", function () { copyText(r.reference_code, btn); });
-      d.appendChild(who); d.appendChild(code); d.appendChild(btn); list.appendChild(d);
+  /* ---------- success ---------- */
+  // data = { reference_code, passenger_count, passengers: [{ masked_name }], ... }
+  // One shared reference code for the whole registration (solo or group).
+  function maskName(full) {
+    var parts = String(full || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "\u2014";
+    var m = parts[0].charAt(0) + "***";
+    if (parts.length > 1) m += " " + parts[parts.length - 1].charAt(0) + ".";
+    return m;
+  }
+
+  function detailRow(label, value) {
+    var r = document.createElement("div"); r.className = "rs-row";
+    var l = document.createElement("span"); l.textContent = label;
+    var v = document.createElement("strong"); v.textContent = value;
+    r.appendChild(l); r.appendChild(v);
+    return r;
+  }
+
+  /* ---------- cancel registration (floating cards) ---------- */
+  function onCancelled(d) {
+    var rem = d.remaining_passengers || [];
+    var whole = d.registration_status === "cancelled";
+
+    var pill = document.querySelector("#step4 .rs3-status .rs-pill");
+    if (pill) {
+      pill.className = "rs-pill rs-pill-" + WTCancelFlow.statusKey(d.registration_status);
+      pill.textContent = WTCancelFlow.statusLabel(d.registration_status);
+    }
+
+    el("successPaxTitle").textContent = rem.length > 1 ? "Passengers (" + rem.length + ")" : "Passenger";
+    var box = el("successPax"); box.textContent = "";
+    rem.forEach(function (p, i) {
+      box.appendChild(detailRow(rem.length > 1 ? String(i + 1) : "Name", p.name));
     });
-    el("successHeading").textContent = regs.length > 1
-      ? "Registration Successful! (" + regs.length + " passengers)" : "Registration Successful!";
-    el("successRoute").textContent = trip.route;
-    el("successTime").textContent = trip.time;
-    el("successDate").textContent = trip.date;
-    el("cancelLink").href =
-      "{{ url_for('passenger.registration_status_page', reference_code='REF') }}".replace("REF", regs[0].reference_code);
+    box.parentNode.hidden = whole;
+    el("cancelLink").hidden = whole;
+
+    var old = el("cancelFlash"); if (old) old.remove();
+    var f = WTCancelFlow.flash(d); f.id = "cancelFlash";
+    var panelEl = document.querySelector("#step4 .rs3-panel");
+    panelEl.parentNode.insertBefore(f, panelEl);
+    f.focus({ preventScroll: true });
+  }
+
+  function initCancelFlow(code) {
+    var enc = encodeURIComponent(code);
+    WTCancelFlow.init({
+      ref: code,
+      verifyUrl: "{{ url_for('passenger.verify_registration_identity', reference_code='REF') }}".replace("REF", enc),
+      cancelUrl: "{{ url_for('passenger.cancel_registration', reference_code='REF') }}".replace("REF", enc),
+      date: trip && trip.date ? trip.date : "\u2014",
+      time: trip && trip.time ? trip.time : "\u2014",
+      route: trip && trip.route ? trip.route.replace(" to ", " \u2192 ") : "\u2014",
+      onCancelled: onCancelled
+    });
+    // Opens over this page. The href stays as a fallback if scripts fail.
+    el("cancelLink").onclick = function (e) { e.preventDefault(); WTCancelFlow.open(); };
+  }
+
+  function linkStatus(data, code) {
+    var url = data.status_url || statusUrlFor(code);
+    // Check Status goes to Passenger Home, where the passenger types the
+    // reference code themselves. It never opens the status result directly.
+    el("checkStatusLink").href = "{{ url_for('passenger.home') }}#registration-status";
+    el("cancelLink").href = url + "?cancel=1";   // fallback only; the click opens a floating card
+    initCancelFlow(code);
+  }
+
+  function showSuccess(data) {
+    var code = String(data.reference_code);
+    var passengers = Array.isArray(data.passengers) ? data.passengers : [];
+    var count = Number(data.passenger_count) || passengers.length || 1;
+
+    el("successCode").textContent = code;
+    var copyBtn = el("successCopy");
+    copyBtn.onclick = function () { copyText(code, copyBtn); };
+
+    el("successMessage").textContent = data.already_registered
+      ? "This registration was already received. No new registration was created."
+      : "Your registration has been submitted successfully.";
+
+    el("successDate").textContent  = trip && trip.date  ? trip.date  : "\u2014";
+    el("successTime").textContent  = trip && trip.time  ? trip.time  : "\u2014";
+    el("successRoute").textContent = trip && trip.route
+      ? trip.route.replace(" to ", " \u2192 ") : "\u2014";
+
+    el("successPaxTitle").textContent = count > 1 ? "Passengers (" + count + ")" : "Passenger";
+    var box = el("successPax"); box.textContent = "";
+    passengers.forEach(function (p, i) {
+      var shown = p.masked_name || maskName(p.full_name);
+      box.appendChild(detailRow(count > 1 ? String(i + 1) : "Name", shown));
+    });
+
+    linkStatus(data, code);
     setStep(4);
   }
+
+  // Minimal confirmation used only if the full one throws for any reason.
+  function showSuccessFallback(data) {
+    var code = String(data.reference_code);
+    el("successCode").textContent = code;
+    linkStatus(data, code);
+    [1, 2, 3, 4].forEach(function (i) { el("step" + i).hidden = (i !== 4); });
+  }
+
+  // Called once the server has confirmed the registration. It must never
+  // lead to a "try again" message, because the registration already exists.
+  function onRegistrationSaved(data, holdAsUncertain) {
+    submitted = true; submitting = true;
+    try { showSuccess(data); return; }
+    catch (e1) { if (window.console) console.error("showSuccess failed", e1); }
+    try { showSuccessFallback(data); return; }
+    catch (e2) { if (window.console) console.error("showSuccessFallback failed", e2); }
+    holdAsUncertain(String(data.reference_code));
+  }
+
+  el("confirmBtn").addEventListener("click", function () {
+    if (submitting || submitted) return;
+    submitting = true;
+
+    var btn = this, err = el("reviewError"), uncertain = el("reviewUncertain");
+    err.hidden = true; uncertain.hidden = true;
+    btn.disabled = true; btn.textContent = "Submitting...";
+
+    // The server answered "nothing was saved": the passenger may fix and resend.
+    function allowRetry() { submitting = false; btn.textContent = "Confirm Registration"; syncConfirm(); }
+
+    // We don't know whether the server saved it: never invite another submit.
+    function holdAsUncertain(code) {
+      btn.disabled = true; btn.textContent = "Registration may be received";
+      if (code) {
+        el("uncertainCode").textContent = code;
+        el("uncertainCodeLine").hidden = false;
+        // uncertainLink already points to Passenger Home (#registration-status).
+      }
+      uncertain.hidden = false;
+    }
+
+    var body;
+    try {
+      body = JSON.stringify({
+        trip_id: trip.id, mode: mode, people: collect(),
+        consent_privacy: el("consentPrivacy").checked,
+        consent_truth: el("consentTruth").checked
+      });
+    } catch (e) {
+      showError(err, "Please review your details and try again.");
+      allowRetry(); return;
+    }
+
+    fetch("{{ url_for('passenger.submit_party_registration') }}", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: body
+    })
+      .then(function (r) {
+        return r.text().then(function (text) {
+          var d = null;
+          try { d = text ? JSON.parse(text) : null; } catch (e) { d = null; }
+          return { status: r.status, d: d };
+        });
+      })
+      .then(function (res) {
+        var d = res.d;
+        if (d && d.success === true && d.data && d.data.reference_code) {
+          onRegistrationSaved(d.data, holdAsUncertain); return;
+        }
+        if (d && d.success === false) {
+          if (d.fields) { setStep(2); showError(el("detailsError"), d.message || "Please check your details."); }
+          else { showError(err, d.message || "Unable to complete registration."); }
+          allowRetry(); return;
+        }
+        // Not JSON, or an unexpected shape (proxy/gateway error, redirect to a login page...)
+        holdAsUncertain();
+      })
+      .catch(function () {
+        if (submitted) return;   // registration already acknowledged
+        holdAsUncertain();        // network drop / timeout: outcome unknown
+      });
+  });
 });
+
+
+async function verifyCancellation(referenceCode, lastFour) {
+    const response = await fetch(
+        `/passenger/registrations/${encodeURIComponent(referenceCode)}/verify`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                last_four: lastFour
+            })
+        }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+        throw new Error(
+            result.message || "Identity verification failed."
+        );
+    }
+
+    return result.data;
+}
+
+
+async function cancelSelectedPassengers(
+    referenceCode,
+    passengerIds,
+    reason = ""
+) {
+    const response = await fetch(
+        `/passenger/registrations/${encodeURIComponent(referenceCode)}/cancel`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                passenger_ids: passengerIds,
+                reason: reason
+            })
+        }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+        throw new Error(
+            result.message || "Cancellation failed."
+        );
+    }
+
+    return result.data;
+}
+
 </script>
 {% endif %}
 {% endblock %}

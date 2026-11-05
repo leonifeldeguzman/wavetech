@@ -66,6 +66,8 @@ from app.models.boat import Boat  # noqa: E402
 from app.models.trip import Trip  # noqa: E402
 from app.models.pending_registration import PendingRegistration  # noqa: E402
 from app.models.manifest_entry import ManifestEntry  # noqa: E402
+from app.models.registration import Registration, RegistrationCancellation  # noqa: E402,F401
+from app.models.cancellation_security import VerificationThrottle, CancellationToken  # noqa: E402,F401
 from app.services import announcement_service, weather_collector  # noqa: E402
 from app.utils.ph_clock import ph_now
 
@@ -135,8 +137,12 @@ def make_trip(app):
             return trip.id
     return _make
 
-
-
+@pytest.fixture()
+def make_open_trip(make_boat, make_trip):
+    """Open trip with a boat of the given capacity; returns trip id."""
+    def _make(capacity=10):
+        return make_trip(boat_id=make_boat(capacity=capacity), status="Open")
+    return _make
 
 @pytest.fixture
 def morning_clock(monkeypatch):

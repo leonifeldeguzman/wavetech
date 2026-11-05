@@ -627,6 +627,96 @@
     flex-direction: column;
 }
 
+/* Heading sits close to its hint line; the hint lines up with the title text. */
+.registration-status-card .home-card-heading {
+    margin-bottom: 4px;
+}
+
+.registration-status-hint {
+    margin: 0 0 20px 31px;
+
+    color: #666666;
+
+    font-size: 0.82rem;
+}
+
+/* One joined field: the fixed prefix and the 6 digits share a single
+   border, so it reads as one code. Clicking anywhere focuses the digits. */
+.reference-field {
+    display: flex;
+    align-items: stretch;
+
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    overflow: hidden;
+
+    border: 1px solid #d3dfeb;
+    border-radius: 8px;
+    background: #ffffff;
+
+    cursor: text;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reference-field:hover {
+    border-color: #9bbce0;
+}
+
+.reference-field:focus-within {
+    border-color: #9bbce0;
+    box-shadow: 0 0 0 3px rgba(90, 140, 190, 0.12);
+}
+
+.reference-prefix {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+
+    padding: 0 14px;
+
+    border-right: 1px solid #d3dfeb;
+    background: #f1f6fb;
+    color: #36516d;
+
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.registration-status-form .reference-field .reference-digits {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    min-height: 0;
+
+    padding: 0 14px;
+
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: 0;
+
+    color: #111111;
+
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+}
+
+.registration-status-form .reference-field .reference-digits:focus {
+    border: 0;
+    box-shadow: none;
+    outline: 0;
+}
+
+.registration-status-form .reference-digits::placeholder {
+    color: #9aa5b4;
+    letter-spacing: 0.08em;
+}
+
 .home-overview-grid .registration-status-btn {
     width: 100%;
 }
@@ -1083,6 +1173,11 @@
 
     .home-overview-grid .registration-status-form {
         flex-direction: row;
+        align-items: center;
+    }
+
+    .home-overview-grid .reference-field {
+        flex: 1;
     }
 
     .home-overview-grid .registration-status-btn {

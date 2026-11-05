@@ -18,7 +18,16 @@ This blueprint reuses the existing Trip, Boat, and PendingRegistration
 models exactly as they are defined elsewhere in the repository. It does
 not add any new tables or columns.
 """
-from flask import current_app, request, render_template, redirect, url_for, abort, jsonify
+from flask import (
+    current_app,
+    request,
+    render_template,
+    redirect,
+    url_for,
+    abort,
+    jsonify,
+    session
+)
 
 from sqlalchemy.exc import IntegrityError
 
@@ -35,6 +44,7 @@ from app.models.environmental_reading import EnvironmentalReading
 from app.services import monitoring_service, scheduling_service
 from sqlalchemy import func
 from app.utils.ph_clock import ph_now
+from app.services import registration_service as reg_svc
 import re
 
 REGISTRABLE_STATUSES = {"Open", "Delayed"}
@@ -350,11 +360,18 @@ class RegistrationResult:
     """Simple result object returned by _execute_registration(), shared
     between the JSON API route and the HTML form route below so the
     transaction/locking/business logic only exists in one place."""
-    def __init__(self, success, error_code=None, message=None, registration=None):
+    def __init__(self, success, error_code=None, message=None, registration=None,
+                 data=None, already_registered=False):
         self.success = success
         self.error_code = error_code
         self.message = message
         self.registration = registration
+        # Plain-dict snapshot (no ORM objects) built before commit, so the
+        # route never has to touch expired ORM instances after the commit.
+        self.data = data
+        # True when an identical pending registration already existed and
+        # was returned instead of creating a second one.
+        self.already_registered = already_registered
 
 
 def _send_registration_confirmation_sms(registration, trip):
@@ -428,8 +445,20 @@ def _execute_registration(trip_id, cleaned):
             db.session.rollback()
             return RegistrationResult(False, error_code, block_reason)
 
+        # One parent registration per transaction (owns the reference code).
+        parent = reg_svc.create_parent_registration(trip, "solo")
+        if parent is None:
+            db.session.rollback()
+            return RegistrationResult(
+                False,
+                "REFERENCE_CODE_GENERATION_FAILED",
+                "Could not generate a unique reference code. Please try again.",
+            )
+
         registration = PendingRegistration(
             trip_id=trip.id,
+            registration_id=parent.id,
+            reference_code=parent.reference_code,
             full_name=cleaned["full_name"],
             age=cleaned["age"],
             address=cleaned["address"],
@@ -437,29 +466,8 @@ def _execute_registration(trip_id, cleaned):
             passenger_type=cleaned["passenger_type"],
             status="pending",
         )
-
-        # generate_reference_code() is randomized; retry on the (rare)
-        # unique-constraint collision instead of failing the whole
-        # registration outright.
-        for _ in range(REFERENCE_CODE_MAX_ATTEMPTS):
-            registration.reference_code = generate_reference_code()
-            try:
-                db.session.add(registration)
-                db.session.flush()  # surface IntegrityError before commit
-                break
-            except IntegrityError:
-                db.session.rollback()
-                # Re-acquire the trip lock after rollback, since rollback
-                # released it.
-                trip = Trip.query.filter_by(id=trip_id).with_for_update().first()
-                continue
-        else:
-            db.session.rollback()
-            return RegistrationResult(
-                False,
-                "REFERENCE_CODE_GENERATION_FAILED",
-                "Could not generate a unique reference code. Please try again.",
-            )
+        db.session.add(registration)
+        db.session.flush()
 
         # The trip row has been locked (SELECT ... FOR UPDATE) since the
         # capacity check above, so no other registration for this trip
@@ -519,8 +527,17 @@ def _validate_party(payload):
             continue
         merged = dict(raw)
         merged["contact_number"] = contact_phone
-        if i > 0 and raw.get("same_as_contact"):
-            merged["address"] = contact_in.get("address")
+        if i > 0:
+            if raw.get("same_as_contact"):
+                # Shares the contact person's address and mobile number.
+                merged["address"] = contact_in.get("address")
+            else:
+                # Other passengers give their own mobile number.
+                own_phone = normalize_ph_mobile(raw.get("contact_number"))
+                if own_phone:
+                    merged["contact_number"] = own_phone
+                else:
+                    errors[f"{i}.contact_number"] = "Enter a valid Philippine mobile number."
 
         fields, cleaned = validate_passenger_fields(merged)
         if not cleaned.get("address"):
@@ -551,103 +568,396 @@ def _validate_party(payload):
     return errors, trip_id, people
 
 
+
 def _send_party_sms(registrations, trip):
-    """Best-effort: one SMS to the contact person listing every code."""
+    """Send the confirmation SMS after a party registration is committed.
+
+    - The contact person (first passenger) gets the full confirmation.
+    - Every other passenger whose contact number is different from the
+      contact person's (i.e. "Same address and contact number" was NOT
+      ticked) also gets a confirmation on their own number.
+    - Passengers who share the contact person's number, or who share a
+      number with each other, are texted once, not repeatedly.
+
+    Best-effort: each message is sent on its own, so one failure never
+    blocks the others or changes the registration result.
+    """
+
+    if not registrations:
+        return
+
     try:
         shown = trip.new_departure_time or trip.departure_time
-        when = shown.strftime("%b %d, %Y, %I:%M %p") if shown else "TBA"
-        codes = ", ".join(r.reference_code for r in registrations)
-        label = "Ref" if len(registrations) == 1 else f"Refs ({len(registrations)} passengers)"
-        message = (
-            f"Talim Island Ferry: Registration confirmed. {label}: {codes}. "
-            f"Trip: {trip.route_origin} to {trip.route_destination}, departing {when}."
+
+        when = (
+            shown.strftime("%b %d, %Y, %I:%M %p")
+            if shown else "TBA"
         )
-        result = unisms_service.send_sms(registrations[0].contact_number, message)
-        if result.status != "skipped_no_number":
-            log_action(
-                user_id=None, admin_name="System", action=ACTION_REGISTRATION_SMS_SENT,
-                details=f"References {codes}, trip #{trip.id}, status={result.status}"
-                        + (f", error={result.error}" if result.error else ""),
-            )
+
+        reference_code = registrations[0].reference_code
+        passenger_count = len(registrations)
+        route = f"{trip.route_origin} to {trip.route_destination}"
+
+        # (number, message, label for the activity log)
+        outgoing = []
+        seen_numbers = set()
+
+        contact_number = registrations[0].contact_number
+        outgoing.append((
+            contact_number,
+            (
+                f"Talim Island Ferry: Registration submitted successfully. "
+                f"Reference Code: {reference_code}. "
+                f"Passengers: {passenger_count}. "
+                f"Trip: {route}, departing {when}. "
+                f"Please bring a valid ID for verification."
+            ),
+            f"{passenger_count} passengers",
+        ))
+        seen_numbers.add(normalize_ph_mobile(contact_number) or contact_number)
+
+        for reg in registrations[1:]:
+            number = reg.contact_number
+            key = normalize_ph_mobile(number) or number
+            if not number or key in seen_numbers:
+                continue
+            seen_numbers.add(key)
+            first_name = (reg.full_name or "").split()[0] if reg.full_name else "Passenger"
+            outgoing.append((
+                number,
+                (
+                    f"Talim Island Ferry: {first_name}, you have been "
+                    f"registered for a trip. "
+                    f"Reference Code: {reference_code}. "
+                    f"Trip: {route}, departing {when}. "
+                    f"Please bring a valid ID for verification."
+                ),
+                "co-passenger",
+            ))
     except Exception:
-        current_app.logger.warning("Party registration SMS failed", exc_info=True)
+        current_app.logger.warning(
+            "Party registration SMS could not be prepared",
+            exc_info=True
+        )
+        return
+
+    for number, message, label in outgoing:
+        try:
+            result = unisms_service.send_sms(number, message)
+
+            if result.status != "skipped_no_number":
+                log_action(
+                    user_id=None,
+                    admin_name="System",
+                    action=ACTION_REGISTRATION_SMS_SENT,
+                    details=(
+                        f"Reference {reference_code}, "
+                        f"{label}, "
+                        f"trip #{trip.id}, status={result.status}"
+                        + (
+                            f", error={result.error}"
+                            if result.error else ""
+                        )
+                    )
+                )
+        except Exception:
+            current_app.logger.warning(
+                "Party registration SMS failed (%s)", label,
+                exc_info=True
+            )
+
+
+def _party_snapshot(trip_id, reference_code, names):
+    """Plain, JSON-safe description of a registration. Built from plain
+    values only so serialising it can never fail after the commit."""
+    return {
+        "reference_code": reference_code,
+        "trip_id": trip_id,
+        "registration_type": "group" if len(names) > 1 else "solo",
+        "passenger_count": len(names),
+        "passengers": [
+            {"full_name": name, "masked_name": _mask_name(name)}
+            for name in names
+        ],
+    }
+
+
+def _find_existing_identical_party(trip_id, people):
+    """Return the rows of a still-pending registration on this trip that
+    has the same contact person number and exactly the same passengers
+    (name + contact number), or None. Called while the trip row is locked,
+    so two concurrent identical submissions (double click, retry after an
+    uncertain response) are serialised and the second one finds the first
+    one's rows.
+
+    Passengers in a group can now have different contact numbers, so the
+    candidates are found through the contact person's number and then
+    every row of those reference codes is compared."""
+    contact = people[0].get("contact_number")
+
+    def key(name, number):
+        return ((name or "").strip().lower(), number or "")
+
+    wanted = sorted(key(p.get("full_name"), p.get("contact_number")) for p in people)
+
+    ref_codes = [
+        code for (code,) in (
+            db.session.query(PendingRegistration.reference_code)
+            .filter_by(trip_id=trip_id, contact_number=contact, status="pending")
+            .distinct()
+            .all()
+        )
+    ]
+    if not ref_codes:
+        return None
+
+    candidates = (
+        PendingRegistration.query
+        .filter(
+            PendingRegistration.trip_id == trip_id,
+            PendingRegistration.status == "pending",
+            PendingRegistration.reference_code.in_(ref_codes),
+        )
+        .order_by(PendingRegistration.id.asc())
+        .all()
+    )
+
+    groups = {}
+    for row in candidates:
+        groups.setdefault(row.reference_code, []).append(row)
+
+    for rows in groups.values():
+        if sorted(key(row.full_name, row.contact_number) for row in rows) == wanted:
+            return rows
+    return None
 
 
 def _execute_party_registration(trip_id, people):
-    """All-or-nothing: lock trip, check seats for the WHOLE party, create one
-    PendingRegistration (and one reference code) per passenger, commit."""
+    """
+    Register a solo passenger or group under ONE shared reference code.
+
+    Transaction:
+    1. Lock the selected trip.
+    2. Validate trip availability.
+    3. Check capacity for the entire party.
+    4. Generate one reference code.
+    5. Create all passenger records using that code.
+    6. Commit the transaction.
+    7. Send confirmation SMS separately.
+    """
+
     try:
-        trip = Trip.query.filter_by(id=trip_id).with_for_update().first()
+        # Lock the trip to prevent concurrent registrations
+        # from reserving the same remaining seats.
+        trip = (
+            Trip.query
+            .filter_by(id=trip_id)
+            .with_for_update()
+            .first()
+        )
+
         if not trip:
             db.session.rollback()
-            return RegistrationResult(False, "TRIP_NOT_FOUND", "No trip found with this ID.")
 
-        ok, code, message = _accepts_registration(trip)
+            return RegistrationResult(
+                False,
+                "TRIP_NOT_FOUND",
+                "No trip found with this ID."
+            )
+
+        # If this exact party is already registered (the first request
+        # succeeded but the browser never saw the answer, or the button was
+        # clicked twice), acknowledge the existing registration instead of
+        # creating a duplicate. This runs BEFORE the availability/capacity
+        # checks because the first registration may itself have just filled
+        # the trip, which would otherwise make the retry look like "Full".
+        existing = _find_existing_identical_party(trip.id, people)
+
+        if existing:
+            snapshot = _party_snapshot(
+                trip.id,
+                existing[0].reference_code,
+                [row.full_name for row in existing],
+            )
+            db.session.rollback()
+
+            return RegistrationResult(
+                True,
+                registration=existing,
+                data=snapshot,
+                already_registered=True
+            )
+
+        # Check trip availability.
+        ok, error_code, message = _accepts_registration(trip)
+
         if not ok:
             db.session.rollback()
-            return RegistrationResult(False, code, message)
 
+            return RegistrationResult(
+                False,
+                error_code,
+                message
+            )
+
+        # Check available seats for the entire party.
         _, _, remaining = _trip_capacity_info(trip)
+
         if remaining is not None and len(people) > remaining:
             db.session.rollback()
-            return RegistrationResult(
-                False, "TRIP_FULL",
-                f"Only {remaining} seat(s) left on this trip. Please remove a passenger or pick another trip.")
 
-        registrations, used = [], set()
+            return RegistrationResult(
+                False,
+                "TRIP_FULL",
+                f"Only {remaining} seat(s) left on this trip."
+            )
+
+        # ONE parent registration (and reference code) for everyone.
+        parent = reg_svc.create_parent_registration(
+            trip, "group" if len(people) > 1 else "solo"
+        )
+
+        if parent is None:
+            db.session.rollback()
+
+            return RegistrationResult(
+                False,
+                "REFERENCE_CODE_GENERATION_FAILED",
+                "Could not generate a reference code. Please try again."
+            )
+
+        reference_code = parent.reference_code
+
+        # Create all passenger records under the parent.
+        registrations = []
+
         for person in people:
-            reg = PendingRegistration(trip_id=trip.id, status="pending", **person)
-            for _ in range(REFERENCE_CODE_MAX_ATTEMPTS):
-                candidate = generate_reference_code()
-                if candidate in used or PendingRegistration.query.filter_by(
-                        reference_code=candidate).first():
-                    continue
-                reg.reference_code = candidate
-                break
-            else:
-                db.session.rollback()
-                return RegistrationResult(False, "REFERENCE_CODE_GENERATION_FAILED",
-                                          "Could not generate a reference code. Please try again.")
-            used.add(reg.reference_code)
+            reg = PendingRegistration(
+                trip_id=trip.id,
+                registration_id=parent.id,
+                reference_code=reference_code,
+                status="pending",
+                **person
+            )
+
             db.session.add(reg)
             registrations.append(reg)
 
+        # Flush before recalculating capacity.
         db.session.flush()
+
+        # Update trip status if all seats have been reserved.
         _, _, remaining = _trip_capacity_info(trip)
+
         if remaining is not None and remaining <= 0:
             trip.status = "Full"
+
+        # Build the response data from plain values BEFORE the commit.
+        # After commit() every ORM instance is expired, so reading it
+        # later would trigger new queries that could fail even though the
+        # registration is already saved.
+        snapshot = _party_snapshot(
+            trip.id,
+            reference_code,
+            [person["full_name"] for person in people],
+        )
+
+        # Commit all passenger records together.
         db.session.commit()
+
     except Exception:
         db.session.rollback()
-        current_app.logger.exception("Party registration failed")
-        return RegistrationResult(False, "REGISTRATION_FAILED",
-                                  "Registration could not be completed due to a server error.")
 
+        current_app.logger.exception(
+            "Party registration failed"
+        )
+
+        return RegistrationResult(
+            False,
+            "REGISTRATION_FAILED",
+            "Registration could not be completed due to a server error."
+        )
+
+    # IMPORTANT:
+    # SMS is sent AFTER the database commit.
+    # SMS failure must never invalidate a successful registration.
     _send_party_sms(registrations, trip)
-    return RegistrationResult(True, registration=registrations)
 
+    return RegistrationResult(
+        True,
+        registration=registrations,
+        data=snapshot
+    )
 
-@passenger_bp.route("/passenger/register/submit-party", methods=["POST"])
+@passenger_bp.route(
+    "/passenger/register/submit-party",
+    methods=["POST"]
+)
 def submit_party_registration():
+
     payload = request.get_json(silent=True) or {}
+
+    # Validate passenger information.
     errors, trip_id, people = _validate_party(payload)
+
     if errors:
-        return jsonify({"success": False, "message": next(iter(errors.values())),
-                        "fields": errors}), 400
+        return jsonify({
+            "success": False,
+            "message": next(iter(errors.values())),
+            "fields": errors
+        }), 400
 
-    result = _execute_party_registration(trip_id, people)
+    # Execute registration.
+    result = _execute_party_registration(
+        trip_id,
+        people
+    )
+
     if not result.success:
-        status = 404 if result.error_code == "TRIP_NOT_FOUND" else (
-            409 if result.error_code in ("TRIP_FULL", "TRIP_NOT_AVAILABLE") else 500)
-        return jsonify({"success": False, "error_code": result.error_code,
-                        "message": result.message}), status
 
-    return jsonify({"success": True, "data": {
-        "trip_id": trip_id,
-        "registrations": [{"reference_code": r.reference_code, "full_name": r.full_name}
-                          for r in result.registration],
-    }}), 201
+        status = (
+            404
+            if result.error_code == "TRIP_NOT_FOUND"
+            else 409
+            if result.error_code in (
+                "TRIP_FULL",
+                "TRIP_NOT_AVAILABLE"
+            )
+            else 500
+        )
 
+        return jsonify({
+            "success": False,
+            "error_code": result.error_code,
+            "message": result.message
+        }), status
+
+    # Plain-dict snapshot built inside the service function; no ORM objects
+    # are read here, so nothing can fail after the registration is saved.
+    data = dict(result.data)
+    data["already_registered"] = bool(result.already_registered)
+
+    try:
+        data["status_url"] = url_for(
+            "passenger.registration_status_page",
+            reference_code=data["reference_code"]
+        )
+    except Exception:
+        current_app.logger.warning(
+            "Could not build status_url for %s",
+            data.get("reference_code"),
+            exc_info=True
+        )
+
+    return jsonify({
+        "success": True,
+        "message": (
+            "This registration was already received."
+            if result.already_registered
+            else "Registration submitted successfully."
+        ),
+        "data": data
+    }), (200 if result.already_registered else 201)
 
 @passenger_bp.route("/api/passenger/registrations", methods=["POST"])
 def create_registration():
@@ -743,9 +1053,24 @@ def home():
         limit=2
     )
 
+    # Reference-code lookup feedback (set by registration_status_lookup).
+    # Only known messages are shown, so a crafted URL cannot display
+    # arbitrary text.
+    lookup_error = request.args.get("lookup_error", "")
+    if lookup_error not in LOOKUP_ERRORS:
+        lookup_error = None
+    # Only the 6 digits are typed into the box; the prefix is fixed text.
+    lookup_value = "".join(
+        ch for ch in _reference_tail(request.args.get("reference_code", ""))
+        if ch in "0123456789"
+    )[:6]
+
     return render_template(
         "passenger/home.html",
         announcements=announcements,
+        lookup_error=lookup_error,
+        lookup_value=lookup_value,
+        reference_prefix=REFERENCE_PREFIX,
 
         latest_reading=latest_reading,
 
@@ -913,54 +1238,184 @@ def submit_registration_page(trip_id):
 # GET /api/passenger/registrations/<reference_code>
 # ---------------------------------------------------------------------------
 
+
+def _find_registrations_by_reference_code(reference_code):
+    return (
+        PendingRegistration.query
+        .filter_by(reference_code=reference_code.strip().upper())
+        .order_by(PendingRegistration.id.asc())
+        .all()
+    )
+
+
 def _find_registration_by_reference_code(reference_code):
-    """Shared lookup used by both the JSON status endpoint and the HTML
-    status page below, so the query only exists in one place."""
-    return PendingRegistration.query.filter_by(reference_code=reference_code).first()
+    registrations = _find_registrations_by_reference_code(
+        reference_code
+    )
+    return registrations[0] if registrations else None
 
 
-def _serialize_registration_status(registration):
-    """Deliberately minimal — only what a passenger needs to confirm
-    their registration status. Address/contact_number are left out since
-    the passenger already has them; there's no reason to echo them back
-    over an endpoint that only requires knowing a reference code."""
-    return {
-        "reference_code": registration.reference_code,
-        "full_name": _mask_name(registration.full_name),
-        "trip_id": registration.trip_id,
-        "status": registration.status,
+def _reopen_trip_if_seats_free(trip):
+    """After a cancellation: flush, then free a "Full" trip that now has
+    seats (same rule the old cancel route used)."""
+    db.session.flush()
+    if trip.status == "Full":
+        _, _, remaining = _trip_capacity_info(trip)
+        if remaining is not None and remaining > 0:
+            trip.status = "Delayed" if trip.new_departure_time else "Open"
+
+
+def _json_error(result):
+    body = {
+        "success": False,
+        "error_code": result.code,
+        "message": result.message,
     }
+    resp = jsonify(body)
+    resp.status_code = result.status
+    if result.retry_after:
+        resp.headers["Retry-After"] = str(result.retry_after)
+    return resp
 
 
-@passenger_bp.route("/api/passenger/registrations/<reference_code>", methods=["GET"])
+def _load_public(reference_code):
+    parent, passengers = reg_svc.load_registration(reference_code)
+    if not parent:
+        return None, [], None
+    trip = db.session.get(Trip, parent.trip_id)
+    return parent, passengers, trip
+
+
+_NOT_FOUND = ("REGISTRATION_NOT_FOUND", "Registration not found.")
+
+
+@passenger_bp.route(
+    "/api/passenger/registrations/<reference_code>",
+    methods=["GET"]
+)
 def get_registration_status(reference_code):
-    registration = _find_registration_by_reference_code(reference_code)
-    if not registration:
-        return error_response("REGISTRATION_NOT_FOUND", "Registration not found.", status=404)
-    return success_response(data=_serialize_registration_status(registration))
+    parent, passengers, trip = _load_public(reference_code)
+    if not parent:
+        return error_response(*_NOT_FOUND, status=404)
+
+    return success_response(
+        data=reg_svc.serialize_status(
+            parent, passengers, trip, _mask_name, _has_departure_time_passed
+        )
+    )
+
+
+@passenger_bp.route(
+    "/api/passenger/registrations/<reference_code>/passengers",
+    methods=["GET"]
+)
+def get_active_passengers(reference_code):
+    parent, passengers, _trip = _load_public(reference_code)
+    if not parent:
+        return error_response(*_NOT_FOUND, status=404)
+
+    return success_response(data={
+        "reference_code": parent.reference_code,
+        "active_passengers": reg_svc.serialize_active_passengers(
+            passengers, _mask_name
+        ),
+    })
+
+
+@passenger_bp.route(
+    "/api/passenger/registrations/<reference_code>/cancellation-eligibility",
+    methods=["GET"]
+)
+def get_cancellation_eligibility(reference_code):
+    parent, passengers, trip = _load_public(reference_code)
+    if not parent:
+        return error_response(*_NOT_FOUND, status=404)
+
+    can_cancel, reason = reg_svc.cancellation_eligibility(
+        passengers, trip, _has_departure_time_passed
+    )
+    return success_response(data={
+        "reference_code": parent.reference_code,
+        "can_cancel": can_cancel,
+        "reason": reason,
+        "verification_required": True,
+    })
+
+
+@passenger_bp.route(
+    "/api/passenger/registrations/<reference_code>/cancellations",
+    methods=["GET"]
+)
+def get_cancellation_history(reference_code):
+    parent, passengers, _trip = _load_public(reference_code)
+    if not parent:
+        return error_response(*_NOT_FOUND, status=404)
+
+    return success_response(
+        data=reg_svc.serialize_cancellation_history(
+            parent, passengers, _mask_name
+        )
+    )
+
+
+LOOKUP_MSG_MISSING = "Please enter your reference code."
+LOOKUP_MSG_INVALID = "Please enter the 6 digits from your SMS."
+LOOKUP_MSG_NOT_FOUND = "No registration found for that reference code."
+LOOKUP_ERRORS = {LOOKUP_MSG_MISSING, LOOKUP_MSG_INVALID, LOOKUP_MSG_NOT_FOUND}
+
+# Every reference code starts with this fixed prefix; the passenger only
+# types the 6 digits that follow it. Keep this in step with
+# generate_reference_code().
+REFERENCE_PREFIX = "WT-2026-"
+_REFERENCE_DIGITS_RE = re.compile(r"[0-9]{6}")
+
+
+def _reference_tail(raw):
+    """What the passenger typed, minus spaces and the fixed prefix.
+
+    Accepts the bare digits ("123456") as well as a full code
+    ("WT-2026-123456"), so a pasted code still works."""
+    text = "".join(str(raw or "").split()).upper()
+    if text.startswith(REFERENCE_PREFIX):
+        text = text[len(REFERENCE_PREFIX):]
+    return text
+
+
+def _reference_from_lookup_input(raw):
+    """Full reference code, or None unless it is exactly 6 digits."""
+    tail = _reference_tail(raw)
+    if _REFERENCE_DIGITS_RE.fullmatch(tail):
+        return REFERENCE_PREFIX + tail
+    return None
+
+
+def _home_with_lookup_error(message, typed=""):
+    params = {"lookup_error": message}
+    if typed:
+        params["reference_code"] = typed
+    return redirect(url_for("passenger.home", **params) + "#registration-status")
 
 
 @passenger_bp.route("/passenger/registrations", methods=["GET"])
 def registration_status_lookup():
-    reference_code = request.args.get("reference_code", "").strip()
+    """Reference-code lookup submitted from the Passenger Home page.
+
+    Read-only: nothing is created or changed. Validation happens here on
+    the server; the form's own checks are only a convenience."""
+    raw = request.args.get("reference_code", "")
+
+    if not _reference_tail(raw):
+        return _home_with_lookup_error(LOOKUP_MSG_MISSING)
+
+    reference_code = _reference_from_lookup_input(raw)
 
     if not reference_code:
-        return redirect(
-            url_for(
-                "passenger.home",
-                lookup_error="Please enter a reference code."
-            ) + "#registration-status"
+        return _home_with_lookup_error(
+            LOOKUP_MSG_INVALID, _reference_tail(raw)[:30]
         )
 
-    registration = _find_registration_by_reference_code(reference_code)
-
-    if not registration:
-        return redirect(
-            url_for(
-                "passenger.home",
-                lookup_error="No registration found for that reference code."
-            ) + "#registration-status"
-        )
+    if not _find_registration_by_reference_code(reference_code):
+        return _home_with_lookup_error(LOOKUP_MSG_NOT_FOUND, reference_code)
 
     return redirect(
         url_for(
@@ -970,11 +1425,61 @@ def registration_status_lookup():
     )
 
 REGISTRATION_STATUS_LABELS = {
-    "pending": "Pending Verification",
+    "pending": "Pending Approval",
     "approved": "Approved",
     "rejected": "Rejected",
     "cancelled": "Cancelled by passenger",
+    "partial": "Partially Approved",
 }
+
+PASSENGER_STATUS_LABELS = {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+}
+
+
+def _group_status_summary(registrations):
+    """Overall status of one reference code, worked out from the passengers
+    who are still on it (cancelled passengers are left out).
+
+    state is one of: pending, approved, rejected, partial, cancelled, other.
+    "partial" means at least one passenger is approved but not everyone is.
+    Also returns the per-passenger rows shown on the status page."""
+    rows = []
+    for reg in registrations:
+        key = (reg.status or "").strip().lower()
+        if key == "cancelled":
+            continue
+        if key not in PASSENGER_STATUS_LABELS:
+            key = "other"
+        rows.append({
+            "name": _mask_name(reg.full_name),
+            "status": key,
+            "label": PASSENGER_STATUS_LABELS.get(key, "Other"),
+        })
+
+    counts = {
+        "total": len(rows),
+        "approved": sum(1 for p in rows if p["status"] == "approved"),
+        "pending": sum(1 for p in rows if p["status"] == "pending"),
+        "rejected": sum(1 for p in rows if p["status"] == "rejected"),
+    }
+
+    if not rows:
+        state = "cancelled"
+    elif counts["approved"] == counts["total"]:
+        state = "approved"
+    elif counts["rejected"] == counts["total"]:
+        state = "rejected"
+    elif counts["approved"] > 0:
+        state = "partial"
+    elif counts["pending"] > 0:
+        state = "pending"
+    else:
+        state = "other"
+
+    return state, counts, rows
 
 
 def _registration_status_label(status):
@@ -982,75 +1487,153 @@ def _registration_status_label(status):
     raw = (status or "").strip()
     return REGISTRATION_STATUS_LABELS.get(raw.lower(), raw.replace("_", " ").title())
 
-@passenger_bp.route("/passenger/registrations/<reference_code>", methods=["GET"])
+
+@passenger_bp.route(
+    "/passenger/registrations/<reference_code>",
+    methods=["GET"]
+)
 def registration_status_page(reference_code):
-    registration = _find_registration_by_reference_code(reference_code)
-    if not registration:
-        return render_template(
-            "passenger/registration_success.html",
-            registration=None, trip=None, status_label=None, can_cancel=False,
-            masked_name=None, masked_phone=None,
-            lookup_error="No registration found for that reference code.",
+
+    registrations = _find_registrations_by_reference_code(
+        reference_code
+    )
+
+    if not registrations:
+        return _home_with_lookup_error(
+            LOOKUP_MSG_NOT_FOUND,
+            reg_svc.normalize_reference(reference_code),
         )
 
+    registration = registrations[0]
+
     trip = db.session.get(Trip, registration.trip_id)
-    left = bool(trip) and (trip.status == "Departed" or _has_departure_time_passed(trip))
+
+    left = (
+        bool(trip)
+        and (
+            trip.status == "Departed"
+            or _has_departure_time_passed(trip)
+        )
+    )
+
+    pending_passengers = [
+        r for r in registrations if r.status == "pending"
+    ]
+
+    group_state, status_counts, passenger_rows = _group_status_summary(
+        registrations
+    )
+
     return render_template(
         "passenger/registration_success.html",
         registration=registration,
+        registrations=registrations,
         trip=_serialize_trip_detail(trip) if trip else None,
         lookup_error=None,
-        status_label=_registration_status_label(registration.status),
+        status_label=_registration_status_label(group_state),
         masked_name=_mask_name(registration.full_name),
-        masked_phone=_mask_phone(registration.contact_number),
-        can_cancel=registration.status in CANCELLABLE_STATUSES and not left,
+        parent_status=group_state,
+        status_counts=status_counts,
+        passenger_rows=passenger_rows,
+        active_passengers=reg_svc.serialize_active_passengers(
+            registrations, _mask_name
+        ),
+        can_cancel=bool(pending_passengers) and not left,
+        is_group=len(registrations) > 1
     )
 
-@passenger_bp.route("/passenger/registrations/<reference_code>/cancel", methods=["POST"])
+
+def _client_ip():
+    # Behind a reverse proxy, configure werkzeug ProxyFix so this is the
+    # real client address.
+    return request.remote_addr
+
+
+@passenger_bp.route(
+    "/passenger/registrations/<reference_code>/cancel",
+    methods=["POST"]
+)
+@passenger_bp.route(
+    "/api/passenger/registrations/<reference_code>/cancel",
+    methods=["POST"]
+)
 def cancel_registration(reference_code):
-    generic = {"success": False,
-               "message": "We couldn't find a matching registration. Check the code and phone number."}
-    phone = normalize_ph_mobile(request.form.get("contact_number"))
-    reason = (request.form.get("reason") or "").strip()[:200]
+    payload = request.get_json(silent=True) or {}
 
-    reg = (PendingRegistration.query
-           .filter_by(reference_code=reference_code.strip().upper())
-           .with_for_update().first())
-    # Same message whether the code or the phone is wrong, so codes can't be probed.
-    if not reg or not phone or normalize_ph_mobile(reg.contact_number) != phone:
-        db.session.rollback()
-        return jsonify(generic), 404
+    ref = reg_svc.normalize_reference(reference_code)
+    stored = session.get("cancellation_verification") or {}
+    token = payload.get("verification_token") or (
+        stored.get("token") if stored.get("reference") == ref else None
+    )
 
-    if reg.status == "cancelled":
-        return jsonify({"success": True, "message": "Your registration was cancelled."})
-    if reg.status not in CANCELLABLE_STATUSES:
-        db.session.rollback()
-        return jsonify({"success": False,
-                        "message": "This registration can no longer be cancelled online. "
-                                   "Please see the terminal staff."}), 409
+    # Explicit type wins; otherwise infer (keeps the existing front end,
+    # which sends passenger_ids only for a partial cancellation).
+    passenger_ids = payload.get("passenger_ids")
+    cancel_type = payload.get("cancel_type")
+    if cancel_type is None:
+        if passenger_ids is not None:
+            cancel_type = "partial"
+        else:
+            parent, _p = reg_svc.load_registration(ref)
+            cancel_type = (
+                "solo" if parent and parent.registration_type == "solo" else "full"
+            )
 
-    trip = db.session.get(Trip, reg.trip_id)
-    if trip and (trip.status == "Departed" or _has_departure_time_passed(trip)):
-        db.session.rollback()
-        return jsonify({"success": False,
-                        "message": "This trip has already left, so it can't be cancelled."}), 409
+    result = reg_svc.cancel_passengers(
+        ref, token, cancel_type, passenger_ids,
+        payload.get("reason"),
+        trip_has_left=lambda t: t.status == "Departed" or _has_departure_time_passed(t),
+        reopen_trip=_reopen_trip_if_seats_free,
+    )
 
-    reg.status = "cancelled"            # seat is freed: only "pending" rows count as reserved
-    if trip and trip.status == "Full":  # reopen if the seat made room
-        _, _, remaining = _trip_capacity_info(trip)
-        if remaining and remaining > 0:
-            trip.status = "Delayed" if trip.new_departure_time else "Open"
-    db.session.commit()
+    if not result.ok:
+        return _json_error(result)
+
+    session.pop("cancellation_verification", None)
+    d = result.data
 
     try:
-        log_action(user_id=None, admin_name="System", action=ACTION_PASSENGER_CANCELLED,
-                   details=f"Passenger cancelled {reg.reference_code} ({reason or 'no reason given'})")
-        unisms_service.send_sms(
-            reg.contact_number, f"Your registration {reg.reference_code} has been cancelled.")
+        log_action(
+            user_id=None,
+            admin_name="System",
+            action=ACTION_PASSENGER_CANCELLED,
+            details=(
+                f"Reference {d['reference_code']}: {d['seats_released']} "
+                f"passenger(s) cancelled ({d['cancel_type']}). "
+                f"Reason: {result.notify['reason'] or 'No reason given'}"
+            ),
+        )
+        if result.notify["contact_number"]:
+            unisms_service.send_sms(
+                result.notify["contact_number"],
+                (
+                    f"Talim Island Ferry: {d['seats_released']} passenger(s) "
+                    f"under reference {d['reference_code']} have been "
+                    f"cancelled. Remaining passengers: {len(d['remaining'])}."
+                ),
+            )
     except Exception:
-        current_app.logger.warning("Cancel log/SMS failed for %s", reg.reference_code, exc_info=True)
+        current_app.logger.warning(
+            "Cancellation SMS/logging failed for %s",
+            d["reference_code"], exc_info=True,
+        )
 
-    return jsonify({"success": True, "message": "Your registration was cancelled."})
+    mask = lambda rows: [{"id": i, "name": _mask_name(n)} for i, n in rows]
+    return jsonify({
+        "success": True,
+        "message": "Cancellation completed successfully.",
+        "data": {
+            "reference_code": d["reference_code"],
+            "registration_status": d["registration_status"],
+            "cancel_type": d["cancel_type"],
+            "cancelled_count": len(d["cancelled"]),
+            "remaining_count": len(d["remaining"]),
+            "cancelled_passengers": mask(d["cancelled"]),
+            "remaining_passengers": mask(d["remaining"]),
+            "seats_released": d["seats_released"],
+        },
+    }), 200
+
 
 @passenger_bp.route("/passenger/guide", methods=["GET"])
 def guide():
@@ -1058,3 +1641,50 @@ def guide():
         "passenger/guide.html",
         active_page="guide",
     )
+
+
+@passenger_bp.route(
+    "/passenger/registrations/<reference_code>/verify",
+    methods=["POST"]
+)
+@passenger_bp.route(
+    "/api/passenger/registrations/<reference_code>/verify",
+    methods=["POST"]
+)
+def verify_registration_identity(reference_code):
+    last_four = (
+        request.form.get("last_four")
+        or (request.get_json(silent=True) or {}).get("last_four")
+        or ""
+    )
+
+    result = reg_svc.verify_identity(
+        reference_code, last_four, _client_ip(),
+        trip_has_left=lambda t: t.status == "Departed" or _has_departure_time_passed(t),
+    )
+    if not result.ok:
+        return _json_error(result)
+
+    ref = result.data["reference_code"]
+    # Cookie session carries the token for the existing front end; it is
+    # bound to this reference and expires server-side regardless.
+    session["cancellation_verification"] = {
+        "reference": ref,
+        "token": result.data["token"],
+    }
+
+    parent, passengers, trip = _load_public(ref)
+    return jsonify({
+        "success": True,
+        "message": "Identity verified successfully.",
+        "data": {
+            "reference_code": ref,
+            "verification_token": result.data["token"],
+            "expires_in": result.data["expires_in"],
+            "registration_type": parent.registration_type,
+            "passenger_count": len(passengers),
+            "passengers": reg_svc.serialize_active_passengers(
+                passengers, _mask_name
+            ),
+        },
+    }), 200
