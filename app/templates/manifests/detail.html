@@ -32,8 +32,15 @@
                 {{ trip.departure_time.strftime('%I:%M %p') }}
             </span>
 
-            <span class="manifest-trip-crew">
-                {{ trip.crew_name or 'No crew assigned' }}
+            <span class="manifest-trip-operator">
+                <span class="manifest-trip-crew">
+                    {{ trip.operator_name or 'No operator assigned' }}
+                </span>
+                {% if trip.crew_name %}
+                <span class="manifest-trip-crew-sub">
+                    Crew: {{ trip.crew_name }}
+                </span>
+                {% endif %}
             </span>
 
             <span class="manifest-trip-capacity">
@@ -114,122 +121,125 @@
         </div>
 
 
+        {# Hybrid input: type a new value or pick a previously saved one. #}
+        {% macro combo_field(name, label, source, placeholder, maxlength) %}
+        <div class="manifest-field manifest-boat-field manifest-combo-field">
+
+            <label class="manifest-field-label" for="manifest_{{ name }}">
+                {{ label }}
+            </label>
+
+            <div class="manifest-boat-dropdown manifest-combo"
+                 data-combo
+                 data-source="{{ source }}">
+
+                <input
+                    type="text"
+                    id="manifest_{{ name }}"
+                    name="{{ name }}"
+                    class="manifest-combo-input{% if field_errors.get(name) %} is-invalid{% endif %}"
+                    value="{{ values[name] }}"
+                    placeholder="{{ placeholder }}"
+                    maxlength="{{ maxlength }}"
+                    autocomplete="off"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-controls="manifest_{{ name }}_list"
+                    {% if field_errors.get(name) %}
+                    aria-invalid="true"
+                    aria-describedby="manifest_{{ name }}_error"
+                    {% endif %}
+                >
+
+                <button
+                    type="button"
+                    class="manifest-combo-toggle"
+                    tabindex="-1"
+                    aria-label="Show saved {{ label|lower }} entries"
+                >
+                    <i class="bi bi-chevron-down manifest-boat-chevron"></i>
+                </button>
+
+                <div
+                    class="manifest-boat-menu"
+                    id="manifest_{{ name }}_list"
+                    role="listbox"
+                    aria-label="Saved {{ label|lower }} entries"
+                ></div>
+
+            </div>
+
+            <div class="manifest-field-error"
+                 id="manifest_{{ name }}_error"
+                 role="alert"
+                 {% if not field_errors.get(name) %}hidden{% endif %}>{{ field_errors.get(name, '') }}</div>
+
+        </div>
+        {% endmacro %}
+
+        <script type="application/json" id="manifestSuggestions">{{ suggestions|tojson }}</script>
+
         <form
             method="POST"
             action="{{ url_for('manifests.assign_boat', trip_id=trip.id) }}"
+            id="tripInfoForm"
+            novalidate
+            data-current-count="{{ current_count }}"
+            data-max-capacity="500"
         >
 
             <div class="manifest-trip-info-grid">
 
-                <!-- Crew -->
+                {{ combo_field('operator_name', 'Operator', 'operators', 'Type or select an operator', 100) }}
+
+                {{ combo_field('crew_name', 'Crew', 'crews', 'Type or select crew', 100) }}
+
+                {{ combo_field('boat_name', 'Boat', 'boats', 'Type or select a boat', 50) }}
+
+
+                <!-- Capacity (manual) -->
 
                 <div class="manifest-field">
 
-                    <label class="manifest-field-label">
-                        Crew
-                    </label>
-
-                    <input
-                        type="text"
-                        name="crew_name"
-                        value="{{ trip.crew_name or '' }}"
-                    >
-
-                </div>
-
-
-                <!-- Boat -->
-
-                <div class="manifest-field manifest-boat-field">
-                    <label class="manifest-field-label">Boat</label>
-
-                    <div class="manifest-boat-dropdown" id="manifestBoatDropdown">
-
-                        <button
-                            type="button"
-                            class="manifest-boat-toggle"
-                            id="manifestBoatToggle"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                        >
-                            <span id="manifestBoatSelected">
-                                {% if trip.boat %}
-                                    {{ trip.boat.name }} — {{ trip.boat.capacity }} passengers
-                                {% else %}
-                                    Select Boat
-                                {% endif %}
-                            </span>
-
-                            <i class="bi bi-chevron-down manifest-boat-chevron"></i>
-                        </button>
-
-                        <div
-                            class="manifest-boat-menu"
-                            id="manifestBoatMenu"
-                            role="listbox"
-                        >
-                            {% for boat in boats %}
-                                <button
-                                    type="button"
-                                    class="manifest-boat-option {% if trip.boat_id == boat.id %}selected{% endif %}"
-                                    data-value="{{ boat.id }}"
-                                    data-name="{{ boat.name }}"
-                                    data-capacity="{{ boat.capacity }}"
-                                    role="option"
-                                    {% if trip.boat_id == boat.id %}
-                                        aria-selected="true"
-                                    {% else %}
-                                        aria-selected="false"
-                                    {% endif %}
-                                >
-                                    <span class="manifest-boat-option-info">
-                                        <span class="manifest-boat-name">
-                                            {{ boat.name }}
-                                        </span>
-
-                                        <span class="manifest-boat-capacity">
-                                            {{ boat.capacity }} passengers
-                                        </span>
-                                    </span>
-
-                                    {% if trip.boat_id == boat.id %}
-                                        <i class="bi bi-check2 manifest-boat-check"></i>
-                                    {% endif %}
-                                </button>
-                            {% endfor %}
-                        </div>
-
-                        <input
-                            type="hidden"
-                            name="boat_id"
-                            id="manifestBoatValue"
-                            value="{{ trip.boat_id or '' }}"
-                        >
-
-                    </div>
-                </div>
-
-
-                <!-- Capacity -->
-
-                <div class="manifest-field">
-
-                    <label class="manifest-field-label">
+                    <label class="manifest-field-label" for="manifest_boat_capacity">
                         Capacity
                     </label>
 
                     <input
-                        type="number"
-                        value="{{ capacity or '' }}"
-                        readonly
+                        type="text"
+                        inputmode="numeric"
+                        id="manifest_boat_capacity"
+                        name="boat_capacity"
+                        class="manifest-capacity-input{% if field_errors.get('boat_capacity') %} is-invalid{% endif %}"
+                        value="{{ values.boat_capacity }}"
+                        placeholder="Number of passengers"
+                        maxlength="4"
+                        autocomplete="off"
+                        {% if field_errors.get('boat_capacity') %}
+                        aria-invalid="true"
+                        {% endif %}
+                        aria-describedby="manifest_boat_capacity_error"
                     >
+
+                    <div class="manifest-field-error"
+                         id="manifest_boat_capacity_error"
+                         role="alert"
+                         {% if not field_errors.get('boat_capacity') %}hidden{% endif %}>{{ field_errors.get('boat_capacity', '') }}</div>
+
+                    {% if current_count %}
+                    <div class="manifest-field-hint">
+                        {{ current_count }} passenger{{ '' if current_count == 1 else 's' }} already on the manifest.
+                    </div>
+                    {% endif %}
 
                 </div>
 
 
                 <!-- Route -->
 
-                <div class="manifest-field">
+                <div class="manifest-field manifest-route-field">
 
                     <label class="manifest-field-label">
                         Route
@@ -1458,142 +1468,348 @@ function populateDeleteEntryModalFromButton(button) {
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    const dropdown = document.getElementById("manifestBoatDropdown");
-    const toggle = document.getElementById("manifestBoatToggle");
-    const menu = document.getElementById("manifestBoatMenu");
-    const selectedText = document.getElementById("manifestBoatSelected");
-    const hiddenInput = document.getElementById("manifestBoatValue");
+    /* =========================================================
+       TRIP INFORMATION: hybrid inputs (type or pick) + capacity
+       Suggestions come from the server (previously saved values).
+       Server-side validation is the source of truth; this is
+       only for faster feedback.
+       ========================================================= */
 
-    if (!dropdown || !toggle || !menu || !selectedText || !hiddenInput) {
+    const form = document.getElementById("tripInfoForm");
+    const dataEl = document.getElementById("manifestSuggestions");
+
+    if (!form || !dataEl) {
         return;
     }
 
+    let suggestions = { operators: [], crews: [], boats: [] };
 
-    /* Open / close */
+    try {
+        suggestions = JSON.parse(dataEl.textContent) || suggestions;
+    } catch (error) {
+        /* No suggestions available: typing still works. */
+    }
 
-    toggle.addEventListener("click", function (event) {
-        event.stopPropagation();
+    const capacityInput = document.getElementById("manifest_boat_capacity");
+    const boatInput = document.getElementById("manifest_boat_name");
+    const currentCount = parseInt(form.dataset.currentCount, 10) || 0;
+    const maxCapacity = parseInt(form.dataset.maxCapacity, 10) || 500;
 
-        if (dropdown.classList.contains("open")) {
-            closeBoatDropdown();
+
+    /* ---------- inline error helpers ---------- */
+
+    function setFieldError(input, message) {
+
+        const errorEl = document.getElementById(input.id + "_error");
+
+        if (message) {
+            input.classList.add("is-invalid");
+            input.setAttribute("aria-invalid", "true");
         } else {
-            openBoatDropdown();
+            input.classList.remove("is-invalid");
+            input.removeAttribute("aria-invalid");
         }
+
+        if (errorEl) {
+            errorEl.textContent = message || "";
+            errorEl.hidden = !message;
+        }
+
+    }
+
+    function capacityProblem() {
+
+        const text = capacityInput.value.trim();
+
+        if (text === "") {
+            return "";
+        }
+
+        if (/^-[0-9]+(\.[0-9]+)?$/.test(text)) {
+            return "Capacity cannot be negative.";
+        }
+
+        if (!/^[0-9]+$/.test(text)) {
+            return "Capacity must be a whole number (digits only).";
+        }
+
+        const value = parseInt(text, 10);
+
+        if (value < 1) {
+            return "Capacity must be at least 1.";
+        }
+
+        if (value > maxCapacity) {
+            return "Capacity cannot exceed " + maxCapacity + ".";
+        }
+
+        if (value < currentCount) {
+            const excess = currentCount - value;
+
+            return "Overloaded: this trip already has " + currentCount +
+                (currentCount === 1 ? " passenger" : " passengers") +
+                " on the manifest, which exceeds a capacity of " + value +
+                ". Remove " + excess + (excess === 1 ? " passenger" : " passengers") +
+                " or enter a capacity of at least " + currentCount + ".";
+        }
+
+        return "";
+
+    }
+
+    capacityInput.addEventListener("input", function () {
+        setFieldError(capacityInput, capacityProblem());
+    });
+
+    boatInput.addEventListener("input", function () {
+        setFieldError(boatInput, "");
+    });
+
+    form.addEventListener("submit", function (event) {
+
+        let firstInvalid = null;
+
+        const capacityMessage = capacityProblem();
+        const hasBoat = boatInput.value.trim() !== "";
+        const hasCapacity = capacityInput.value.trim() !== "";
+
+        setFieldError(boatInput, "");
+        setFieldError(capacityInput, capacityMessage);
+
+        if (capacityMessage) {
+            firstInvalid = capacityInput;
+        } else if (hasBoat && !hasCapacity) {
+            setFieldError(capacityInput, "Enter the boat\u2019s capacity.");
+            firstInvalid = capacityInput;
+        } else if (hasCapacity && !hasBoat) {
+            setFieldError(boatInput, "Enter the boat name for this capacity.");
+            firstInvalid = boatInput;
+        }
+
+        if (firstInvalid) {
+            event.preventDefault();
+            firstInvalid.focus();
+        }
+
     });
 
 
-    /* Select boat */
+    /* ---------- combobox ---------- */
 
-    const options = menu.querySelectorAll(".manifest-boat-option");
+    const combos = form.querySelectorAll("[data-combo]");
 
-    options.forEach(function (option) {
+    function closeAll(except) {
+        combos.forEach(function (combo) {
+            if (combo !== except && combo._close) {
+                combo._close();
+            }
+        });
+    }
 
-        option.addEventListener("click", function (event) {
+    combos.forEach(function (combo) {
 
-            event.stopPropagation();
+        const source = combo.dataset.source;
+        const input = combo.querySelector(".manifest-combo-input");
+        const toggle = combo.querySelector(".manifest-combo-toggle");
+        const menu = combo.querySelector(".manifest-boat-menu");
+        const field = combo.closest(".manifest-combo-field");
 
-            const value = option.dataset.value;
-            const name = option.dataset.name;
-            const capacity = option.dataset.capacity;
+        const items = (suggestions[source] || []).map(function (entry) {
+            return typeof entry === "string" ? { name: entry } : entry;
+        });
 
-            /* Update visible selected boat */
-
-            selectedText.textContent =
-                name + " — " + capacity + " passengers";
-
-
-            /* Update hidden value sent to Flask */
-
-            hiddenInput.value = value;
+        let visible = [];
+        let activeIndex = -1;
 
 
-            /* Remove previous selected state */
+        function isOpen() {
+            return combo.classList.contains("open");
+        }
 
-            options.forEach(function (item) {
+        function render(filterText) {
 
-                item.classList.remove("selected");
-                item.setAttribute("aria-selected", "false");
+            const query = (filterText || "").trim().toLowerCase();
 
-                const oldCheck =
-                    item.querySelector(".manifest-boat-check");
+            visible = items.filter(function (item) {
+                return !query || item.name.toLowerCase().indexOf(query) !== -1;
+            }).slice(0, 50);
 
-                if (oldCheck) {
-                    oldCheck.remove();
+            activeIndex = -1;
+            menu.textContent = "";
+            input.removeAttribute("aria-activedescendant");
+
+            if (!visible.length) {
+
+                const empty = document.createElement("div");
+                empty.className = "manifest-combo-empty";
+
+                if (query) {
+                    empty.textContent = "No saved match. \u201C" +
+                        input.value.trim() + "\u201D will be saved as a new entry.";
+                } else {
+                    empty.textContent = "No saved entries yet. Type a name to add one.";
                 }
+
+                menu.appendChild(empty);
+                return;
+
+            }
+
+            const current = input.value.trim().toLowerCase();
+
+            visible.forEach(function (item, index) {
+
+                const option = document.createElement("button");
+                option.type = "button";
+                option.className = "manifest-boat-option";
+                option.id = menu.id + "_opt" + index;
+                option.setAttribute("role", "option");
+
+                const isCurrent = item.name.toLowerCase() === current;
+                option.setAttribute("aria-selected", isCurrent ? "true" : "false");
+
+                if (isCurrent) {
+                    option.classList.add("selected");
+                }
+
+                const info = document.createElement("span");
+                info.className = "manifest-boat-option-info";
+
+                const name = document.createElement("span");
+                name.className = "manifest-boat-name";
+                name.textContent = item.name;
+                info.appendChild(name);
+
+                option.appendChild(info);
+
+                /* Keep focus in the input while clicking an option */
+                option.addEventListener("mousedown", function (event) {
+                    event.preventDefault();
+                });
+
+                option.addEventListener("click", function () {
+                    choose(item);
+                });
+
+                menu.appendChild(option);
 
             });
 
+        }
 
-            /* Mark selected boat */
+        function open(filterText) {
+            closeAll(combo);
+            render(filterText);
+            combo.classList.add("open");
+            field.classList.add("is-open");
+            input.setAttribute("aria-expanded", "true");
+        }
 
-            option.classList.add("selected");
-            option.setAttribute("aria-selected", "true");
+        function close() {
+            combo.classList.remove("open");
+            field.classList.remove("is-open");
+            input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
+            activeIndex = -1;
+        }
+
+        combo._close = close;
+
+        function setActive(index) {
+
+            const options = menu.querySelectorAll(".manifest-boat-option");
+
+            if (!options.length) {
+                return;
+            }
+
+            options.forEach(function (option) {
+                option.classList.remove("active");
+            });
+
+            activeIndex = (index + options.length) % options.length;
+
+            const active = options[activeIndex];
+            active.classList.add("active");
+            active.scrollIntoView({ block: "nearest" });
+            input.setAttribute("aria-activedescendant", active.id);
+
+        }
+
+        function choose(item) {
+
+            input.value = item.name;
+            setFieldError(input, "");
+
+            /* Picking a boat only fills the boat name. Capacity is always
+               typed in by the operator for this trip. */
+
+            close();
+            input.focus();
+
+        }
 
 
-            /* Add check icon */
+        /* Typing filters the saved entries; anything typed is valid. */
+        input.addEventListener("input", function () {
+            setFieldError(input, "");
+            open(input.value);
+        });
 
-            const check = document.createElement("i");
+        /* Clicking the field or arrow shows everything that was saved. */
+        input.addEventListener("click", function () {
+            if (!isOpen()) {
+                open("");
+            }
+        });
 
-            check.className =
-                "bi bi-check2 manifest-boat-check";
+        toggle.addEventListener("click", function () {
+            if (isOpen()) {
+                close();
+            } else {
+                open("");
+            }
+            input.focus();
+        });
 
-            option.appendChild(check);
+        input.addEventListener("keydown", function (event) {
 
-
-            closeBoatDropdown();
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                if (!isOpen()) {
+                    open("");
+                }
+                setActive(activeIndex + 1);
+            } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                if (!isOpen()) {
+                    open("");
+                }
+                setActive(activeIndex - 1);
+            } else if (event.key === "Enter") {
+                if (isOpen() && activeIndex >= 0 && visible[activeIndex]) {
+                    event.preventDefault();
+                    choose(visible[activeIndex]);
+                }
+            } else if (event.key === "Escape") {
+                if (isOpen()) {
+                    event.preventDefault();
+                    close();
+                }
+            } else if (event.key === "Tab") {
+                close();
+            }
 
         });
 
     });
 
-
-    function openBoatDropdown() {
-
-        dropdown.classList.add("open");
-
-        toggle.setAttribute(
-            "aria-expanded",
-            "true"
-        );
-
-    }
-
-
-    function closeBoatDropdown() {
-
-        dropdown.classList.remove("open");
-
-        toggle.setAttribute(
-            "aria-expanded",
-            "false"
-        );
-
-    }
-
-
-    /* Close when clicking outside */
-
     document.addEventListener("click", function (event) {
-
-        if (!dropdown.contains(event.target)) {
-            closeBoatDropdown();
-        }
-
-    });
-
-
-    /* Escape key */
-
-    document.addEventListener("keydown", function (event) {
-
-        if (event.key === "Escape") {
-
-            closeBoatDropdown();
-
-            toggle.focus();
-
-        }
-
+        combos.forEach(function (combo) {
+            if (!combo.contains(event.target)) {
+                combo._close();
+            }
+        });
     });
 
 });

@@ -8,6 +8,9 @@ class Trip(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     boat_id = db.Column(db.Integer, db.ForeignKey("boats.id"), nullable=True)
     crew_name = db.Column(db.String(100), nullable=True)
+    # Boat operator: the person who represents this slot. Separate from
+    # crew_name, which stays as the crew record.
+    operator_name = db.Column(db.String(100), nullable=True)
 
     updated_at = db.Column(
         db.DateTime,

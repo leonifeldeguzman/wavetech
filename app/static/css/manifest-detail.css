@@ -1210,3 +1210,179 @@
         justify-content: flex-start;
     }
 }
+
+
+/* =========================================================
+   OPERATOR / CREW / BOAT HYBRID INPUTS + MANUAL CAPACITY
+   (type a value or pick a saved one; capacity typed by hand)
+   ========================================================= */
+
+/* Header: operator is the slot's representative, crew is secondary */
+
+.manifest-trip-operator {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.manifest-trip-crew-sub {
+    color: #6b7280;
+    font-size: 0.78rem;
+}
+
+
+/* Five fields: three across, then Capacity + Route */
+
+.manifest-trip-info-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 26px 44px;
+    align-items: start;
+}
+
+.manifest-trip-info-grid .manifest-route-field {
+    grid-column: span 2;
+}
+
+
+/* Inputs share the existing underline look */
+
+.manifest-field input.manifest-combo-input,
+.manifest-field input.manifest-capacity-input {
+    box-sizing: border-box;
+    border: none;
+    border-bottom: 1px solid #555;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+}
+
+.manifest-field input.manifest-combo-input {
+    padding-right: 26px;
+    text-overflow: ellipsis;
+}
+
+.manifest-field input.manifest-combo-input:focus,
+.manifest-field input.manifest-capacity-input:focus {
+    border-bottom-color: #173f62;
+}
+
+.manifest-field input.is-invalid,
+.manifest-field input.is-invalid:focus {
+    border-bottom-color: #b42318;
+}
+
+.manifest-field input::placeholder {
+    color: #9ca3af;
+}
+
+
+/* Arrow button inside the input */
+
+.manifest-combo-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1002;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    width: 26px;
+    height: 30px;
+    padding: 0;
+
+    border: none;
+    background: transparent;
+    color: #6b7280;
+
+    cursor: pointer;
+}
+
+
+/* Suggestion list: scrolls inside itself, never taller than the screen */
+
+.manifest-combo .manifest-boat-menu {
+    max-height: 232px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.manifest-combo .manifest-boat-option {
+    min-height: 40px;
+}
+
+.manifest-combo .manifest-boat-name {
+    overflow-wrap: anywhere;
+}
+
+.manifest-combo .manifest-boat-option.active {
+    background-color: #f1f8ff;
+    color: #173f62;
+}
+
+.manifest-combo .manifest-boat-option.active .manifest-boat-name {
+    color: #173f62;
+}
+
+.manifest-combo-empty {
+    padding: 10px 11px;
+    color: #6b7280;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+
+/* The field with an open list sits above its neighbours (stacked layouts) */
+
+.manifest-combo-field:focus-within,
+.manifest-combo-field.is-open {
+    z-index: 300;
+}
+
+
+/* Validation feedback */
+
+.manifest-field-error {
+    margin-top: 6px;
+    color: #b42318;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.manifest-field-hint {
+    margin-top: 6px;
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+
+@media (max-width: 992px) {
+
+    .manifest-trip-info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 25px;
+    }
+
+    .manifest-trip-info-grid .manifest-route-field {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 576px) {
+
+    .manifest-trip-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .manifest-trip-info-grid .manifest-route-field {
+        grid-column: auto;
+    }
+
+    .manifest-route {
+        flex-wrap: wrap;
+        white-space: normal;
+    }
+}

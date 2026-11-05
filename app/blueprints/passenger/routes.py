@@ -234,6 +234,7 @@ def _serialize_trip_summary(trip):
         "notice": block_reason,
         "delay_reason": trip.delay_reason,
         "crew_name": trip.crew_name,
+        "operator_name": trip.operator_name,
     }
 
 

@@ -5,12 +5,16 @@ from flask import render_template, request, redirect, url_for, session, flash, a
 from app.blueprints.manifests import manifests_bp
 from app.blueprints.passenger.routes import validate_passenger_fields
 from app.extensions import db
-from app.models.boat import Boat
 from app.models.environmental_reading import EnvironmentalReading
 from app.models.manifest_entry import ManifestEntry
 from app.models.pending_registration import PendingRegistration
 from app.models.trip import Trip
-from app.services import activity_log_service, scheduling_service, settings_service
+from app.services import (
+    activity_log_service,
+    manifest_service,
+    scheduling_service,
+    settings_service,
+)
 from app.utils.decorators import login_required
 from app.utils.ph_clock import ph_now, ph_today
 
@@ -119,7 +123,13 @@ def add_slot():
 @login_required
 def trip_detail(trip_id):
     trip = Trip.query.get_or_404(trip_id)
-    
+    return _render_trip_detail(trip)
+
+
+def _render_trip_detail(trip, form_values=None, field_errors=None, status=200):
+    """Render the trip page. After a failed Trip Information save, the
+    submitted values and per-field errors come back in so nothing the admin
+    typed is lost."""
 
     # Search terms are independent per section and travel via query
     # params only — they never change which trip/rows are in scope,
@@ -153,43 +163,79 @@ def trip_detail(trip_id):
     )
     manifest = manifest_query.order_by(ManifestEntry.check_in_time).all()
 
-    boats = Boat.query.all()
-
     capacity = trip.boat.capacity if trip.boat else None
+
+    values = form_values or {
+        "operator_name": trip.operator_name or "",
+        "crew_name": trip.crew_name or "",
+        "boat_name": trip.boat.name if trip.boat else "",
+        "boat_capacity": capacity or "",
+    }
 
     return render_template(
         "manifests/detail.html",
         trip=trip,
         pending=pending,
         manifest=manifest,
-        boats=boats,
+        suggestions=manifest_service.get_suggestions(),
+        values=values,
+        field_errors=field_errors or {},
         current_count=current_count,
         capacity=capacity,
         is_expired=_is_expired(trip),
         pending_search=pending_search,
         manifest_search=manifest_search,
         active_page="manifests"
-    )
+    ), status
 
 
 @manifests_bp.route("/manifests/<int:trip_id>/assign-boat", methods=["POST"])
 @login_required
 def assign_boat(trip_id):
-    trip = Trip.query.get_or_404(trip_id)
+    """Save the Trip Information form: operator, crew, boat and capacity.
 
-    boat_id = request.form.get("boat_id")
-    crew_name = request.form.get("crew_name")
+    Operator / crew / boat are free text (the UI suggests previously saved
+    values). Capacity is typed by hand and validated here on the server: it
+    must be a positive whole number and may not be lower than the number of
+    passengers already on the manifest (overloading). On any error nothing is
+    saved and the form is shown again with the problem next to the field.
+    """
+    trip = Trip.query.filter_by(id=trip_id).with_for_update().first_or_404()
+    blocked = _block_if_departed(trip)
+    if blocked:
+        return blocked
 
-    trip.boat_id = boat_id if boat_id else None
-    trip.crew_name = crew_name if crew_name else None
+    current_count = ManifestEntry.query.filter_by(trip_id=trip.id).count()
+    values, errors = manifest_service.validate_trip_details(
+        request.form, current_count
+    )
+
+    if errors:
+        flash("Could not save trip details. Please fix the highlighted fields.")
+        return _render_trip_detail(
+            trip, form_values=values, field_errors=errors, status=400
+        )
+
+    trip.operator_name = values["operator_name"] or None
+    trip.crew_name = values["crew_name"] or None
+
+    if values["boat_name"]:
+        trip.boat = manifest_service.find_or_create_boat(
+            values["boat_name"], values["_capacity_int"]
+        )
+    else:
+        trip.boat = None
+
+    manifest_service.sync_trip_status(trip, current_count)
     db.session.commit()
 
+    flash("Trip details saved.", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
 @manifests_bp.route("/manifests/<int:trip_id>/add-walkin", methods=["POST"])
 @login_required
 def add_walkin(trip_id):
-    trip = Trip.query.get_or_404(trip_id)
+    trip = Trip.query.filter_by(id=trip_id).with_for_update().first_or_404()
     blocked = _block_if_departed(trip)
     if blocked:
             return blocked
@@ -354,7 +400,7 @@ def cancel_trip(trip_id):
 @manifests_bp.route("/manifests/<int:trip_id>/pending/<int:reg_id>/approve", methods=["POST"])
 @login_required
 def approve_registration(trip_id, reg_id):
-    trip = Trip.query.get_or_404(trip_id)
+    trip = Trip.query.filter_by(id=trip_id).with_for_update().first_or_404()
     blocked = _block_if_departed(trip)
     if blocked:
             return blocked

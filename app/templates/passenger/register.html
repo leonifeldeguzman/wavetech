@@ -56,8 +56,8 @@
                 <div>
                   <h5>
                     <i class="fa-solid fa-ship"></i> {{ trip.boat.name }}
-                    {% if trip.crew_name %}
-                      <span class="trip-crew"><i class="fa-solid fa-user"></i> {{ trip.crew_name }}</span>
+                    {% if trip.operator_name %}
+                      <span class="trip-crew" title="Operator"><i class="fa-solid fa-user"></i> {{ trip.operator_name }}</span>
                     {% endif %}
                   </h5>
                   <div class="trip-route">

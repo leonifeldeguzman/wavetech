@@ -334,7 +334,7 @@ def get_manifest_detail(trip_id):
 
     The passenger list is always the FULL manifest (never the searched subset),
     ordered by check-in time and numbered 1..n. "Driver's Name" in the mockup
-    is Trip.crew_name (there is no separate driver field).
+    is Trip.operator_name (older trips: Trip.crew_name).
     """
     trip = db.session.get(Trip, trip_id)
     if trip is None:
@@ -361,7 +361,9 @@ def get_manifest_detail(trip_id):
         "date_label": _date_label(trip.departure_time.date()),
         "time_label": _time_label(trip.departure_time),
         "boat_name": trip.boat.name if trip.boat else None,
-        "driver_name": trip.crew_name,
+        # The operator drives the boat. Trips saved before the Operator field
+        # existed only have a crew name, so fall back to it for those records.
+        "driver_name": trip.operator_name or trip.crew_name,
         "capacity": trip.boat.capacity if trip.boat else None,
         "passengers": len(entries),
         "status": trip.status,
