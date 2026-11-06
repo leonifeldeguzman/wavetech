@@ -101,25 +101,48 @@ LOG HEADING
 TABLE
 ========================================================= */
 
+/* The scrollbar sits OUTSIDE the table's outline, in the card's right
+   padding, so it never touches the last column. --scroll-gap is the space
+   between the table and the scrollbar; the negative margin gives that space
+   back so the table keeps its width. */
 #activity-log-page .activity-log-table-wrapper {
-    width: 100%;
+    --scroll-gap: 14px;
+    --scroll-bar: 6px;
 
-    border: 1px solid #e1e7ef;
-    border-radius: 9px;
+    width: auto;
+
+    padding-right: var(--scroll-gap);
+    margin-right: calc(-1 * (var(--scroll-gap) + var(--scroll-bar)));
+
+    border: 0;
+    border-radius: 0;
 
     overflow-x: auto;
     overflow-y: auto;
+    scrollbar-gutter: stable;
 }
 
+/* The outline is on the table itself (separate borders so it can be
+   rounded). overflow stays visible so the sticky header keeps working;
+   the corner cells are rounded instead. */
 #activity-log-page .activity-log-table {
     width: 100%;
     min-width: 760px;
 
     margin: 0;
 
-    border-collapse: collapse;
+    border: 1px solid #e1e7ef;
+    border-radius: 9px;
+
+    border-collapse: separate;
+    border-spacing: 0;
     table-layout: fixed;
 }
+
+#activity-log-page .activity-log-table thead th:first-child { border-top-left-radius: 8px; }
+#activity-log-page .activity-log-table thead th:last-child  { border-top-right-radius: 8px; }
+#activity-log-page .activity-log-table tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }
+#activity-log-page .activity-log-table tbody tr:last-child td:last-child  { border-bottom-right-radius: 8px; }
 
 /* =========================================================
 TABLE CELLS
@@ -246,6 +269,10 @@ RESPONSIVE
         flex-direction: column;
 
         gap: 6px;
+    }
+
+    #activity-log-page .activity-log-table-wrapper {
+        --scroll-gap: 8px;
     }
 
 }

@@ -1141,26 +1141,56 @@ text-decoration: none;
 text-decoration: none !important;
 }
 
+/* The scrollbar sits OUTSIDE the table's outline, in the card's right
+padding, so it never touches the last column. --scroll-gap is the space
+between the table and the scrollbar; the negative margin gives that space
+back so the table keeps its width. */
 #settings-page .activity-table-wrapper {
-width: 100%;
+--scroll-gap: 14px;
+--scroll-bar: 6px;
+
+width: auto;
 
 max-height: 320px;
 
+padding-right: var(--scroll-gap);
+margin-right: calc(-1 * (var(--scroll-gap) + var(--scroll-bar)));
+
 overflow-y: auto;
+scrollbar-gutter: stable;
 
-border: 1px solid #e1e7ef;
+border: 0;
 
-border-radius: 8px;
+border-radius: 0;
 
 }
 
+/* Outline is on the table itself (separate borders so it can be rounded).
+overflow stays visible so the sticky header keeps working; the corner
+cells are rounded instead. */
 #settings-page .activity-table {
 width: 100%;
 
 margin: 0;
 
-border-collapse: collapse;
+border: 1px solid #e1e7ef;
 
+border-radius: 8px;
+
+border-collapse: separate;
+border-spacing: 0;
+
+}
+
+#settings-page .activity-table thead th:first-child { border-top-left-radius: 7px; }
+#settings-page .activity-table thead th:last-child  { border-top-right-radius: 7px; }
+#settings-page .activity-table tbody tr:last-child td:first-child { border-bottom-left-radius: 7px; }
+#settings-page .activity-table tbody tr:last-child td:last-child  { border-bottom-right-radius: 7px; }
+
+@media (max-width: 767.98px) {
+    #settings-page .activity-table-wrapper {
+        --scroll-gap: 8px;
+    }
 }
 
 #settings-page .activity-table th,
@@ -1881,4 +1911,694 @@ html.pfc-open {
     .profile-picture-preview-content {
         animation: none;
     }
+}
+
+
+/* Password rule hint under the New Password field */
+#settings-page .password-hint {
+    margin-top: 6px;
+    color: #777777;
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+/* Live password validation message + red field */
+#settings-page .password-error {
+    margin-top: 6px;
+    color: #b42318;
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+#settings-page .password-error[hidden] {
+    display: none;
+}
+
+#settings-page .password-input-wrapper input.is-invalid {
+    border-color: #b42318 !important;
+    box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.10) !important;
+}
+
+/* =========================================================
+   SAFETY THRESHOLDS: weather dropdowns, confirm modal,
+   operator observation rules
+   ========================================================= */
+
+#settings-page .weather-category-select {
+    min-width: 150px;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid var(--settings-border);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--settings-text);
+    font-size: 0.875rem;
+}
+
+#settings-page .weather-category-select:disabled {
+    background: #f5f6f8;
+    color: var(--settings-muted);
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+#settings-page .weather-category-select:focus {
+    outline: 2px solid var(--settings-navy);
+    outline-offset: 1px;
+}
+
+/* ---- Confirm threshold changes ---- */
+
+html.stc-open {
+    overflow: hidden;
+}
+
+.stc-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(9, 19, 47, 0.55);
+}
+
+.stc-backdrop[hidden] {
+    display: none;
+}
+
+.stc-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(560px, 100%);
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 18px 48px rgba(9, 19, 47, 0.28);
+    color: #111111;
+}
+
+.stc-header {
+    padding: 18px 22px 8px;
+}
+
+.stc-title {
+    margin: 0;
+    color: #0f1b3c;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.stc-body {
+    padding: 4px 22px 8px;
+}
+
+.stc-intro {
+    margin: 0 0 12px;
+    color: #666666;
+    font-size: 0.85rem;
+}
+
+.stc-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #d7e4f1;
+    border-radius: 8px;
+}
+
+.stc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.stc-table th,
+.stc-table td {
+    padding: 9px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.stc-table thead th {
+    background: #f1f5f9;
+    color: #0f1b3c;
+    font-weight: 600;
+}
+
+.stc-table tbody tr + tr td {
+    border-top: 1px solid #e7e7e7;
+}
+
+.stc-old {
+    color: #666666;
+    text-decoration: line-through;
+}
+
+.stc-new {
+    color: #111111;
+    font-weight: 700;
+}
+
+.stc-footer {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 22px 18px;
+}
+
+.stc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.stc-btn:focus-visible {
+    outline: 2px solid #4d9cff;
+    outline-offset: 2px;
+}
+
+.stc-btn-primary {
+    background: #0f1b3c;
+    color: #ffffff;
+}
+
+.stc-btn-primary:hover {
+    background: #09132f;
+}
+
+.stc-btn-secondary {
+    background: #ffffff;
+    border-color: #d7e4f1;
+    color: #0f1b3c;
+}
+
+.stc-btn-secondary:hover {
+    background: #f1f5f9;
+}
+
+@media (max-width: 480px) {
+    .stc-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .stc-dialog {
+        border-radius: 14px 14px 0 0;
+    }
+
+    .stc-footer .stc-btn {
+        flex: 1;
+    }
+}
+
+/* ---- Operator observation rules ---- */
+
+#settings-page .obs-rules-intro {
+    margin-top: 0;
+}
+
+#settings-page .obs-rules-wrap {
+    overflow-x: auto;
+    margin: 10px 0 12px;
+    border: 1px solid var(--settings-border);
+    border-radius: 8px;
+}
+
+#settings-page .obs-rules-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+#settings-page .obs-rules-table th,
+#settings-page .obs-rules-table td {
+    padding: 10px 14px;
+    text-align: left;
+    vertical-align: top;
+}
+
+#settings-page .obs-rules-table thead th {
+    background: #f1f5f9;
+    color: var(--settings-navy);
+    font-weight: 600;
+}
+
+#settings-page .obs-rules-table tbody tr + tr td {
+    border-top: 1px solid var(--settings-divider);
+}
+
+#settings-page .obs-rules-table td:first-child {
+    width: 130px;
+    white-space: nowrap;
+}
+
+#settings-page .obs-pill {
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+#settings-page .obs-calm,
+#settings-page .obs-moderate {
+    background: #eef0f3;
+    color: #44505e;
+}
+
+#settings-page .obs-rough {
+    background: #FEF3C7;
+    color: #B45309;
+}
+
+/* ---- Safety cards: spacing between cards ---- */
+
+#settings-page .safety-cards,
+#settings-page .safety-cards-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+#settings-page .safety-card .settings-threshold-header {
+    margin-bottom: 20px;
+}
+
+#settings-page .settings-edit-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ---- Weather conditions table (scrolls via table-scroll.css) ---- */
+
+#settings-page .weather-table-scroll {
+    border: 1px solid var(--settings-border);
+    border-radius: 8px;
+}
+
+#settings-page .weather-table {
+    width: 100%;
+    min-width: 320px;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+#settings-page .weather-table th,
+#settings-page .weather-table td {
+    padding: 9px 14px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+#settings-page .weather-table thead th {
+    background-color: var(--table-head-bg, #f1f5f9);
+    color: var(--settings-navy);
+    font-weight: 600;
+}
+
+#settings-page .weather-table tbody tr + tr td {
+    border-top: 1px solid var(--settings-divider);
+}
+
+#settings-page .weather-row-new td {
+    background: #f4f9ff;
+}
+
+/* ---- Add a weather condition ---- */
+
+#settings-page .weather-add {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px dashed var(--settings-border);
+    border-radius: 8px;
+    background: #fafcff;
+}
+
+#settings-page .weather-add-title {
+    margin-bottom: 10px;
+    color: var(--settings-text);
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+#settings-page .weather-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+#settings-page .weather-add-input {
+    flex: 1 1 200px;
+    min-width: 0;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--settings-border);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--settings-text);
+    font-size: 0.875rem;
+}
+
+#settings-page .weather-add-category {
+    flex: 0 0 auto;
+    min-width: 130px;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid var(--settings-border);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--settings-text);
+    font-size: 0.875rem;
+}
+
+#settings-page .weather-add-input:disabled,
+#settings-page .weather-add-category:disabled {
+    background: #f5f6f8;
+    color: var(--settings-muted);
+    cursor: not-allowed;
+}
+
+#settings-page .weather-add-input:focus,
+#settings-page .weather-add-category:focus {
+    outline: 2px solid var(--settings-navy);
+    outline-offset: 1px;
+}
+
+#settings-page .weather-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    height: 38px;
+    padding: 0 16px;
+    border: 1px solid var(--settings-navy);
+    border-radius: 8px;
+    background: var(--settings-navy);
+    color: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#settings-page .weather-add-btn:hover:not(:disabled) {
+    background: var(--settings-navy-dark);
+}
+
+#settings-page .weather-add-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+#settings-page .weather-add-error {
+    margin-top: 8px;
+    color: #B91C1C;
+    font-size: 0.78rem;
+}
+
+#settings-page .weather-add-error[hidden] {
+    display: none;
+}
+
+/* ---- Weather table: Action column, tags, rename input ---- */
+
+#settings-page .weather-table .weather-col-category {
+    width: 36%;
+}
+
+#settings-page .weather-table .weather-col-action {
+    width: 104px;
+    text-align: center;
+}
+
+#settings-page .weather-action-cell {
+    text-align: center;
+}
+
+#settings-page .weather-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+#settings-page .weather-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--settings-border);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #44505e;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+#settings-page .weather-icon-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #a9c6e2;
+    color: var(--settings-text);
+}
+
+#settings-page .weather-icon-btn.weather-icon-danger:hover:not(:disabled) {
+    background: #FEE2E2;
+    border-color: #DC2626;
+    color: #DC2626;
+}
+
+#settings-page .weather-icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#settings-page .weather-icon-btn:focus-visible {
+    outline: 2px solid #4d9cff;
+    outline-offset: 2px;
+}
+
+#settings-page .weather-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+#settings-page .weather-tag-new {
+    background: #DBEAFE;
+    color: #1D4ED8;
+}
+
+#settings-page .weather-tag-renamed {
+    background: #FEF3C7;
+    color: #B45309;
+}
+
+#settings-page .weather-tag-removed {
+    background: #FEE2E2;
+    color: #B91C1C;
+}
+
+#settings-page .weather-row-deleted td {
+    background: #fafafa;
+}
+
+#settings-page .weather-row-deleted .weather-name {
+    color: var(--settings-muted);
+    text-decoration: line-through;
+}
+
+#settings-page .weather-rename-input {
+    width: 100%;
+    max-width: 240px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--settings-navy);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--settings-text);
+    font-size: 0.875rem;
+}
+
+#settings-page .weather-rename-input:focus {
+    outline: 2px solid var(--settings-navy);
+    outline-offset: 1px;
+}
+
+.stc-warning {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #FEF3C7;
+    color: #B45309;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.stc-warning[hidden] {
+    display: none;
+}
+
+/* ---- Operator observation table: Action column lines up with its header ----
+   (#settings-page .obs-rules-table td has higher specificity than the shared
+   .weather-action-cell rule, so it left-aligned the buttons) */
+
+#settings-page .obs-rules-table th.weather-col-action,
+#settings-page .obs-rules-table td.weather-action-cell {
+    width: 104px;
+    text-align: center;
+}
+
+#settings-page .obs-rules-table td {
+    vertical-align: middle;
+}
+
+#settings-page .obs-rules-table td:first-child {
+    width: 190px;
+}
+
+/* ---- Discard unsaved changes (same look as the manifest Discard modal) ---- */
+
+.sdc-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(9, 19, 47, 0.55);
+}
+
+.sdc-backdrop[hidden] {
+    display: none;
+}
+
+.sdc-dialog {
+    width: min(380px, 100%);
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(16, 24, 40, 0.18);
+    text-align: center;
+}
+
+.sdc-body {
+    padding: 28px 28px 8px;
+}
+
+.sdc-title {
+    margin: 0 0 8px;
+    color: #111111;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.sdc-text {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.sdc-footer {
+    display: flex;
+    gap: 10px;
+    padding: 18px 28px 24px;
+}
+
+.sdc-btn {
+    flex: 1;
+    height: 38px;
+    border: 1px solid #0f1b3c;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.sdc-stay {
+    background: #ffffff;
+    color: #0f1b3c;
+}
+
+.sdc-confirm {
+    background: #0f1b3c;
+    color: #ffffff;
+}
+
+.sdc-confirm:hover {
+    background: #09132f;
+}
+
+
+/* =========================================================
+   STYLED SELECT DROPDOWN (same look as the Manifest Detail dropdowns)
+   Companion of static/js/select-dropdown.js
+   ========================================================= */
+
+.wt-select-menu {
+    position: fixed;
+    z-index: 100000;                 /* above every modal on the page */
+    display: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    font-size: 0.92rem;
+}
+
+.wt-select-menu.is-open {
+    display: block;
+}
+
+.wt-select-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.85rem;
+    cursor: pointer;
+    color: #212529;
+    user-select: none;
+}
+
+.wt-select-option.is-active {
+    background: #f1f3f5;
+}
+
+.wt-select-option.is-selected {
+    background: #e7f0ff;
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+.wt-select-option.is-selected.is-active {
+    background: #d6e6ff;
+}
+
+.wt-select-option.is-disabled {
+    color: #6c757d;
+    opacity: 0.6;
+    cursor: not-allowed;
 }

@@ -284,46 +284,113 @@
             />
           </div>
 
+          <!-- Boat: type a name or pick from the list -->
           <div class="col-6 col-md-2">
             <label for="filter-boat" class="form-label small text-muted mb-1">
               Boat
             </label>
-            <select
-              id="filter-boat"
-              name="boat_id"
-              class="form-select form-select-sm"
-            >
-              <option value="">All boats</option>
-              {% for b in boats %}
-              <option
-                value="{{ b.id }}"
-                {% if filters.boat_id == b.id %}selected{% endif %}
+
+            {# Name of the currently selected boat (when filtering by id) #}
+            {% set sel = namespace(name='') %}
+            {% for b in boats if b.id == filters.boat_id %}
+              {% set sel.name = (b.name or '')|trim %}
+            {% endfor %}
+
+            <div class="analytics-combo" data-combo="boat">
+              <input
+                type="text"
+                id="filter-boat"
+                name="boat"
+                value="{{ filters.boat or sel.name }}"
+                class="form-control form-control-sm analytics-combo-input"
+                placeholder="All boats"
+                autocomplete="off"
+                role="combobox"
+                aria-expanded="false"
+                aria-controls="boat-menu"
+              />
+              <input
+                type="hidden"
+                id="filter-boat-id"
+                name="boat_id"
+                value="{{ filters.boat_id or '' }}"
+              />
+              <button
+                type="button"
+                class="analytics-combo-toggle"
+                tabindex="-1"
+                aria-label="Show boats"
               >
-                {{ b.name }}
-              </option>
-              {% endfor %}
-            </select>
+                <i class="bi bi-chevron-down analytics-combo-chevron"></i>
+              </button>
+
+              {# One entry per boat name: known boats first, then any boat
+                 names found on manifest records, so new boats appear #}
+              <div class="analytics-combo-menu" id="boat-menu" role="listbox">
+                {% set seen = namespace(names=[]) %}
+                {% for b in boats|sort(attribute='name') %}
+                  {% set nm = (b.name or '')|trim %}
+                  {% if nm and nm|lower not in seen.names %}
+                    {% set seen.names = seen.names + [nm|lower] %}
+                    <button type="button" class="analytics-combo-option" role="option"
+                            data-value="{{ nm }}" data-id="{{ b.id }}">
+                      <span class="analytics-combo-name">{{ nm }}</span>
+                    </button>
+                  {% endif %}
+                {% endfor %}
+                {% for r in records.rows|sort(attribute='boat_name') %}
+                  {% set nm = (r.boat_name or '')|trim %}
+                  {% if nm and nm|lower not in seen.names %}
+                    {% set seen.names = seen.names + [nm|lower] %}
+                    <button type="button" class="analytics-combo-option" role="option"
+                            data-value="{{ nm }}" data-id="">
+                      <span class="analytics-combo-name">{{ nm }}</span>
+                    </button>
+                  {% endif %}
+                {% endfor %}
+                <div class="analytics-combo-empty" hidden>No matching boat</div>
+              </div>
+            </div>
           </div>
 
+          <!-- Status: type a status or pick from the list -->
           <div class="col-6 col-md-2">
             <label for="filter-status" class="form-label small text-muted mb-1">
               Status
             </label>
-            <select
-              id="filter-status"
-              name="status"
-              class="form-select form-select-sm"
-            >
-              <option value="">All statuses</option>
-              {% for s in statuses %}
-              <option
-                value="{{ s }}"
-                {% if filters.status == s %}selected{% endif %}
+
+            <div class="analytics-combo" data-combo="status">
+              <input
+                type="text"
+                id="filter-status"
+                name="status"
+                value="{{ filters.status or '' }}"
+                class="form-control form-control-sm analytics-combo-input"
+                placeholder="All statuses"
+                autocomplete="off"
+                role="combobox"
+                aria-expanded="false"
+                aria-controls="status-menu"
+              />
+              <button
+                type="button"
+                class="analytics-combo-toggle"
+                tabindex="-1"
+                aria-label="Show statuses"
               >
-                {{ s }}
-              </option>
-              {% endfor %}
-            </select>
+                <i class="bi bi-chevron-down analytics-combo-chevron"></i>
+              </button>
+
+              <div class="analytics-combo-menu" id="status-menu" role="listbox">
+                {% for s in statuses if s|lower != 'boarding' %}
+                  <button type="button" class="analytics-combo-option" role="option"
+                          data-value="{{ s }}" data-id="">
+                    <span class="analytics-combo-name">{{ s }}</span>
+                  </button>
+                {% endfor %}
+                <div class="analytics-combo-empty" hidden>No matching status</div>
+              </div>
+            </div>
           </div>
 
           <div class="col-12 col-md-2 d-flex gap-2">
@@ -601,6 +668,117 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+
+    /* ---------- Boat / Status combo fields (type or pick) ---------- */
+    function setupCombo(combo, onChange) {
+      const input = combo.querySelector(".analytics-combo-input");
+      const toggle = combo.querySelector(".analytics-combo-toggle");
+      const menu = combo.querySelector(".analytics-combo-menu");
+      const empty = combo.querySelector(".analytics-combo-empty");
+      if (!input || !menu) return;
+
+      const options = Array.from(menu.querySelectorAll(".analytics-combo-option"));
+      let activeIndex = -1;
+
+      const norm = (v) => (v || "").trim().toLowerCase();
+      const visible = () => options.filter((o) => !o.hidden);
+
+      function setActive(i) {
+        const list = visible();
+        list.forEach((o) => o.classList.remove("active"));
+        activeIndex = list.length ? (i + list.length) % list.length : -1;
+        if (activeIndex >= 0) {
+          list[activeIndex].classList.add("active");
+          list[activeIndex].scrollIntoView({ block: "nearest" });
+        }
+      }
+
+      function applyFilter(showAll) {
+        const q = showAll ? "" : norm(input.value);
+        options.forEach((o) => {
+          o.hidden = q !== "" && !norm(o.dataset.value).includes(q);
+          o.classList.toggle("selected", norm(o.dataset.value) === norm(input.value));
+        });
+        if (empty) empty.hidden = visible().length > 0;
+        setActive(-1);
+      }
+
+      function open(showAll) {
+        applyFilter(showAll);
+        combo.classList.add("open");
+        input.setAttribute("aria-expanded", "true");
+      }
+
+      function close() {
+        combo.classList.remove("open");
+        input.setAttribute("aria-expanded", "false");
+        setActive(-1);
+      }
+
+      function choose(opt) {
+        input.value = opt.dataset.value;
+        if (onChange) onChange();
+        close();
+      }
+
+      input.addEventListener("focus", () => open(true));
+      input.addEventListener("input", () => {
+        if (onChange) onChange();
+        open(false);
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          if (!combo.classList.contains("open")) open(true);
+          setActive(activeIndex + (e.key === "ArrowDown" ? 1 : -1));
+        } else if (e.key === "Enter" && combo.classList.contains("open") && activeIndex >= 0) {
+          e.preventDefault();          // pick the highlighted option, don't submit
+          choose(visible()[activeIndex]);
+        } else if (e.key === "Escape" || e.key === "Tab") {
+          close();
+        }
+      });
+
+      toggle.addEventListener("mousedown", (e) => e.preventDefault());
+      toggle.addEventListener("click", () => {
+        if (combo.classList.contains("open")) { close(); }
+        else { input.focus(); open(true); }
+      });
+
+      options.forEach((o) => {
+        o.addEventListener("mousedown", (e) => e.preventDefault());
+        o.addEventListener("click", () => choose(o));
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!combo.contains(e.target)) close();
+      });
+    }
+
+    const boatCombo = document.querySelector('[data-combo="boat"]');
+    if (boatCombo) {
+      const boatInput = boatCombo.querySelector(".analytics-combo-input");
+      const boatId = document.getElementById("filter-boat-id");
+
+      // Typed/picked name -> known boat id (blank if it is a new name)
+      function syncBoatId() {
+        const typed = boatInput.value.trim().toLowerCase();
+        let id = "";
+        if (typed) {
+          const match = Array.from(
+            boatCombo.querySelectorAll(".analytics-combo-option")
+          ).find((o) => o.dataset.value.trim().toLowerCase() === typed);
+          if (match) id = match.dataset.id || "";
+        }
+        boatId.value = id;
+      }
+
+      setupCombo(boatCombo, syncBoatId);
+      boatInput.form.addEventListener("submit", syncBoatId);
+    }
+
+    const statusCombo = document.querySelector('[data-combo="status"]');
+    if (statusCombo) setupCombo(statusCombo);
 
     /* ---------- Live search for the records table ---------- */
     function setupLiveSearch(inputId, table, columns) {

@@ -55,7 +55,7 @@
 
                 {% if active_trips_count %}
                 <div class="dashboard-kpi-sub dashboard-kpi-positive">
-                    <i class="bi bi-arrow-up"></i>
+                    <i class="bi"></i>
                     Active today
                 </div>
                 {% else %}
@@ -574,7 +574,7 @@
 
 
             <!-- Table -->
-            <div class="table-responsive">
+            <div class="table-responsive table-scroll">
 
                 <table class="table active-trip-table align-middle">
 
@@ -582,7 +582,7 @@
                         <tr>
                             <th>Departure</th>
                             <th>Boat</th>
-                            <th>Crew</th>
+                            <th>Operator</th>
                             <th>Passengers</th>
                             <th>Capacity</th>
                             <th>Status</th>
@@ -620,9 +620,9 @@
                             </td>
 
 
-                            <!-- Crew -->
+                            <!-- Operator -->
                             <td>
-                                {{ trip.crew_name if trip.crew_name else '-' }}
+                                {{ trip.operator_name if trip.operator_name else '-' }}
                             </td>
 
 

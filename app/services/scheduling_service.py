@@ -15,14 +15,14 @@ from flask import current_app
 
 from app.models.announcement import Announcement
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import monitoring_service, settings_service
+from app.services import monitoring_service, observation_rules_service, settings_service
 from app.utils.ph_clock import ph_today
 from app.utils.timezone import to_ph_time
 import dataclasses
 
 RECOMMENDATION_PROCEED = "PROCEED"
-RECOMMENDATION_CAUTION = "CAUTION / DELAY"
-RECOMMENDATION_UNSAFE = "UNSAFE / DO NOT DEPART"
+RECOMMENDATION_CAUTION = "DELAY"
+RECOMMENDATION_UNSAFE = "SUSPEND"
 RECOMMENDATION_UNAVAILABLE = "UNAVAILABLE"
 
 STATUS_SAFE = "Safe"
@@ -125,9 +125,9 @@ def _classify_wind(value: Any, thresholds: dict[str, float]) -> ConditionResult:
 # the only recommendation is the existing combined one from
 # evaluate_conditions(), which follows the severity tier (`status`) below:
 #   SAFE             -> Safe    -> PROCEED
-#   LOW WATER LEVEL  -> Caution -> CAUTION / DELAY
-#   HIGH WATER LEVEL -> Caution -> CAUTION / DELAY
-#   CRITICAL HIGH    -> Unsafe  -> UNSAFE / DO NOT DEPART
+#   LOW WATER LEVEL  -> Caution -> DELAY
+#   HIGH WATER LEVEL -> Caution -> DELAY
+#   CRITICAL HIGH    -> Unsafe  -> SUSPEND
 WATER_RANGE_LOW = "low"
 WATER_RANGE_NORMAL = "normal"
 WATER_RANGE_HIGH = "high"
@@ -351,10 +351,12 @@ def _water_source_label(reading) -> str:
 def apply_operator_observation(assessment, observation):
     """Fold today's operator observation into an assessment.
 
-    Rough water raises a Safe result to Caution and adds a reason. It never
-    lowers a result and never turns UNAVAILABLE into a recommendation.
-    Calm and Moderate have no effect on the result. The observation is always
-    attached so it can be displayed. No database access."""
+    The effect comes from the Operator Observation Rules an Admin manages in
+    Settings (none / raise to Caution / raise to Unsafe). An observation never
+    lowers a result and never turns UNAVAILABLE into a recommendation. An
+    observation with no rule (e.g. deleted since it was recorded) has no
+    effect. The observation is always attached so it can be displayed.
+    """
     if observation is None:
         return assessment
 
@@ -365,17 +367,35 @@ def apply_operator_observation(assessment, observation):
         "observation_recorded_at": getattr(observation, "retrieved_at", None),
     }
 
-    if condition == EnvironmentalReading.OBS_ROUGH:
-        if assessment.overall_status == STATUS_SAFE:
+    rule = observation_rules_service.get_rule(condition)
+    if rule is not None and rule.effect != observation_rules_service.EFFECT_NONE:
+        water = rule.label.lower()
+        status = assessment.overall_status
+        raise_to_unsafe = rule.effect == observation_rules_service.EFFECT_UNSAFE
+
+        if status == STATUS_SAFE and not raise_to_unsafe:
             changes["overall_status"] = STATUS_CAUTION
             changes["recommendation"] = RECOMMENDATION_CAUTION
             changes["reason"] = (
-                "Caution: the operator observed rough water. "
+                f"Caution: the operator observed {water} water. "
                 "Consider delaying after operator review."
             )
-        elif assessment.overall_status in (STATUS_CAUTION, STATUS_UNSAFE):
+        elif status in (STATUS_SAFE, STATUS_CAUTION) and raise_to_unsafe:
+            changes["overall_status"] = STATUS_UNSAFE
+            changes["recommendation"] = RECOMMENDATION_UNSAFE
+            if status == STATUS_SAFE:
+                changes["reason"] = (
+                    f"Unsafe: the operator observed {water} water. "
+                    "Consider suspending after operator review."
+                )
+            else:
+                changes["reason"] = (
+                    assessment.reason
+                    + f" The operator observed {water} water, which raises the result to Unsafe."
+                )
+        elif status in (STATUS_CAUTION, STATUS_UNSAFE):
             changes["reason"] = (
-                assessment.reason + " The operator also observed rough water."
+                assessment.reason + f" The operator also observed {water} water."
             )
 
     return dataclasses.replace(assessment, **changes)
@@ -450,8 +470,8 @@ _SAFETY_ALERT_HEADERS = {
 }
 
 _SAFETY_ALERT_RECOMMENDATION_LABELS = {
-    STATUS_UNSAFE: "UNSAFE",
-    STATUS_CAUTION: "CAUTION/DELAY",
+    STATUS_UNSAFE: "SUSPEND",
+    STATUS_CAUTION: "DELAY",
 }
 
 _SAFETY_ALERT_CLOSINGS = {
@@ -488,21 +508,33 @@ def _safety_alert_reason_phrase(assessment: SchedulingAssessment) -> str:
     """A short phrase describing why the trip was flagged, based on the
     condition(s) that actually drove the result. Only attributes the
     warning to "weather" when weather is the sole driving condition.
-    A rough-water operator observation is named when it applies to a
-    Caution result."""
+    An operator observation that has an effect is named when it applies to the
+    result."""
     driving = _safety_alert_driving_conditions(assessment)
     weather = assessment.weather
-    rough = (
+    rule = observation_rules_service.get_rule(
         getattr(assessment, "observed_condition", None)
-        == EnvironmentalReading.OBS_ROUGH
     )
-    rough_phrase = "rough water observed by the operator"
+    observed = bool(
+        rule is not None
+        and rule.effect != observation_rules_service.EFFECT_NONE
+        and (
+            assessment.overall_status == STATUS_CAUTION
+            or (
+                assessment.overall_status == STATUS_UNSAFE
+                and rule.effect == observation_rules_service.EFFECT_UNSAFE
+            )
+        )
+    )
+    observed_phrase = (
+        f"{rule.label.lower()} water observed by the operator" if observed else ""
+    )
 
-    if rough and assessment.overall_status == STATUS_CAUTION:
+    if observed:
         if not driving:
-            return rough_phrase
+            return observed_phrase
         names = " and ".join(condition.name.lower() for condition in driving)
-        return f"{names} conditions and {rough_phrase}"
+        return f"{names} conditions and {observed_phrase}"
 
     if len(driving) == 1 and driving[0] is weather:
         normalized = str(weather.value).strip().lower() if weather.value else ""

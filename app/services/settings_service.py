@@ -108,10 +108,21 @@ def _parse_required_float(raw, field_label: str) -> float:
     return value
 
 
+def _split_conditions(raw) -> list[str]:
+    """Comma-separated list -> normalised names (lower-case, single spaces,
+    no duplicates, original order kept)."""
+    out: list[str] = []
+    for part in str(raw or "").split(","):
+        name = " ".join(part.split()).lower()
+        if name and name not in out:
+            out.append(name)
+    return out
+
+
 def _parse_weather_field(raw, field_label: str) -> str:
-    if raw is None or str(raw).strip() == "":
-        raise SettingsValidationError(f"{field_label} is required.")
-    return str(raw).strip()
+    """A category may be empty: deleting or moving the last condition out of
+    a category is a normal edit and must be saveable."""
+    return ", ".join(_split_conditions(raw))
 
 
 def update_safety_thresholds(
@@ -177,15 +188,9 @@ def update_safety_thresholds(
         )
 
     # --- Weather Conditions validation ---
-    def _split(raw: str) -> set[str]:
-        return {part.strip().lower() for part in raw.split(",") if part.strip()}
-
-    safe_set = _split(weather_safe)
-    caution_set = _split(weather_caution)
-    unsafe_set = _split(weather_unsafe)
-
-    if not (safe_set and caution_set and unsafe_set):
-        raise SettingsValidationError("Weather safe/caution/unsafe conditions cannot be empty.")
+    safe_set = set(_split_conditions(weather_safe))
+    caution_set = set(_split_conditions(weather_caution))
+    unsafe_set = set(_split_conditions(weather_unsafe))
 
     if (safe_set & caution_set) or (safe_set & unsafe_set) or (caution_set & unsafe_set):
         raise SettingsValidationError(
@@ -211,10 +216,15 @@ def update_safety_thresholds(
     db.session.commit()
 
     after = get_safety_thresholds()
+    def _same(key: str) -> bool:
+        if key.startswith("weather_"):
+            return set(_split_conditions(before[key])) == set(_split_conditions(after[key]))
+        return before[key] == after[key]
+
     changed = {
         key: {"from": before[key], "to": after[key]}
         for key in before
-        if before[key] != after[key]
+        if not _same(key)
     }
     return changed
 

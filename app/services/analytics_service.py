@@ -352,7 +352,7 @@ def get_manifest_detail(trip_id):
             "age": e.age,
             "address": e.address,
             "passenger_type": e.passenger_type,
-            "check_in_label": e.check_in_time.strftime("%H:%M:%S") if e.check_in_time else "—",
+            "check_in_label": e.check_in_time.strftime("%H:%M") if e.check_in_time else "—",
         }
         for number, e in enumerate(entries, start=1)
     ]

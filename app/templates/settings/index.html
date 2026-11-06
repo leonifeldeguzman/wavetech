@@ -309,6 +309,8 @@ page_title %}Settings{% endblock %} {% block extra_css %}
             method="POST"
             action="{{ url_for('settings.change_password') }}"
             class="password-form"
+            id="password-form"
+            novalidate
           >
             <div class="password-field">
               <label for="current-password"> Current Password </label>
@@ -329,6 +331,7 @@ page_title %}Settings{% endblock %} {% block extra_css %}
                   <i class="bi bi-eye"></i>
                 </button>
               </div>
+              <div class="password-error" id="current-password-error" role="alert" hidden></div>
             </div>
             <div class="password-field">
               <label for="new-password"> New Password </label>
@@ -350,6 +353,8 @@ page_title %}Settings{% endblock %} {% block extra_css %}
                   <i class="bi bi-eye"></i>
                 </button>
               </div>
+              <div class="password-hint">Minimum of 8 characters.</div>
+              <div class="password-error" id="new-password-error" role="alert" hidden></div>
             </div>
             <div class="password-field">
               <label for="confirm-password"> Confirm New Password </label>
@@ -371,6 +376,7 @@ page_title %}Settings{% endblock %} {% block extra_css %}
                   <i class="bi bi-eye"></i>
                 </button>
               </div>
+              <div class="password-error" id="confirm-password-error" role="alert" hidden></div>
             </div>
             <div class="password-actions">
               <button type="reset" class="settings-cancel-btn">Clear</button>
@@ -390,202 +396,457 @@ page_title %}Settings{% endblock %} {% block extra_css %}
     been validated as official maritime safety limits.
   </div>
 
+  {# Edit / Cancel / Save buttons, one set per card #}
+  {% macro safety_actions() %}
+  <div class="settings-threshold-actions">
+    <button type="button" class="settings-edit-btn" onclick="startSafetyEdit(this)">
+      <i class="bi bi-pencil"></i>
+      Edit
+    </button>
+
+    <button type="button" class="settings-cancel-btn safety-cancel-btn" onclick="cancelSafetyEdit(this)">
+      Cancel
+    </button>
+
+    <button type="button" class="settings-primary-btn safety-save-btn" onclick="saveSafetyEdit(this)">
+      Save
+    </button>
+  </div>
+  {% endmacro %}
+
+  {% if not is_admin %}
+
   <div class="settings-card">
-
-  <div class="settings-threshold-header">
-    <h4>Wind Speed (km/h)</h4>
-
-    <div class="settings-threshold-actions">
-      <button
-        type="button"
-        class="settings-edit-btn"
-        onclick="startSafetyEdit(this)"
-      >
-        <i class="bi bi-pencil"></i>
-        Edit
-      </button>
-
-      <button
-        type="button"
-        class="settings-cancel-btn safety-cancel-btn"
-        onclick="cancelSafetyEdit(this)"
-      >
-        Cancel
-      </button>
-
-      <button
-        type="button"
-        class="settings-primary-btn safety-save-btn"
-        onclick="saveSafetyEdit(this)"
-      >
-        Save
-      </button>
+    <div class="settings-card-body">
+      <div class="settings-locked">
+        <i class="bi bi-lock-fill"></i>
+        <span>
+          Only Admin accounts can view and modify Safety Thresholds.
+        </span>
+      </div>
     </div>
   </div>
 
-  <div class="settings-card-body">
+  {% else %}
 
-    {% if not is_admin %}
+  <div class="safety-cards">
 
-    <div class="settings-locked">
-      <i class="bi bi-lock-fill"></i>
-      <span>
-        Only Admin accounts can view and modify Safety Thresholds.
-      </span>
-    </div>
-
-    {% else %}
-
+    {# One form around the three cards: the server still receives every
+       threshold together, but each card is edited and saved on its own. #}
     <form
       method="POST"
       action="{{ url_for('settings.update_safety_thresholds') }}"
       id="safety-threshold-form"
+      class="safety-cards-form"
     >
 
-      <div class="settings-form-grid two-column">
-        <div class="settings-field">
-          <label>Safe limit (max)</label>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            name="wind_safe_max_kmh"
-            value="{{ thresholds.wind_safe_max_kmh }}"
-            readonly
-            required
-          />
+      <!-- ============ WIND SPEED ============ -->
+      <div class="settings-card safety-card" id="wind-card">
+
+        <div class="settings-threshold-header">
+          <h4>Wind Speed (km/h)</h4>
+          {{ safety_actions() }}
         </div>
 
-        <div class="settings-field">
-          <label>Caution limit (max)</label>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            name="wind_caution_max_kmh"
-            value="{{ thresholds.wind_caution_max_kmh }}"
-            readonly
-            required
-          />
-        </div>
-      </div>
+        <div class="settings-card-body">
 
-      <p class="settings-help">
-        Above the caution limit is classified Unsafe.
-      </p>
+          <div class="settings-form-grid two-column">
+            <div class="settings-field">
+              <label>Safe limit (max)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                name="wind_safe_max_kmh"
+                data-label="Wind Speed – Safe limit (max)"
+                data-unit="km/h"
+                value="{{ thresholds.wind_safe_max_kmh }}"
+                readonly
+                required
+              />
+            </div>
 
-      <div class="settings-threshold-divider"></div>
+            <div class="settings-field">
+              <label>Caution limit (max)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                name="wind_caution_max_kmh"
+                data-label="Wind Speed – Caution limit (max)"
+                data-unit="km/h"
+                value="{{ thresholds.wind_caution_max_kmh }}"
+                readonly
+                required
+              />
+            </div>
+          </div>
 
-      <h4>Water Level (m)</h4>
+          <p class="settings-help">
+            Above the caution limit is classified Unsafe.
+          </p>
 
-      <div class="settings-form-grid two-column">
-        <div class="settings-field">
-          <label>Safe range (min)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            name="water_safe_min_m"
-            value="{{ thresholds.water_safe_min_m }}"
-            readonly
-            required
-          />
-        </div>
-
-        <div class="settings-field">
-          <label>Safe range (max)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            name="water_safe_max_m"
-            value="{{ thresholds.water_safe_max_m }}"
-            readonly
-            required
-          />
-        </div>
-
-        <div class="settings-field">
-          <label>Caution range (min)</label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            name="water_caution_min_m"
-            value="{{ thresholds.water_caution_min_m }}"
-            readonly
-            required
-          />
-        </div>
-
-        <div class="settings-field">
-          <label>Caution range (max)</label>
-          <input
-            type="number"
-            step="0.01"
-            name="water_caution_max_m"
-            value="{{ thresholds.water_caution_max_m }}"
-            readonly
-            required
-          />
         </div>
       </div>
 
-      <p class="settings-help">
-        The caution range must fully surround the safe range.
-        Outside the caution range is classified Unsafe.
-      </p>
+      <!-- ============ WATER LEVEL ============ -->
+      <div class="settings-card safety-card" id="water-card">
 
-      <div class="settings-threshold-divider"></div>
+        <div class="settings-threshold-header">
+          <h4>Water Level (m)</h4>
+          {{ safety_actions() }}
+        </div>
 
-      <h4>Weather Conditions</h4>
+        <div class="settings-card-body">
 
-      <div class="settings-field">
-        <label>Safe conditions (comma-separated)</label>
-        <input
-          type="text"
-          name="weather_safe"
-          value="{{ thresholds.weather_safe }}"
-          readonly
-          required
-        />
+          <div class="settings-form-grid two-column">
+            <div class="settings-field">
+              <label>Safe range (min)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="water_safe_min_m"
+                data-label="Water Level – Safe range (min)"
+                data-unit="m"
+                value="{{ thresholds.water_safe_min_m }}"
+                readonly
+                required
+              />
+            </div>
+
+            <div class="settings-field">
+              <label>Safe range (max)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="water_safe_max_m"
+                data-label="Water Level – Safe range (max)"
+                data-unit="m"
+                value="{{ thresholds.water_safe_max_m }}"
+                readonly
+                required
+              />
+            </div>
+
+            <div class="settings-field">
+              <label>Caution range (min)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="water_caution_min_m"
+                data-label="Water Level – Caution range (min)"
+                data-unit="m"
+                value="{{ thresholds.water_caution_min_m }}"
+                readonly
+                required
+              />
+            </div>
+
+            <div class="settings-field">
+              <label>Caution range (max)</label>
+              <input
+                type="number"
+                step="0.01"
+                name="water_caution_max_m"
+                data-label="Water Level – Caution range (max)"
+                data-unit="m"
+                value="{{ thresholds.water_caution_max_m }}"
+                readonly
+                required
+              />
+            </div>
+          </div>
+
+          <p class="settings-help">
+            The caution range must fully surround the safe range.
+            Outside the caution range is classified Unsafe.
+          </p>
+
+        </div>
       </div>
 
-      <div class="settings-field">
-        <label>Caution conditions (comma-separated)</label>
-        <input
-          type="text"
-          name="weather_caution"
-          value="{{ thresholds.weather_caution }}"
-          readonly
-          required
-        />
-      </div>
+      <!-- ============ WEATHER CONDITIONS ============ -->
+      <div class="settings-card safety-card" id="weather-card">
 
-      <div class="settings-field">
-        <label>Unsafe conditions (comma-separated)</label>
-        <input
-          type="text"
-          name="weather_unsafe"
-          value="{{ thresholds.weather_unsafe }}"
-          readonly
-          required
-        />
-      </div>
+        <div class="settings-threshold-header">
+          <h4>Weather Conditions</h4>
+          {{ safety_actions() }}
+        </div>
 
-      <p class="settings-help">
-        A condition can only belong to one category.
-      </p>
+        <div class="settings-card-body">
+
+          {# Each condition is listed once and assigned to exactly one
+             category. The list is `weather_options` (when the route passes
+             it) plus every condition already saved, so a condition an Admin
+             added is still listed after saving. #}
+          {% set wx_safe = (thresholds.weather_safe or '').split(',') | map('trim') | map('lower') | select | list %}
+          {% set wx_caution = (thresholds.weather_caution or '').split(',') | map('trim') | map('lower') | select | list %}
+          {% set wx_unsafe = (thresholds.weather_unsafe or '').split(',') | map('trim') | map('lower') | select | list %}
+          {% set wx = namespace(items=[]) %}
+          {% if weather_options is defined and weather_options %}
+            {% for v in weather_options %}
+              {% set k = v | trim | lower %}
+              {% if k and k not in wx.items %}{% set wx.items = wx.items + [k] %}{% endif %}
+            {% endfor %}
+          {% endif %}
+          {% for v in wx_safe + wx_caution + wx_unsafe %}
+            {% if v not in wx.items %}{% set wx.items = wx.items + [v] %}{% endif %}
+          {% endfor %}
+
+          <div
+            class="table-scroll weather-table-scroll"
+            style="--table-max-height: 320px; --table-head-bg: #f1f5f9;"
+          >
+            <table class="weather-table">
+              <thead>
+                <tr>
+                  <th>Weather condition</th>
+                  <th class="weather-col-category">Category</th>
+                  <th class="weather-col-action">Action</th>
+                </tr>
+              </thead>
+              <tbody id="weather-rows">
+                {% for c in wx.items %}
+                  {% set cur = 'safe' if c in wx_safe else ('caution' if c in wx_caution else ('unsafe' if c in wx_unsafe else '')) %}
+                  <tr data-name="{{ c }}">
+                    <td class="weather-name-cell"><span class="weather-name">{{ c | title }}</span></td>
+                    <td>
+                      <select
+                        id="wx-{{ loop.index }}"
+                        class="weather-category-select"
+                        aria-label="Category for {{ c | title }}"
+                        data-condition="{{ c }}"
+                        data-original="{{ cur }}"
+                        disabled
+                      >
+                        {% if not cur %}<option value="" selected>Not classified</option>{% endif %}
+                        <option value="safe" {{ 'selected' if cur == 'safe' }}>Safe</option>
+                        <option value="caution" {{ 'selected' if cur == 'caution' }}>Caution</option>
+                        <option value="unsafe" {{ 'selected' if cur == 'unsafe' }}>Unsafe</option>
+                      </select>
+                    </td>
+                    <td class="weather-action-cell">
+                      <div class="weather-actions">
+                        <button type="button" class="weather-icon-btn" data-weather-action="rename" aria-label="Rename {{ c | title }}" title="Rename" data-edit-only disabled><i class="bi bi-pencil"></i></button>
+                        <button type="button" class="weather-icon-btn weather-icon-danger" data-weather-action="delete" aria-label="Delete {{ c | title }}" title="Delete" data-edit-only disabled><i class="bi bi-trash"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="weather-add">
+            <div class="weather-add-title">Add a weather condition</div>
+            <div class="weather-add-row">
+              <input
+                type="text"
+                id="weather-new-name"
+                class="weather-add-input"
+                placeholder="e.g. Hazy"
+                maxlength="40"
+                autocomplete="off"
+                aria-label="New weather condition name"
+                data-edit-only
+                disabled
+              />
+              <select
+                id="weather-new-category"
+                class="weather-add-category"
+                aria-label="Category for the new weather condition"
+                data-edit-only
+                disabled
+              >
+                <option value="safe">Safe</option>
+                <option value="caution" selected>Caution</option>
+                <option value="unsafe">Unsafe</option>
+              </select>
+              <button
+                type="button"
+                id="weather-add-btn"
+                class="weather-add-btn"
+                onclick="addWeatherCondition(this)"
+                data-edit-only
+                disabled
+              >
+                <i class="bi bi-plus-lg"></i>
+                Add
+              </button>
+            </div>
+            <div class="weather-add-error" id="weather-add-error" role="alert" hidden></div>
+          </div>
+
+          {# Still submitted as the same three comma-separated fields. #}
+          <input type="hidden" name="weather_safe" value="{{ thresholds.weather_safe }}" />
+          <input type="hidden" name="weather_caution" value="{{ thresholds.weather_caution }}" />
+          <input type="hidden" name="weather_unsafe" value="{{ thresholds.weather_unsafe }}" />
+
+          <p class="settings-help">
+            Pick one category for each condition. A condition can only belong
+            to one category. A condition left as "Not classified" is treated
+            as Unavailable by the assessment. A new condition only has an
+            effect if its name matches the weather label the system receives.
+          </p>
+
+        </div>
+      </div>
 
     </form>
 
-    {% endif %}
+    <!-- Confirm threshold changes -->
+    <div class="stc-backdrop" id="safetyConfirmModal" hidden>
+      <div class="stc-dialog" role="dialog" aria-modal="true" aria-labelledby="stc-title">
+        <div class="stc-header">
+          <h3 class="stc-title" id="stc-title">Confirm threshold changes</h3>
+        </div>
+        <div class="stc-body">
+          <p class="stc-intro">Review the changes below before saving.</p>
+          <div class="stc-table-wrap">
+            <table class="stc-table">
+              <thead>
+                <tr><th>Setting</th><th>Old value</th><th>New value</th></tr>
+              </thead>
+              <tbody id="stc-changes"></tbody>
+            </table>
+          </div>
+          <p class="stc-warning" id="stc-warning" hidden>
+            A removed or renamed weather condition is no longer recognized
+            under its old name. If the weather source still reports it, the
+            assessment may show Unavailable until it is listed again.
+          </p>
+        </div>
+        <div class="stc-footer">
+          <button type="button" class="stc-btn stc-btn-secondary" id="stc-cancel">No, go back</button>
+          <button type="button" class="stc-btn stc-btn-primary" id="stc-confirm">Yes, save changes</button>
+        </div>
+      </div>
+    </div>
 
+    <!-- ============ OPERATOR OBSERVATION RULES ============ -->
+    {% macro obs_row(id, label, effect) %}
+      <tr data-id="{{ id }}" data-label="{{ label }}" data-effect="{{ effect }}">
+        <td class="weather-name-cell">
+          <span class="weather-name obs-label-view">{{ label }}</span><span class="obs-tag-slot"></span>
+          <input type="text" class="weather-rename-input obs-label-input" maxlength="30" autocomplete="off" value="{{ label }}" aria-label="Observation name" hidden />
+        </td>
+        <td>
+          <select class="weather-category-select obs-effect-select" aria-label="Effect of {{ label }}" disabled>
+            <option value="none" {{ 'selected' if effect == 'none' }}>No effect</option>
+            <option value="caution" {{ 'selected' if effect == 'caution' }}>Raise a Safe result to Caution (Delay)</option>
+            <option value="unsafe" {{ 'selected' if effect == 'unsafe' }}>Raise a Safe or Caution result to Unsafe</option>
+          </select>
+        </td>
+        <td class="weather-action-cell">
+          <div class="weather-actions obs-actions"></div>
+        </td>
+      </tr>
+    {% endmacro %}
+
+    <form
+      method="POST"
+      action="{{ url_for('settings.update_observation_rules') }}"
+      id="observation-rules-form"
+      class="settings-card"
+    >
+      <div id="observation-rules-card">
+
+        <div class="settings-threshold-header">
+          <h4>Operator Observation Rules</h4>
+          <div class="settings-threshold-actions">
+            <button type="button" class="settings-edit-btn" id="obs-edit-btn"><i class="bi bi-pencil"></i> Edit</button>
+            <button type="button" class="settings-cancel-btn" id="obs-cancel-btn" style="display:none">Cancel</button>
+            <button type="button" class="settings-primary-btn" id="obs-save-btn" style="display:none">Save</button>
+          </div>
+        </div>
+
+        <div class="settings-card-body">
+          <p class="settings-help obs-rules-intro">
+            The operator picks one of these observations on the Monitoring
+            page. Press Edit, then use the pencil on a row to change it or the
+            bin to delete it. Each observation has its own effect on the
+            safety assessment.
+          </p>
+
+          <div class="table-scroll obs-rules-wrap" style="--table-max-height: 320px; --table-head-bg: #f1f5f9;">
+            <table class="weather-table obs-rules-table">
+              <thead>
+                <tr>
+                  <th>Observation</th>
+                  <th class="weather-col-category">Effect on the assessment</th>
+                  <th class="weather-col-action">Action</th>
+                </tr>
+              </thead>
+              <tbody id="obs-rows">
+                {% for r in observation_rules %}
+                  {{ obs_row(r.id, r.label, r.effect) }}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <template id="obs-row-template">{{ obs_row('', '', 'none') }}</template>
+
+          <div class="weather-add">
+            <div class="weather-add-title">Add an observation</div>
+            <div class="weather-add-row">
+              <input type="text" id="obs-new-name" class="weather-add-input" placeholder="e.g. Choppy" maxlength="30" autocomplete="off" aria-label="New observation name" data-obs-edit-only disabled />
+              <select id="obs-new-effect" class="weather-add-category" aria-label="Effect of the new observation" data-obs-edit-only disabled>
+                <option value="none">No effect</option>
+                <option value="caution" selected>Raise to Caution</option>
+                <option value="unsafe">Raise to Unsafe</option>
+              </select>
+              <button type="button" id="obs-add-btn" class="weather-add-btn" data-obs-edit-only disabled><i class="bi bi-plus-lg"></i> Add</button>
+            </div>
+            <div class="weather-add-error" id="obs-error" role="alert" hidden></div>
+          </div>
+
+          <input type="hidden" name="observation_rules_json" id="obs-json" value="[]" />
+
+          <p class="settings-help">
+            An observation never lowers a result and never replaces an
+            Unavailable result. Deleting an observation does not change past
+            readings; they keep their text but no longer affect the assessment.
+            At least one observation must remain.
+          </p>
+        </div>
+      </div>
+    </form>
+
+    <!-- Discard unsaved changes (Back / Refresh / leaving the page) -->
+    <div class="sdc-backdrop" id="settingsDiscardModal" hidden>
+      <div class="sdc-dialog" role="dialog" aria-modal="true" aria-labelledby="sdc-title">
+        <div class="sdc-body">
+          <h5 class="sdc-title" id="sdc-title">Discard Changes</h5>
+          <p class="sdc-text">You have unsaved changes to these settings.</p>
+        </div>
+        <div class="sdc-footer">
+          <button type="button" class="sdc-btn sdc-stay" id="sdc-stay">Stay</button>
+          <button type="button" class="sdc-btn sdc-confirm" id="sdc-confirm">Discard</button>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+
+  {% endif %}
 </section>
       <!-- ================================================= REFRESH SETTINGS ================================================= -->
       <section id="refresh-section" class="settings-section">
+        {# Stored values stay in seconds. Under a minute shows seconds,
+           a minute or more shows minutes. #}
+        {% macro interval_label(sec) -%}
+          {%- set sec = sec or 0 -%}
+          {%- if sec < 60 -%}
+            {{ sec }} {{ 'second' if sec == 1 else 'seconds' }}
+          {%- else -%}
+            {%- set mins = sec / 60 -%}
+            {%- set shown = mins|int if mins == mins|int else mins|round(1) -%}
+            {{ shown }} {{ 'minute' if mins == 1 else 'minutes' }}
+          {%- endif -%}
+        {%- endmacro %}
         <div class="settings-section-title">Refresh Settings</div>
         <div class="settings-divider"></div>
 
@@ -637,7 +898,7 @@ page_title %}Settings{% endblock %} {% block extra_css %}
                       value="{{ option }}"
                       {% if option == refresh_interval %}selected{% endif %}
                     >
-                      {{ option }} seconds
+                      {{ interval_label(option) }}
                     </option>
                     {% endif %}
                   {% endfor %}
@@ -654,7 +915,7 @@ page_title %}Settings{% endblock %} {% block extra_css %}
             </form>
 
             <div class="settings-help">
-              Current interval: {{ refresh_interval }} seconds
+              Current interval: {{ interval_label(refresh_interval) }}
             </div>
           </div>
         </div>
@@ -1252,6 +1513,122 @@ page_title %}Settings{% endblock %} {% block extra_css %}
     }
   }
 
+  /* =====================================================
+     CHANGE PASSWORD: live validation
+     (minimum length + confirmation must match)
+  ===================================================== */
+
+  (function () {
+    const MIN_LENGTH = 8;
+
+    const form = document.getElementById("password-form");
+    if (!form) return;
+
+    const current = document.getElementById("current-password");
+    const next = document.getElementById("new-password");
+    const confirm = document.getElementById("confirm-password");
+
+    const currentError = document.getElementById("current-password-error");
+    const nextError = document.getElementById("new-password-error");
+    const confirmError = document.getElementById("confirm-password-error");
+
+    // A field only starts complaining once the person has touched it,
+    // so the form is not covered in red when the page loads.
+    const touched = { current: false, next: false, confirm: false };
+
+    function show(input, box, message) {
+      if (message) {
+        box.textContent = message;
+        box.hidden = false;
+        input.classList.add("is-invalid");
+        input.setAttribute("aria-invalid", "true");
+      } else {
+        box.textContent = "";
+        box.hidden = true;
+        input.classList.remove("is-invalid");
+        input.removeAttribute("aria-invalid");
+      }
+    }
+
+    function checkCurrent() {
+      const msg = current.value ? "" : "Please enter your current password.";
+      show(current, currentError, touched.current ? msg : "");
+      return !msg;
+    }
+
+    function checkNext() {
+      let msg = "";
+      if (next.value.length < MIN_LENGTH) {
+        const left = MIN_LENGTH - next.value.length;
+        msg = next.value.length === 0
+          ? "Password must be at least " + MIN_LENGTH + " characters."
+          : "Password must be at least " + MIN_LENGTH + " characters (" +
+            left + " more needed).";
+      }
+      show(next, nextError, touched.next ? msg : "");
+      return !msg;
+    }
+
+    function checkConfirm() {
+      let msg = "";
+      if (confirm.value !== next.value) {
+        msg = "Passwords do not match.";
+      } else if (confirm.value.length < MIN_LENGTH) {
+        msg = "Please confirm your new password.";
+      }
+      show(confirm, confirmError, touched.confirm ? msg : "");
+      return !msg;
+    }
+
+    current.addEventListener("input", function () {
+      touched.current = true;
+      checkCurrent();
+    });
+
+    next.addEventListener("input", function () {
+      touched.next = true;
+      checkNext();
+      // The confirmation may now match, or stop matching.
+      if (confirm.value) {
+        touched.confirm = true;
+        checkConfirm();
+      }
+    });
+
+    confirm.addEventListener("input", function () {
+      touched.confirm = true;
+      checkConfirm();
+    });
+
+    current.addEventListener("blur", function () { touched.current = true; checkCurrent(); });
+    next.addEventListener("blur", function () { touched.next = true; checkNext(); });
+    confirm.addEventListener("blur", function () {
+      if (confirm.value) { touched.confirm = true; checkConfirm(); }
+    });
+
+    // Block the submit until everything is valid, and jump to the first problem.
+    form.addEventListener("submit", function (event) {
+      touched.current = touched.next = touched.confirm = true;
+
+      const okCurrent = checkCurrent();
+      const okNext = checkNext();
+      const okConfirm = checkConfirm();
+
+      if (!(okCurrent && okNext && okConfirm)) {
+        event.preventDefault();
+        (!okCurrent ? current : !okNext ? next : confirm).focus();
+      }
+    });
+
+    // "Clear" wipes the messages as well as the fields.
+    form.addEventListener("reset", function () {
+      touched.current = touched.next = touched.confirm = false;
+      show(current, currentError, "");
+      show(next, nextError, "");
+      show(confirm, confirmError, "");
+    });
+  })();
+
   document.addEventListener("DOMContentLoaded", function () {
     const profileImage = document.querySelector(
         "#settings-page .profile-avatar-img"
@@ -1641,47 +2018,42 @@ if (refreshToggle) {
      SAFETY THRESHOLDS EDIT
   ===================================================== */
 
-  function startSafetyEdit(button) {
-    const card = button.closest(".settings-card");
-    const form = card.querySelector("#safety-threshold-form");
+  const WEATHER_LABELS = { safe: "Safe", caution: "Caution", unsafe: "Unsafe", "": "Not classified" };
+  let safetyConfirmed = false;
+  let safetyLastFocus = null;
 
-    if (!form) {
-      return;
-    }
-
-    const inputs = form.querySelectorAll("input");
-    const actionRow = button.parentElement;
-    const buttons = actionRow.querySelectorAll("button");
-
-    inputs.forEach(function (input) {
-      input.dataset.originalValue = input.value;
-      input.removeAttribute("readonly");
-    });
-
-    buttons[0].style.display = "none";
-    buttons[1].style.display = "inline-flex";
-    buttons[2].style.display = "inline-flex";
-
-    if (inputs[0]) {
-      inputs[0].focus();
-      inputs[0].select();
-    }
+  function titleCase(text) {
+    return text.replace(/\b\w/g, function (c) { return c.toUpperCase(); });
   }
 
+  /* Show Edit, or Cancel + Save, for one card */
+  function setCardEditing(card, editing) {
+    const buttons = card.querySelectorAll(".settings-threshold-actions button");
 
-  function cancelSafetyEdit(button) {
-    const card = button.closest(".settings-card");
-    const form = card.querySelector("#safety-threshold-form");
-
-    if (!form) {
+    if (buttons.length < 3) {
       return;
     }
 
-    const actionRow = button.parentElement;
-    const buttons = actionRow.querySelectorAll("button");
-    const inputs = form.querySelectorAll("input");
+    buttons[0].style.display = editing ? "none" : "inline-flex";
+    buttons[1].style.display = editing ? "inline-flex" : "none";
+    buttons[2].style.display = editing ? "inline-flex" : "none";
+    card.dataset.editing = editing ? "1" : "";
+  }
 
-    inputs.forEach(function (input) {
+  /* Only one card is edited at a time (Wind, Water, Weather and the
+     Observation card): while one is being edited every other card's Edit
+     button is disabled. Pass activeCard = null to unlock them all. */
+  function lockOtherCards(form, activeCard, lock) {
+    document.querySelectorAll("#safety-section .settings-edit-btn").forEach(function (btn) {
+      if (!activeCard || !activeCard.contains(btn)) {
+        btn.disabled = lock;
+      }
+    });
+  }
+
+  /* Back to read-only, discarding anything typed in this card */
+  function resetCard(card) {
+    card.querySelectorAll("input").forEach(function (input) {
       if (input.dataset.originalValue !== undefined) {
         input.value = input.dataset.originalValue;
       }
@@ -1690,22 +2062,1357 @@ if (refreshToggle) {
       delete input.dataset.originalValue;
     });
 
-    buttons[0].style.display = "inline-flex";
-    buttons[1].style.display = "none";
-    buttons[2].style.display = "none";
+    resetWeatherRows(card);
+
+    card.querySelectorAll("[data-edit-only]").forEach(function (el) {
+      el.disabled = true;
+    });
+
+    const error = card.querySelector("#weather-add-error");
+    if (error) {
+      error.hidden = true;
+      error.textContent = "";
+    }
+
+    setCardEditing(card, false);
   }
 
 
-  function saveSafetyEdit(button) {
-    const card = button.closest(".settings-card");
-    const form = card.querySelector("#safety-threshold-form");
+  function startSafetyEdit(button) {
+    const card = button.closest(".safety-card");
+    const form = card ? card.closest("form") : null;
 
-    if (!form) {
+    if (!card || !form) {
       return;
     }
 
-    form.requestSubmit();
+    card.querySelectorAll("input").forEach(function (input) {
+      input.dataset.originalValue = input.value;
+      input.removeAttribute("readonly");
+    });
+
+    card.querySelectorAll(".weather-category-select").forEach(function (select) {
+      // Stays disabled: a row's dropdown unlocks only via that row's own
+      // pencil (rename) button.
+      select.dataset.original = select.value;
+      select.disabled = true;
+    });
+
+    card.querySelectorAll("[data-edit-only]").forEach(function (el) {
+      el.disabled = false;
+    });
+
+    setCardEditing(card, true);
+    lockOtherCards(form, card, true);
+
+    const first = card.querySelector("input:not([type=hidden])");
+    if (first) {
+      first.focus();
+      if (first.type === "number") {
+        first.select();
+      }
+    }
   }
+
+
+  function cancelSafetyEdit(button) {
+    const card = button.closest(".safety-card");
+    const form = card ? card.closest("form") : null;
+
+    if (!card || !form) {
+      return;
+    }
+
+    resetCard(card);
+    lockOtherCards(form, card, false);
+  }
+
+
+  /* ---- Weather conditions: add, rename, delete (Weather card) ---- */
+
+  function showWeatherError(card, message) {
+    const error = card.querySelector("#weather-add-error");
+
+    if (!error) {
+      return;
+    }
+
+    error.textContent = message;
+    error.hidden = !message;
+  }
+
+  // Same normal form the server compares against: lower-case, single spaces.
+  function normalizeWeatherName(value) {
+    return value.trim().replace(/\s+/g, " ").toLowerCase();
+  }
+
+  // Returns an error message, or "" when the name can be used.
+  function validateWeatherName(card, name, ignoreSelect) {
+    if (!name) {
+      return "Enter a weather condition name.";
+    }
+
+    if (name.length > 40) {
+      return "Use 40 characters or fewer.";
+    }
+
+    // No commas: the lists are saved comma-separated.
+    if (!/^[a-z][a-z -]*$/.test(name)) {
+      return "Use letters, spaces and hyphens only (no commas or numbers).";
+    }
+
+    const duplicate = Array.prototype.some.call(
+      card.querySelectorAll(".weather-category-select"),
+      function (select) {
+        return select !== ignoreSelect && select.dataset.condition === name;
+      }
+    );
+
+    if (duplicate) {
+      return titleCase(name) + " is already in the list.";
+    }
+
+    return "";
+  }
+
+  function rowSelect(row) {
+    return row.querySelector(".weather-category-select");
+  }
+
+  function makeTag(text, kind) {
+    const tag = document.createElement("span");
+    tag.className = "weather-tag weather-tag-" + kind;
+    tag.textContent = text;
+    return tag;
+  }
+
+  /* Name cell: name plus a New / Renamed / Removed tag */
+  function renderName(row) {
+    const cell = row.querySelector(".weather-name-cell");
+    const name = rowSelect(row).dataset.condition;
+
+    cell.textContent = "";
+
+    const label = document.createElement("span");
+    label.className = "weather-name";
+    label.textContent = titleCase(name);
+    cell.appendChild(label);
+
+    if (row.dataset.deleted === "1") {
+      cell.appendChild(makeTag("Removed", "removed"));
+    } else if (row.dataset.new === "1") {
+      cell.appendChild(makeTag("New", "new"));
+    } else if (name !== row.dataset.name) {
+      cell.appendChild(makeTag("Renamed", "renamed"));
+    }
+  }
+
+  function makeIconButton(action, icon, label, enabled, danger) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "weather-icon-btn" + (danger ? " weather-icon-danger" : "");
+    btn.dataset.weatherAction = action;
+    btn.dataset.editOnly = "";
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+    btn.disabled = !enabled;
+    btn.innerHTML = '<i class="bi ' + icon + '"></i>';
+    return btn;
+  }
+
+  /* Action cell: normal (rename + delete), renaming (save + cancel),
+     or deleted (undo) */
+  function renderRowActions(row, mode, enabled) {
+    const cell = row.querySelector(".weather-action-cell");
+    const name = titleCase(rowSelect(row).dataset.condition);
+    const wrap = document.createElement("div");
+    wrap.className = "weather-actions";
+
+    if (mode === "renaming") {
+      wrap.appendChild(makeIconButton("apply-rename", "bi-check-lg", "Save name", enabled, false));
+      wrap.appendChild(makeIconButton("cancel-rename", "bi-x-lg", "Cancel rename", enabled, false));
+    } else if (mode === "deleted") {
+      wrap.appendChild(makeIconButton("undo", "bi-arrow-counterclockwise", "Undo remove " + name, enabled, false));
+    } else {
+      wrap.appendChild(makeIconButton("rename", "bi-pencil", "Rename " + name, enabled, false));
+      wrap.appendChild(makeIconButton("delete", "bi-trash", "Delete " + name, enabled, true));
+    }
+
+    cell.textContent = "";
+    cell.appendChild(wrap);
+  }
+
+  /* Back to the saved list: undo renames and removals, drop new rows */
+  function resetWeatherRows(card) {
+    card.querySelectorAll("#weather-rows tr").forEach(function (row) {
+      if (row.dataset.new === "1") {
+        row.remove();
+        return;
+      }
+
+      const select = rowSelect(row);
+
+      select.dataset.condition = row.dataset.name;
+      select.setAttribute("aria-label", "Category for " + titleCase(row.dataset.name));
+      select.value = select.dataset.original || "";
+      select.disabled = true;
+
+      delete row.dataset.deleted;
+      delete row.dataset.renaming;
+      row.classList.remove("weather-row-deleted");
+
+      renderName(row);
+      renderRowActions(row, "normal", false);
+    });
+  }
+
+  function addWeatherCondition(button) {
+    const card = button.closest(".safety-card");
+    const nameInput = card.querySelector("#weather-new-name");
+    const categorySelect = card.querySelector("#weather-new-category");
+    const body = card.querySelector("#weather-rows");
+
+    if (!nameInput || !categorySelect || !body) {
+      return;
+    }
+
+    const name = normalizeWeatherName(nameInput.value);
+    const problem = validateWeatherName(card, name, null);
+
+    if (problem) {
+      showWeatherError(card, problem);
+      nameInput.focus();
+      return;
+    }
+
+    showWeatherError(card, "");
+
+    const row = document.createElement("tr");
+    row.dataset.new = "1";
+    row.className = "weather-row-new";
+
+    const nameCell = document.createElement("td");
+    nameCell.className = "weather-name-cell";
+
+    const categoryCell = document.createElement("td");
+    const select = document.createElement("select");
+    select.className = "weather-category-select";
+    select.dataset.condition = name;
+    select.dataset.original = "";
+    select.dataset.isNew = "1";
+    select.setAttribute("aria-label", "Category for " + titleCase(name));
+
+    ["safe", "caution", "unsafe"].forEach(function (value) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = WEATHER_LABELS[value];
+      select.appendChild(option);
+    });
+    select.value = categorySelect.value;
+    categoryCell.appendChild(select);
+
+    const actionCell = document.createElement("td");
+    actionCell.className = "weather-action-cell";
+
+    row.appendChild(nameCell);
+    row.appendChild(categoryCell);
+    row.appendChild(actionCell);
+    body.appendChild(row);
+
+    select.disabled = true;
+    renderName(row);
+    renderRowActions(row, "normal", true);
+
+    // Show the new row inside the scrollable list.
+    row.scrollIntoView({ block: "nearest" });
+
+    nameInput.value = "";
+    nameInput.focus();
+  }
+
+  function beginRename(row) {
+    const card = row.closest(".safety-card");
+    const select = rowSelect(row);
+    const cell = row.querySelector(".weather-name-cell");
+
+    showWeatherError(card, "");
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "weather-rename-input";
+    input.maxLength = 40;
+    input.autocomplete = "off";
+    input.value = select.dataset.condition;
+    input.setAttribute("aria-label", "New name for " + titleCase(select.dataset.condition));
+
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        applyRename(row);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        cancelRename(row);
+      }
+    });
+
+    cell.textContent = "";
+    cell.appendChild(input);
+
+    row.dataset.renaming = "1";
+    select.dataset.rowValue = select.value;
+    select.disabled = false;
+    renderRowActions(row, "renaming", true);
+
+    input.focus();
+    input.select();
+  }
+
+  function applyRename(row) {
+    const card = row.closest(".safety-card");
+    const select = rowSelect(row);
+    const input = row.querySelector(".weather-rename-input");
+
+    if (!input) {
+      return;
+    }
+
+    const name = normalizeWeatherName(input.value);
+    const problem = validateWeatherName(card, name, select);
+
+    if (problem) {
+      showWeatherError(card, problem);
+      input.focus();
+      return;
+    }
+
+    showWeatherError(card, "");
+
+    select.dataset.condition = name;
+    select.setAttribute("aria-label", "Category for " + titleCase(name));
+
+    delete row.dataset.renaming;
+    delete select.dataset.rowValue;
+    select.disabled = true;
+    renderName(row);
+    renderRowActions(row, "normal", true);
+  }
+
+  function cancelRename(row) {
+    const card = row.closest(".safety-card");
+    const select = rowSelect(row);
+
+    showWeatherError(card, "");
+
+    // Discard a category change made during this row edit and lock again.
+    if (select.dataset.rowValue !== undefined) {
+      select.value = select.dataset.rowValue;
+      delete select.dataset.rowValue;
+    }
+    select.disabled = true;
+
+    delete row.dataset.renaming;
+    renderName(row);
+    renderRowActions(row, "normal", true);
+  }
+
+  function deleteWeatherRow(row) {
+    // A condition added in this edit was never saved: just drop it.
+    if (row.dataset.new === "1") {
+      row.remove();
+      return;
+    }
+
+    const select = rowSelect(row);
+
+    delete row.dataset.renaming;
+    row.dataset.deleted = "1";
+    row.classList.add("weather-row-deleted");
+    select.disabled = true;
+
+    renderName(row);
+    renderRowActions(row, "deleted", true);
+  }
+
+  function undoDeleteWeatherRow(row) {
+    delete row.dataset.deleted;
+    row.classList.remove("weather-row-deleted");
+    rowSelect(row).disabled = true;
+
+    renderName(row);
+    renderRowActions(row, "normal", true);
+  }
+
+
+  /* Weather dropdowns -> the three comma-separated fields the server reads */
+  function syncWeatherInputs(form) {
+    const groups = { safe: [], caution: [], unsafe: [] };
+
+    form.querySelectorAll(".weather-category-select").forEach(function (select) {
+      const row = select.closest("tr");
+
+      // A removed condition is left out of every list.
+      if (row && row.dataset.deleted === "1") {
+        return;
+      }
+
+      if (groups[select.value]) {
+        groups[select.value].push(select.dataset.condition);
+      }
+    });
+
+    Object.keys(groups).forEach(function (key) {
+      const input = form.querySelector('input[name="weather_' + key + '"]');
+      if (input) {
+        input.value = groups[key].join(", ");
+      }
+    });
+  }
+
+
+  /* Every setting whose value differs from when Edit was pressed */
+  function collectSafetyChanges(form) {
+    const changes = [];
+
+    form.querySelectorAll("input[data-label]").forEach(function (input) {
+      const before = input.dataset.originalValue;
+      if (before === undefined) {
+        return;
+      }
+
+      const a = parseFloat(before);
+      const b = parseFloat(input.value);
+      const same = (!isNaN(a) && !isNaN(b))
+        ? a === b
+        : before.trim() === input.value.trim();
+
+      if (!same) {
+        const unit = input.dataset.unit ? " " + input.dataset.unit : "";
+        changes.push({
+          label: input.dataset.label,
+          oldValue: before + unit,
+          newValue: input.value + unit
+        });
+      }
+    });
+
+    form.querySelectorAll(".weather-category-select").forEach(function (select) {
+      const row = select.closest("tr");
+      const isNew = select.dataset.isNew === "1";
+      const before = select.dataset.original || "";
+      const after = select.value;
+      const current = select.dataset.condition;
+
+      if (isNew) {
+        changes.push({
+          label: "Weather – " + titleCase(current) + " (new)",
+          oldValue: "—",
+          newValue: WEATHER_LABELS[after]
+        });
+        return;
+      }
+
+      const savedName = row.dataset.name;
+
+      if (row.dataset.deleted === "1") {
+        changes.push({
+          label: "Weather – " + titleCase(savedName) + " (removed)",
+          oldValue: WEATHER_LABELS[before],
+          newValue: "—",
+          risk: true
+        });
+        return;
+      }
+
+      if (current !== savedName) {
+        changes.push({
+          label: "Weather condition name",
+          oldValue: titleCase(savedName),
+          newValue: titleCase(current),
+          risk: true
+        });
+      }
+
+      if (before !== after) {
+        changes.push({
+          label: "Weather – " + titleCase(current),
+          oldValue: WEATHER_LABELS[before],
+          newValue: WEATHER_LABELS[after]
+        });
+      }
+    });
+
+    return changes;
+  }
+
+
+  function openSafetyConfirm(changes, title, warningText) {
+    const modal = document.getElementById("safetyConfirmModal");
+    const body = document.getElementById("stc-changes");
+
+    if (!modal || !body) {
+      return;
+    }
+
+    body.innerHTML = "";
+
+    changes.forEach(function (change) {
+      const row = document.createElement("tr");
+
+      [change.label, change.oldValue, change.newValue].forEach(function (text, index) {
+        const cell = document.createElement("td");
+        cell.textContent = text;
+        if (index === 1) { cell.className = "stc-old"; }
+        if (index === 2) { cell.className = "stc-new"; }
+        row.appendChild(cell);
+      });
+
+      body.appendChild(row);
+    });
+
+    // Attach to <body> so no parent layout can clip or offset the overlay.
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+
+    const titleEl = document.getElementById("stc-title");
+    if (titleEl) {
+      titleEl.textContent = title || "Confirm threshold changes";
+    }
+
+    const warning = document.getElementById("stc-warning");
+    if (warning) {
+      if (warning.dataset.defaultText === undefined) {
+        warning.dataset.defaultText = warning.textContent;
+      }
+      warning.textContent = warningText || warning.dataset.defaultText;
+      warning.hidden = !changes.some(function (change) { return change.risk; });
+    }
+
+    safetyLastFocus = document.activeElement;
+    modal.hidden = false;
+    document.documentElement.classList.add("stc-open");
+    document.getElementById("stc-confirm").focus();
+  }
+
+
+  function closeSafetyConfirm() {
+    const modal = document.getElementById("safetyConfirmModal");
+
+    if (!modal || modal.hidden) {
+      return;
+    }
+
+    modal.hidden = true;
+    window.safetyConfirmCallback = null;
+    document.documentElement.classList.remove("stc-open");
+
+    if (safetyLastFocus && safetyLastFocus.focus) {
+      safetyLastFocus.focus();
+    }
+  }
+
+
+  /* Save: validate, then show old vs new before anything is sent */
+  function reviewSafetyChanges(form) {
+    const pending = form.querySelector("#weather-new-name");
+
+    if (pending && !pending.disabled && pending.value.trim() !== "") {
+      const card = pending.closest(".safety-card");
+      showWeatherError(card, 'Press "Add" to include this condition, or clear the field.');
+      pending.focus();
+      return;
+    }
+
+    const renaming = form.querySelector('#weather-rows tr[data-renaming="1"]');
+
+    if (renaming) {
+      const card = renaming.closest(".safety-card");
+      showWeatherError(card, "Save the new name (tick) or cancel the rename first.");
+      const field = renaming.querySelector(".weather-rename-input");
+      if (field) {
+        field.focus();
+      }
+      return;
+    }
+
+    if (!form.reportValidity()) {
+      return;
+    }
+
+    const changes = collectSafetyChanges(form);
+
+    if (changes.length === 0) {
+      // Nothing changed: leave edit mode without saving.
+      form.querySelectorAll(".safety-card").forEach(function (card) {
+        if (card.dataset.editing === "1") {
+          resetCard(card);
+        }
+      });
+      lockOtherCards(form, null, false);
+      return;
+    }
+
+    openSafetyConfirm(changes);
+  }
+
+  function saveSafetyEdit(button) {
+    const form = button.closest("form");
+
+    if (form) {
+      reviewSafetyChanges(form);
+    }
+  }
+
+
+  (function wireSafetyConfirm() {
+    const form = document.getElementById("safety-threshold-form");
+    const modal = document.getElementById("safetyConfirmModal");
+
+    if (!form || !modal) {
+      return;
+    }
+
+    // Enter key inside a field must go through the same confirmation.
+    form.addEventListener("submit", function (event) {
+      if (safetyConfirmed) {
+        return;
+      }
+
+      event.preventDefault();
+      reviewSafetyChanges(form);
+    });
+
+    // Enter in the "new condition" box adds it instead of submitting.
+    const nameInput = document.getElementById("weather-new-name");
+    if (nameInput) {
+      nameInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          addWeatherCondition(document.getElementById("weather-add-btn"));
+        }
+      });
+    }
+
+    document.getElementById("stc-cancel").addEventListener("click", closeSafetyConfirm);
+
+    document.getElementById("stc-confirm").addEventListener("click", function () {
+      // Another card (Observation Rules) reuses this dialog with its own action.
+      if (typeof window.safetyConfirmCallback === "function") {
+        const run = window.safetyConfirmCallback;
+        window.safetyConfirmCallback = null;
+        run();
+        return;
+      }
+
+      safetyConfirmed = true;
+      window.settingsLeaving = true;
+      syncWeatherInputs(form);
+      form.submit();
+    });
+
+    modal.addEventListener("click", function (event) {
+      if (event.target === modal) {
+        closeSafetyConfirm();
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        closeSafetyConfirm();
+      }
+    });
+  })();
+
+  /* Rename / delete / undo buttons in the weather table (works for rows
+     added in this edit too) */
+  (function wireWeatherRows() {
+    const rows = document.getElementById("weather-rows");
+
+    if (!rows) {
+      return;
+    }
+
+    rows.addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-weather-action]");
+
+      if (!btn || btn.disabled) {
+        return;
+      }
+
+      const row = btn.closest("tr");
+
+      switch (btn.dataset.weatherAction) {
+        case "rename": beginRename(row); break;
+        case "apply-rename": applyRename(row); break;
+        case "cancel-rename": cancelRename(row); break;
+        case "delete": deleteWeatherRow(row); break;
+        case "undo": undoDeleteWeatherRow(row); break;
+      }
+    });
+  })();
+  /* =====================================================
+     OPERATOR OBSERVATION RULES
+     Edit unlocks the card; each row is then changed with its own pencil
+     (name + effect) or deleted with its bin, like the weather table.
+  ===================================================== */
+  (function observationRules() {
+    const form = document.getElementById("observation-rules-form");
+    if (!form) { return; }
+
+    const card = document.getElementById("observation-rules-card");
+    const body = document.getElementById("obs-rows");
+    const tpl = document.getElementById("obs-row-template");
+    const err = document.getElementById("obs-error");
+    const editBtn = document.getElementById("obs-edit-btn");
+    const cancelBtn = document.getElementById("obs-cancel-btn");
+    const saveBtn = document.getElementById("obs-save-btn");
+    const nameIn = document.getElementById("obs-new-name");
+    const effectIn = document.getElementById("obs-new-effect");
+    const LABEL_RE = /^[A-Za-z][A-Za-z -]*$/;
+    const ICONS = {
+      edit: ["bi-pencil", "Edit", false],
+      delete: ["bi-trash", "Delete", true],
+      apply: ["bi-check-lg", "Apply", false],
+      cancel: ["bi-x-lg", "Cancel edit", false],
+      undo: ["bi-arrow-counterclockwise", "Undo delete", false]
+    };
+
+    function makeTag(text, kind) {
+      const tag = document.createElement("span");
+      tag.className = "weather-tag weather-tag-" + kind;
+      tag.textContent = text;
+      return tag;
+    }
+
+    function showError(msg) { err.textContent = msg || ""; err.hidden = !msg; }
+    function clean(v) { return v.trim().replace(/\s+/g, " "); }
+    function rows() { return Array.prototype.slice.call(body.querySelectorAll("tr")); }
+    function isOn() { return form.dataset.editing === "1"; }
+
+    function actionButton(action, label) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "weather-icon-btn" + (ICONS[action][2] ? " weather-icon-danger" : "");
+      btn.dataset.obsAction = action;
+      btn.title = ICONS[action][1];
+      btn.setAttribute("aria-label", ICONS[action][1] + " " + label);
+      btn.disabled = !isOn();
+      const icon = document.createElement("i");
+      icon.className = "bi " + ICONS[action][0];
+      btn.appendChild(icon);
+      return btn;
+    }
+
+    /* Make one row look right for its state */
+    function syncRow(row) {
+      const input = row.querySelector(".obs-label-input");
+      const view = row.querySelector(".obs-label-view");
+      const sel = row.querySelector(".obs-effect-select");
+      const del = row.dataset.deleted === "1";
+      const editing = row.dataset.editing === "1";
+      const isNew = row.dataset.new === "1";
+      const label = clean(input.value);
+
+      view.textContent = label || "—";
+      view.className = "weather-name obs-label-view";
+
+      /* New / Renamed / Removed tag, same as the weather table */
+      const slot = row.querySelector(".obs-tag-slot");
+      slot.textContent = "";
+      slot.hidden = editing;
+      if (del) { slot.appendChild(makeTag("Removed", "removed")); }
+      else if (isNew) { slot.appendChild(makeTag("New", "new")); }
+      else if (label !== row.dataset.label) { slot.appendChild(makeTag("Renamed", "renamed")); }
+
+      input.hidden = !editing;
+      view.hidden = editing;
+      sel.disabled = !(isOn() && !del && (editing || isNew));
+      row.classList.toggle("weather-row-deleted", del);
+
+      const box = row.querySelector(".obs-actions");
+      box.textContent = "";
+      const modes = del ? ["undo"] : (editing ? ["apply", "cancel"] : ["edit", "delete"]);
+      modes.forEach(function (m) { box.appendChild(actionButton(m, label)); });
+    }
+
+    function syncAll() { rows().forEach(syncRow); }
+
+    function setEditing(on) {
+      editBtn.style.display = on ? "none" : "inline-flex";
+      cancelBtn.style.display = on ? "inline-flex" : "none";
+      saveBtn.style.display = on ? "inline-flex" : "none";
+      form.dataset.editing = on ? "1" : "";
+      form.querySelectorAll("[data-obs-edit-only]").forEach(function (el) { el.disabled = !on; });
+      syncAll();
+    }
+
+    function restoreAll() {
+      rows().forEach(function (row) {
+        if (row.dataset.new === "1") { row.remove(); return; }
+        delete row.dataset.deleted;
+        delete row.dataset.editing;
+        row.querySelector(".obs-label-input").value = row.dataset.label;
+        row.querySelector(".obs-effect-select").value = row.dataset.effect;
+      });
+      nameIn.value = "";
+      showError("");
+    }
+
+    /* Edit / Cancel on the card; only one safety card at a time */
+    editBtn.addEventListener("click", function () {
+      setEditing(true);
+      lockOtherCards(form, card, true);
+    });
+    cancelBtn.addEventListener("click", function () {
+      restoreAll();
+      setEditing(false);
+      lockOtherCards(form, card, false);
+    });
+
+    body.addEventListener("change", function (e) {
+      const row = e.target.closest("tr");
+      if (row) { syncRow(row); }
+    });
+    body.addEventListener("input", function (e) {
+      const row = e.target.closest("tr");
+      if (row && e.target.classList.contains("obs-label-input")) {
+        row.querySelector(".obs-label-view").textContent = clean(e.target.value) || "—";
+      }
+    });
+
+    function labelProblem(row, label) {
+      if (!label) { return "Enter an observation name."; }
+      if (label.length > 30) { return "Use 30 characters or fewer."; }
+      if (!LABEL_RE.test(label)) { return "Use letters, spaces and hyphens only."; }
+      const dup = rows().some(function (r) {
+        return r !== row && r.dataset.deleted !== "1" &&
+          clean(r.querySelector(".obs-label-input").value).toLowerCase() === label.toLowerCase();
+      });
+      return dup ? label + " is already in the list." : "";
+    }
+
+    /* Per-row pencil / apply / cancel / bin / undo */
+    body.addEventListener("click", function (e) {
+      const btn = e.target.closest("[data-obs-action]");
+      if (!btn || btn.disabled) { return; }
+      const row = btn.closest("tr");
+      const input = row.querySelector(".obs-label-input");
+      const sel = row.querySelector(".obs-effect-select");
+      showError("");
+
+      switch (btn.dataset.obsAction) {
+        case "edit":
+          row.dataset.prevLabel = input.value;
+          row.dataset.prevEffect = sel.value;
+          row.dataset.editing = "1";
+          syncRow(row);
+          input.focus();
+          input.select();
+          break;
+        case "apply": {
+          const label = clean(input.value);
+          const problem = labelProblem(row, label);
+          if (problem) { showError(problem); input.focus(); return; }
+          input.value = label;
+          delete row.dataset.editing;
+          syncRow(row);
+          break;
+        }
+        case "cancel":
+          input.value = row.dataset.prevLabel;
+          sel.value = row.dataset.prevEffect;
+          delete row.dataset.editing;
+          syncRow(row);
+          break;
+        case "delete":
+          if (row.dataset.new === "1") { row.remove(); return; }
+          row.dataset.deleted = "1";
+          delete row.dataset.editing;
+          syncRow(row);
+          break;
+        case "undo":
+          delete row.dataset.deleted;
+          syncRow(row);
+          break;
+      }
+    });
+
+    function addRule() {
+      const label = clean(nameIn.value);
+      const problem = labelProblem(null, label);
+      if (problem) { showError(problem); nameIn.focus(); return; }
+      showError("");
+
+      const row = tpl.content.firstElementChild.cloneNode(true);
+      row.dataset.new = "1";
+      row.classList.add("weather-row-new");
+      row.querySelector(".obs-label-input").value = label;
+      row.querySelector(".obs-effect-select").value = effectIn.value;
+      body.appendChild(row);
+      syncRow(row);
+      row.scrollIntoView({ block: "nearest" });
+      nameIn.value = "";
+      nameIn.focus();
+    }
+    document.getElementById("obs-add-btn").addEventListener("click", addRule);
+    nameIn.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); addRule(); }
+    });
+
+    function save() {
+      if (clean(nameIn.value)) {
+        showError('Press "Add" to include this observation, or clear the field.');
+        nameIn.focus();
+        return;
+      }
+      const open = rows().find(function (r) { return r.dataset.editing === "1"; });
+      if (open) {
+        showError("Apply (tick) or cancel the row you are editing first.");
+        open.querySelector(".obs-label-input").focus();
+        return;
+      }
+
+      const EFFECT_LABELS = { none: "No effect", caution: "Raise to Caution", unsafe: "Raise to Unsafe" };
+      const items = [];
+      const changes = [];
+      rows().forEach(function (row) {
+        const input = row.querySelector(".obs-label-input");
+        const sel = row.querySelector(".obs-effect-select");
+        const label = clean(input.value);
+        const savedLabel = row.dataset.label;
+        const savedEffect = row.dataset.effect;
+
+        if (row.dataset.deleted === "1") {
+          changes.push({
+            label: "Observation – " + savedLabel + " (removed)",
+            oldValue: EFFECT_LABELS[savedEffect],
+            newValue: "—",
+            risk: true
+          });
+          return;
+        }
+
+        items.push({
+          id: row.dataset.new === "1" ? null : Number(row.dataset.id),
+          label: label,
+          effect: sel.value
+        });
+
+        if (row.dataset.new === "1") {
+          changes.push({
+            label: "Observation – " + label + " (new)",
+            oldValue: "—",
+            newValue: EFFECT_LABELS[sel.value]
+          });
+          return;
+        }
+        if (label !== savedLabel) {
+          changes.push({ label: "Observation name", oldValue: savedLabel, newValue: label });
+        }
+        if (sel.value !== savedEffect) {
+          changes.push({
+            label: "Observation – " + label,
+            oldValue: EFFECT_LABELS[savedEffect],
+            newValue: EFFECT_LABELS[sel.value]
+          });
+        }
+      });
+
+      if (!items.length) { showError("Keep at least one observation."); return; }
+
+      if (!changes.length) {
+        // Nothing changed: leave edit mode without saving.
+        restoreAll();
+        setEditing(false);
+        lockOtherCards(form, card, false);
+        return;
+      }
+
+      showError("");
+      safetyLastFocus = document.activeElement;
+      window.safetyConfirmCallback = function () {
+        document.getElementById("obs-json").value = JSON.stringify(items);
+        window.settingsLeaving = true;
+        form.submit();
+      };
+      openSafetyConfirm(
+        changes,
+        "Confirm observation changes",
+        "A deleted observation no longer affects the assessment. Past readings keep their text."
+      );
+    }
+    saveBtn.addEventListener("click", save);
+    form.addEventListener("submit", function (e) {
+      const v = document.getElementById("obs-json").value;
+      if (!v || v === "[]") { e.preventDefault(); save(); }
+    });
+
+    /* True when the card is being edited and differs from what was saved */
+    window.obsHasChanges = function () {
+      if (!isOn()) { return false; }
+      if (clean(nameIn.value)) { return true; }
+      return rows().some(function (row) {
+        return row.dataset.new === "1" ||
+          row.dataset.deleted === "1" ||
+          clean(row.querySelector(".obs-label-input").value) !== row.dataset.label ||
+          row.querySelector(".obs-effect-select").value !== row.dataset.effect;
+      });
+    };
+
+    syncAll();
+  })();
+
+  /* =====================================================
+     UNSAVED CHANGES GUARD (same behaviour as the manifest Discard modal)
+     Back button, Refresh (F5 / Ctrl+R), links to other pages and the
+     browser's own reload/close all ask first when a Safety Threshold card
+     or the Observation card has edits that were not saved.
+  ===================================================== */
+  (function settingsDiscardGuard() {
+    const modal = document.getElementById("settingsDiscardModal");
+    if (!modal) { return; }
+
+    const stayBtn = document.getElementById("sdc-stay");
+    const confirmBtn = document.getElementById("sdc-confirm");
+    let pendingHref = null;
+    let pendingReload = false;
+    let usedBrowserBack = false;
+    let lastFocus = null;
+    window.settingsLeaving = false;
+
+    function hasUnsaved() {
+      const sf = document.getElementById("safety-threshold-form");
+      if (sf && sf.querySelector('.safety-card[data-editing="1"]')) {
+        const pending = sf.querySelector("#weather-new-name");
+        if (pending && !pending.disabled && pending.value.trim() !== "") { return true; }
+        if (collectSafetyChanges(sf).length > 0) { return true; }
+      }
+      return typeof window.obsHasChanges === "function" && window.obsHasChanges();
+    }
+
+    function openModal() {
+      if (modal.parentElement !== document.body) { document.body.appendChild(modal); }
+      lastFocus = document.activeElement;
+      modal.hidden = false;
+      document.documentElement.classList.add("stc-open");
+      confirmBtn.focus();
+    }
+
+    function closeModal() {
+      if (modal.hidden) { return; }
+      modal.hidden = true;
+      document.documentElement.classList.remove("stc-open");
+      usedBrowserBack = false;
+      pendingReload = false;
+      pendingHref = null;
+      if (lastFocus && lastFocus.focus) { lastFocus.focus(); }
+    }
+
+    window.addEventListener("beforeunload", function (event) {
+      if (!window.settingsLeaving && hasUnsaved()) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    });
+
+    /* One guard history entry sits on top of this page, so the browser Back
+       button can be intercepted (it pops the guard first). */
+    try {
+      history.pushState({ settingsGuard: true }, "", window.location.href);
+    } catch (error) { /* history unavailable: beforeunload still works */ }
+
+    window.addEventListener("popstate", function () {
+      if (window.settingsLeaving) { return; }
+
+      if (!hasUnsaved()) {
+        window.settingsLeaving = true;      /* clean: really go back */
+        history.back();
+        return;
+      }
+
+      history.pushState({ settingsGuard: true }, "", window.location.href);
+      usedBrowserBack = true;
+      pendingReload = false;
+      pendingHref = null;
+      openModal();
+    });
+
+    /* Links to other pages (sidebar, logo, ...) */
+    document.addEventListener("click", function (event) {
+      const link = event.target.closest("a[href]");
+      if (!link || window.settingsLeaving) { return; }
+      if (link.closest(".settings-navigation")) { return; }          /* tabs stay on this page */
+      if (link.target === "_blank" || event.ctrlKey || event.metaKey || event.shiftKey) { return; }
+      const href = link.getAttribute("href");
+      if (!href || href.charAt(0) === "#" || href.indexOf("javascript:") === 0) { return; }
+      if (!hasUnsaved()) { return; }
+
+      event.preventDefault();
+      pendingHref = link.href;
+      pendingReload = false;
+      usedBrowserBack = false;
+      openModal();
+    });
+
+    /* Keyboard refresh; Chrome's reload button gets the browser's own
+       "Leave site?" prompt from beforeunload above. */
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !modal.hidden) { closeModal(); return; }
+
+      const key = (event.key || "").toLowerCase();
+      const isRefresh = key === "f5" || ((event.ctrlKey || event.metaKey) && key === "r");
+      if (!isRefresh || window.settingsLeaving || !hasUnsaved()) { return; }
+
+      event.preventDefault();
+      usedBrowserBack = false;
+      pendingHref = null;
+      pendingReload = true;
+      openModal();
+    });
+
+    stayBtn.addEventListener("click", closeModal);
+    modal.addEventListener("click", function (event) {
+      if (event.target === modal) { closeModal(); }
+    });
+
+    confirmBtn.addEventListener("click", function () {
+      window.settingsLeaving = true;
+      if (pendingReload) {
+        window.location.reload();
+        return;
+      }
+      if (pendingHref) {
+        window.location.href = pendingHref;
+        return;
+      }
+      if (usedBrowserBack) {
+        history.go(-2);                      /* skip our guard entry and this page */
+        setTimeout(function () { window.location.reload(); }, 400);   /* nowhere to go back to */
+        return;
+      }
+      window.location.reload();
+    });
+  })();
+
+  /* Reopen the tab the server redirected from (?section=safety-section) so a
+     saved change, or its error message, is visible instead of landing on
+     My Profile. */
+  document.addEventListener("DOMContentLoaded", function () {
+    const wanted = new URLSearchParams(window.location.search).get("section");
+    if (!wanted) { return; }
+    const item = document.querySelector('#settings-page .settings-nav-item[data-section="' + wanted + '"]');
+    if (item) { item.click(); }
+    history.replaceState(null, "", window.location.pathname);
+  });
+</script>
+
+<script>
+/* =========================================================
+   WAVETECH - STYLED SELECT DROPDOWN
+   Gives the Safety Thresholds and Notice Management (announcement type)
+   dropdowns the same look as the dropdowns in Manifest Detail.
+
+   How it works
+   - The real <select> is NOT replaced: it keeps its look, its value, its
+     "disabled" state and its "change" event, so every existing script keeps
+     working (including selects added later by JavaScript).
+   - Clicking it (or pressing Space / Alt+Down) opens the styled list
+     (.wt-select-menu) instead of the browser's plain one.
+
+   Applies to every <select> inside #settings-page or inside an element whose
+   class contains "announcement-". Opt out with  data-native-select.
+   ========================================================= */
+(function () {
+    "use strict";
+
+    var SCOPE = "#settings-page, [class*='announcement-']";
+    var current = null; // { select, menu, items, active }
+
+    function eligible(el) {
+        return !!el && el.tagName === "SELECT" && !el.multiple &&
+            !(el.size > 1) && !el.hasAttribute("data-native-select") &&
+            !!el.closest(SCOPE);
+    }
+
+    function selectFrom(target) {
+        var s = target && target.closest ? target.closest("select") : null;
+        return eligible(s) ? s : null;
+    }
+
+    /* ---------- open / close ---------- */
+
+    function close(refocus) {
+        if (!current) return;
+        var c = current;
+        current = null;
+        if (c.menu.parentNode) c.menu.parentNode.removeChild(c.menu);
+        c.select.setAttribute("aria-expanded", "false");
+        if (refocus) c.select.focus();
+    }
+
+    function setActive(index) {
+        if (!current) return;
+        var items = current.items;
+        if (!items.length) return;
+        index = Math.max(0, Math.min(items.length - 1, index));
+        if (current.active >= 0 && items[current.active]) {
+            items[current.active].classList.remove("is-active");
+        }
+        current.active = index;
+        items[index].classList.add("is-active");
+        items[index].scrollIntoView({ block: "nearest" });
+    }
+
+    function choose(index) {
+        if (!current) return;
+        var select = current.select;
+        var option = select.options[current.optionIndexes[index]];
+        if (!option || option.disabled) return;
+        var changed = select.value !== option.value;
+        select.selectedIndex = option.index;
+        close(true);
+        if (changed) {
+            select.dispatchEvent(new Event("input", { bubbles: true }));
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+    }
+
+    function position(select, menu) {
+        var rect = select.getBoundingClientRect();
+        var gap = 4;
+        var below = window.innerHeight - rect.bottom - 8;
+        var above = rect.top - 8;
+
+        menu.style.minWidth = rect.width + "px";
+        menu.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)) + "px";
+        menu.style.maxHeight = "none";
+
+        var natural = menu.offsetHeight;
+        var openUp = natural > below && above > below;
+        var room = Math.max(120, openUp ? above : below);
+
+        menu.style.maxHeight = Math.min(natural, room, 300) + "px";
+        var height = menu.offsetHeight;
+        menu.style.top = (openUp ? rect.top - height - gap : rect.bottom + gap) + "px";
+    }
+
+    function open(select) {
+        if (select.disabled) return;
+        close(false);
+
+        var menu = document.createElement("ul");
+        menu.className = "wt-select-menu is-open";
+        menu.setAttribute("role", "listbox");
+        menu.style.visibility = "hidden";
+
+        var items = [];
+        var optionIndexes = [];
+        Array.prototype.forEach.call(select.options, function (option, i) {
+            if (option.hidden) return;
+            var li = document.createElement("li");
+            li.className = "wt-select-option";
+            li.setAttribute("role", "option");
+            li.textContent = (option.textContent || "").trim();
+            if (option.disabled) li.classList.add("is-disabled");
+            if (option.selected) {
+                li.classList.add("is-selected");
+                li.setAttribute("aria-selected", "true");
+            }
+            var index = items.length;
+            li.addEventListener("click", function () { choose(index); });
+            li.addEventListener("mousemove", function () {
+                if (current && current.active !== index) setActive(index);
+            });
+            items.push(li);
+            optionIndexes.push(i);
+            menu.appendChild(li);
+        });
+
+        /* keep focus on the select while the list is used */
+        menu.addEventListener("mousedown", function (e) { e.preventDefault(); });
+
+        document.body.appendChild(menu);
+        current = { select: select, menu: menu, items: items, optionIndexes: optionIndexes, active: -1 };
+        select.setAttribute("aria-expanded", "true");
+
+        position(select, menu);
+        menu.style.visibility = "";
+
+        var selected = 0;
+        optionIndexes.forEach(function (oi, i) { if (select.options[oi].selected) selected = i; });
+        setActive(selected);
+    }
+
+    function toggle(select) {
+        if (current && current.select === select) close(false);
+        else open(select);
+    }
+
+    /* ---------- mouse ---------- */
+
+    document.addEventListener("mousedown", function (e) {
+        var select = selectFrom(e.target);
+
+        if (current && !current.menu.contains(e.target) && select !== current.select) {
+            close(false);
+        }
+        if (!select || e.button !== 0) return;
+
+        e.preventDefault();          // stops the browser's own list
+        if (select.disabled) return;
+        select.focus();
+        toggle(select);
+    }, true);
+
+    /* ---------- touch (tap opens, scroll does not) ---------- */
+
+    var touchMoved = false;
+    document.addEventListener("touchstart", function () { touchMoved = false; }, { passive: true });
+    document.addEventListener("touchmove", function () { touchMoved = true; }, { passive: true });
+    document.addEventListener("touchend", function (e) {
+        var select = selectFrom(e.target);
+        if (!select || select.disabled || touchMoved) return;
+        if (e.cancelable) e.preventDefault();   // no native picker, no emulated mouse events
+        select.focus();
+        toggle(select);
+    }, { passive: false });
+
+    /* ---------- keyboard ---------- */
+
+    document.addEventListener("keydown", function (e) {
+        if (current) {
+            if (e.target !== current.select) { close(false); return; }
+            switch (e.key) {
+                case "ArrowDown": e.preventDefault(); setActive(current.active + 1); return;
+                case "ArrowUp":   e.preventDefault(); setActive(current.active - 1); return;
+                case "Home":      e.preventDefault(); setActive(0); return;
+                case "End":       e.preventDefault(); setActive(current.items.length - 1); return;
+                case "Enter":
+                case " ":         e.preventDefault(); choose(current.active); return;
+                case "Escape":    e.preventDefault(); e.stopPropagation(); close(true); return;
+                case "Tab":       close(false); return;
+            }
+            return;
+        }
+
+        var select = selectFrom(e.target);
+        if (!select || select.disabled) return;
+        if (e.key === " " || e.key === "F4" || (e.altKey && e.key === "ArrowDown")) {
+            e.preventDefault();
+            open(select);
+        }
+    }, true);
+
+    /* ---------- keep it tidy ---------- */
+
+    window.addEventListener("scroll", function (e) {
+        if (current && !current.menu.contains(e.target)) close(false);
+    }, true);
+    window.addEventListener("resize", function () { close(false); });
+    document.addEventListener("focusout", function (e) {
+        if (current && e.target === current.select) close(false);
+    });
+})();
 </script>
 
 {% endblock %}

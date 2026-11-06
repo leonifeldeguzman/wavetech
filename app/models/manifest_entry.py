@@ -1,4 +1,3 @@
-
 from app.extensions import db
 from app.utils.ph_clock import ph_now
 
@@ -37,10 +36,22 @@ class ManifestEntry(db.Model):
         default="walkin"
     )
 
+    # Set only for entries created by approving an online registration, so
+    # the manifest can show when that registration was approved. NULL for
+    # walk-ins and for entries approved before this column existed.
+    registration_id = db.Column(
+        db.Integer,
+        db.ForeignKey("registrations.id"),
+        nullable=True,
+        index=True
+    )
+
     trip = db.relationship(
         "Trip",
         backref="manifest_entries"
     )
+
+    registration = db.relationship("Registration")
 
     def __repr__(self):
         return f"<ManifestEntry {self.full_name}>"

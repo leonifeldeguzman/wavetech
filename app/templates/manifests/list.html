@@ -9,6 +9,232 @@
     rel="stylesheet"
     href="{{ url_for('static', filename='css/manifests.css') }}"
 >
+<style>
+/* =========================================================
+   WAVETECH - DATE / TIME COMBO (companion of date-time-combo.js)
+
+   Styles the type-it-or-pick-it field that replaces every
+   .modal input[type="date"] and .modal input[type="time"].
+
+   Parts:
+     .dt-combo            wrapper, sits where the original input was
+     .dt-combo-field      holds the text box + the arrow button
+     .dt-combo-text       the visible text box (copies the original input's
+                          classes, so it looks like the rest of the form)
+     .dt-combo-toggle     the arrow that opens the list
+     .dt-combo-note       message under the field (red = error, amber = info)
+     .dt-combo-menu       the dropdown list (lives on <body>, position: fixed)
+     .dt-combo-option     one row in the list
+     .dt-source           the real <input> / <select>, kept in the form but hidden
+
+   Colours can be changed from one place by overriding these variables
+   (for example on :root or on .modal):
+     --dt-accent, --dt-accent-soft, --dt-danger, --dt-info
+   ========================================================= */
+
+:root {
+    --dt-accent: #0d6efd;
+    --dt-accent-soft: #e7f0ff;
+    --dt-danger: #dc3545;
+    --dt-info: #8a5a00;
+    --dt-border: #ced4da;
+    --dt-muted: #6c757d;
+}
+
+/* ---------- field ---------- */
+
+.dt-combo {
+    width: 100%;
+}
+
+.dt-combo-field {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.dt-combo-text {
+    width: 100%;
+    padding-right: 2.4rem;          /* room for the arrow */
+    cursor: text;
+    text-overflow: ellipsis;
+}
+
+.dt-combo-text.is-invalid {
+    border-color: var(--dt-danger);
+}
+
+.dt-combo-text.is-invalid:focus {
+    border-color: var(--dt-danger);
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.2);
+}
+
+/* ---------- arrow button ---------- */
+
+.dt-combo-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 2.4rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    color: var(--dt-muted);
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.dt-combo-toggle::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translate(-50%, -70%) rotate(45deg);
+    transition: transform 0.15s ease;
+}
+
+.dt-combo-text[aria-expanded="true"] + .dt-combo-toggle::after {
+    transform: translate(-50%, -30%) rotate(225deg);
+}
+
+.dt-combo-text:disabled {
+    cursor: not-allowed;
+}
+
+.dt-combo-toggle:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.dt-combo-toggle:hover:not(:disabled) {
+    color: #212529;
+}
+
+/* ---------- message under the field ---------- */
+
+.dt-combo-note {
+    margin-top: 0.3rem;
+    color: var(--dt-danger);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.dt-combo-note[hidden] {
+    display: none;
+}
+
+.dt-combo-note.is-info {
+    color: var(--dt-info);
+}
+
+/* ---------- dropdown list ---------- */
+
+.dt-combo-menu {
+    position: fixed;
+    z-index: 2000;                   /* above Bootstrap modals (1055) */
+    display: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #fff;
+    border: 1px solid var(--dt-border);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    font-size: 0.92rem;
+}
+
+.dt-combo-menu.is-open {
+    display: block;
+}
+
+.dt-combo-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.85rem;
+    cursor: pointer;
+    color: #212529;
+    user-select: none;
+}
+
+.dt-combo-option.is-active {
+    background: #f1f3f5;
+}
+
+.dt-combo-option.is-selected {
+    background: var(--dt-accent-soft);
+    color: var(--dt-accent);
+    font-weight: 600;
+}
+
+.dt-combo-option.is-selected.is-active {
+    background: #d6e6ff;
+}
+
+.dt-combo-empty {
+    padding: 0.7rem 0.85rem;
+    color: var(--dt-muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+/* ---------- the real input: still in the form, never seen or focused ---------- */
+
+input.dt-source,
+select.dt-source {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* ---------- safety net for inputs that opt out (data-native-*) ---------- */
+
+.modal input[type="time"][data-native-time]::-webkit-calendar-picker-indicator,
+.modal input[type="date"][data-native-date]::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
+/* ---------- date field: Month + Day hybrid fields, year fixed ---------- */
+
+.dt-date {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.dt-date > .dt-combo-field {
+    width: auto;
+    min-width: 0;
+}
+
+.dt-date > .dt-date-month { flex: 2 1 0; }
+.dt-date > .dt-date-day   { flex: 1 1 0; }
+
+/* The year is shown but cannot be changed */
+.dt-date-year {
+    flex: none;
+    padding: 0 0.25rem;
+    color: var(--dt-muted);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+</style>
 
 <!-- Timetable Header -->
 <div class="manifest-page-header">
@@ -92,7 +318,24 @@
 </div>
 
 
+{% if is_past_date %}
+{# TODO: point this at the real Analytics page. The #manifest-records hash makes it
+   scroll to the Manifest Records section (that section needs id="manifest-records"). #}
+{% set analytics_records_url = '/analytics?tab=manifest-records#manifest-records' %}
+<!-- Shown whenever the selected date is before today (Asia/Manila) -->
+<div class="manifest-past-banner" role="status">
+    <i class="bi bi-lock-fill" aria-hidden="true"></i>
+    <span>Past dates are view-only</span>
+    <a href="{{ analytics_records_url }}" class="manifest-past-banner-link">
+        View all records in Analytics &rarr;
+    </a>
+</div>
+{% endif %}
+
+{# Overall condition is a live reading, so it is hidden for past dates #}
+{% if not is_past_date %}
 {% include 'partials/overall_condition.html' %}
+{% endif %}
 
 <!-- Status filter (shows/hides rows in the browser; the date view is unchanged) -->
 <div class="manifest-filter" id="slotFilter" role="group" aria-label="Filter trips by status">
@@ -396,6 +639,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             min="{{ terminal_open }}"
                             max="{{ terminal_close }}"
                             value="{{ f.departure_time or '' }}"
+                            data-disable-when-none
                             required
                         >
                     </div>
@@ -532,6 +776,991 @@ document.addEventListener("DOMContentLoaded", function () {
 
 {% block scripts %}
 <script>
+/* =========================================================
+   WAVETECH - DATE / TIME COMBO (type it or pick it, past is never offered)
+
+   Turns every  .modal input[type="time"]  and  .modal input[type="date"]
+   (and every  .modal select[data-pick]) into hybrid fields: the admin can TYPE the value or open the dropdown and
+   PICK it.
+     time  -> one field.            Typing: 9   9am   9:30   9:30 pm   930   14:30
+     date  -> MONTH + DAY fields.   Typing a month: Nov   november   11
+                                    Typing a day:   12    12th
+              The year is not chosen: it is always the current year
+              (Asia/Manila). It moves to next year only when this year has no
+              dates left, or when the page itself sets a date in another year.
+     select[data-pick] -> one field showing the select's options.
+              Typing: the start of an option (e.g. "weat"). The original
+              <select> stays in the form, hidden, and still fires "change".
+              Optional  data-placeholder="..."  sets the box's hint text.
+
+   Only values that can still be chosen are listed, so past dates and times
+   cannot be clicked or scrolled to, and a typed past value is refused with a
+   message under the field.
+
+   The original input stays in the form, hidden, and keeps the value as
+   HH:MM (time) or YYYY-MM-DD (date). Every existing script and the server
+   see no difference.
+
+   Limits come from the input itself (the page may change them any time):
+     min / max              earliest / latest value
+     data-after="HH:MM"     time must be LATER than this (Delay modal)
+     data-date + data-now   when that date is today (Asia/Manila), times
+                            before "now" are not offered
+     data-list-step="15"    minutes between the times in the dropdown
+                            (typing still accepts any minute)
+   Terminal hours for the messages are read from the nearest data-open /
+   data-close attribute (the modal or its form).
+
+   Opt out with  data-native-time  /  data-native-date  /  data-native-select.
+   ========================================================= */
+(function () {
+    "use strict";
+
+    var NATIVE_VALUE = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+    var MONTHS = ["january", "february", "march", "april", "may", "june", "july",
+                  "august", "september", "october", "november", "december"];
+
+    var NATIVE_SELECT_VALUE = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    var instances = [];
+    var openInst = null;
+    var seq = 0;
+
+    /* ---------- small helpers ---------- */
+
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+
+    function toMin(hm) {
+        var p = String(hm || "").split(":");
+        return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+    }
+
+    function hhmm(total) { return pad(Math.floor(total / 60)) + ":" + pad(total % 60); }
+
+    function label12(total) {
+        var h = Math.floor(total / 60), m = total % 60;
+        return ((h % 12) || 12) + ":" + pad(m) + " " + (h >= 12 ? "PM" : "AM");
+    }
+
+    /* "Now" in Asia/Manila: the server time when data-now is given
+       (advanced by the browser's elapsed time, so a wrong device clock is
+       ignored), otherwise the Manila clock of this device. */
+    function manilaNow(input) {
+        var iso = input && input.getAttribute("data-now");
+        if (iso) {
+            var base = new Date(iso).getTime();
+            if (!isNaN(base)) {
+                if (input._dtcIso !== iso) { input._dtcIso = iso; input._dtcLoadedAt = Date.now(); }
+                var n = new Date(base + (Date.now() - input._dtcLoadedAt));
+                return {
+                    date: n.getFullYear() + "-" + pad(n.getMonth() + 1) + "-" + pad(n.getDate()),
+                    minutes: n.getHours() * 60 + n.getMinutes()
+                };
+            }
+        }
+        var parts = {};
+        new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+        }).formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+        return {
+            date: parts.year + "-" + parts.month + "-" + parts.day,
+            minutes: (parseInt(parts.hour, 10) % 24) * 60 + parseInt(parts.minute, 10)
+        };
+    }
+
+    /* ---------- limits ---------- */
+
+    function timeLimits(input) {
+        var lo = input.getAttribute("min") ? toMin(input.getAttribute("min")) : 0;
+        var hi = input.getAttribute("max") ? toMin(input.getAttribute("max")) : 1439;
+
+        var after = input.getAttribute("data-after");
+        if (after) { lo = Math.max(lo, toMin(after) + 1); }
+
+        var date = input.getAttribute("data-date");
+        if (date) {
+            var now = manilaNow(input);
+            if (date < now.date) { hi = -1; }                       /* the whole day has passed */
+            else if (date === now.date) { lo = Math.max(lo, now.minutes); }
+        }
+        return { lo: lo, hi: hi };
+    }
+
+    function dateLimits(input) {
+        var lo = input.getAttribute("min") || manilaNow(input).date;
+        var hi = input.getAttribute("max") || "";
+        return { lo: lo, hi: hi };
+    }
+
+    function terminalHours(input) {
+        var holder = input.closest ? input.closest("[data-open]") : null;
+        if (!holder) { return null; }
+        var o = holder.getAttribute("data-open"), c = holder.getAttribute("data-close");
+        return (o && c) ? { open: toMin(o), close: toMin(c) } : null;
+    }
+
+    /* ---------- parsing what the admin types ---------- */
+
+    /* Returns minutes since midnight, or null when it is not a time */
+    function parseTime(text, lim) {
+        var s = String(text || "").toLowerCase().replace(/\s+/g, "").replace(/\./g, "");
+        var m = /^(\d{1,2})(?::?(\d{2}))?(a|p|am|pm)?$/.exec(s);
+        if (!m) { return null; }
+
+        var h = parseInt(m[1], 10);
+        var min = m[2] === undefined ? 0 : parseInt(m[2], 10);
+        var mer = m[3] || "";
+        if (min > 59) { return null; }
+
+        if (mer) {
+            if (h < 1 || h > 12) { return null; }
+            return (h % 12) * 60 + (mer.charAt(0) === "p" ? 720 : 0) + min;
+        }
+        if (h > 23) { return null; }
+        if (h === 0 || h >= 13) { return h * 60 + min; }           /* 24-hour typing */
+
+        /* 1-12 without AM/PM: take the one that fits the allowed range */
+        var am = (h % 12) * 60 + min;
+        var pm = am + 720;
+        function fits(t) { return t >= lim.lo && t <= lim.hi; }
+        if (fits(am) && !fits(pm)) { return am; }
+        if (fits(pm) && !fits(am)) { return pm; }
+        if (fits(am) && fits(pm)) { return h === 12 ? pm : am; }
+        if (lim.hi < lim.lo) { return am; }
+        function dist(t) { return t < lim.lo ? lim.lo - t : t - lim.hi; }
+        return dist(am) <= dist(pm) ? am : pm;
+    }
+
+    /* ---------- one hybrid field (type it or pick it) ----------
+       Used for the time, and for the month and the day of a date.
+
+       cfg.items()        the values that can be chosen: [{value, label, alt}]
+       cfg.parse(raw)     typed text -> value, or null when it is not understood
+       cfg.allowed(v)     can this value still be chosen?
+       cfg.textFor(v)     text shown in the box for a value
+       cfg.get() / set(v) read / write the value the owner keeps
+       cfg.note(msg)      show or clear a message ("" clears)
+       cfg.msgs           { empty(filtering), bad, notAllowed(v) }
+       cfg.onChosen()     optional, called after a value was picked        */
+    function createPicker(cfg) {
+        var uid = "dtc-" + (++seq);
+
+        var field = document.createElement("div");
+        field.className = "dt-combo-field" + (cfg.fieldClass ? " " + cfg.fieldClass : "");
+
+        var text = document.createElement("input");
+        text.type = "text";
+        text.className = cfg.inputClass + " dt-combo-text";
+        if (cfg.id) { text.id = cfg.id; }
+        text.setAttribute("autocomplete", "off");
+        text.setAttribute("autocapitalize", "off");
+        text.setAttribute("spellcheck", "false");
+        text.setAttribute("role", "combobox");
+        text.setAttribute("aria-autocomplete", "list");
+        text.setAttribute("aria-expanded", "false");
+        text.setAttribute("aria-controls", uid + "-list");
+        text.setAttribute("aria-label", cfg.label);
+        text.placeholder = cfg.placeholder;
+
+        var toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "dt-combo-toggle";
+        toggle.setAttribute("tabindex", "-1");
+        toggle.setAttribute("aria-label", "Show " + cfg.label.toLowerCase());
+
+        var menu = document.createElement("ul");
+        menu.className = "dt-combo-menu";
+        menu.id = uid + "-list";
+        menu.setAttribute("role", "listbox");
+
+        field.appendChild(text);
+        field.appendChild(toggle);
+
+        var items = [];
+        var active = -1;
+        var filtering = false;
+        var isOpen = false;
+
+        function filtered() {
+            var all = cfg.items();
+            var q = text.value.toLowerCase().replace(/[\s,.:]/g, "");
+            if (!filtering || !q) { return all; }
+            return all.filter(function (it) {
+                var key = it.label.toLowerCase().replace(/[\s,.:]/g, "");
+                return key.indexOf(q) === 0 || (it.alt && it.alt.indexOf(q) === 0);
+            });
+        }
+
+        function renderMenu() {
+            items = filtered();
+            menu.innerHTML = "";
+            var cur = cfg.get();
+            if (!items.length) {
+                var empty = document.createElement("li");
+                empty.className = "dt-combo-empty";
+                empty.textContent = cfg.msgs.empty(filtering);
+                menu.appendChild(empty);
+            }
+            items.forEach(function (it, idx) {
+                var li = document.createElement("li");
+                li.className = "dt-combo-option" + (it.value === cur ? " is-selected" : "") + (idx === active ? " is-active" : "");
+                li.id = uid + "-opt-" + idx;
+                li.setAttribute("role", "option");
+                li.setAttribute("aria-selected", it.value === cur ? "true" : "false");
+                li.setAttribute("data-value", it.value);
+                li.textContent = it.label;
+                menu.appendChild(li);
+            });
+            if (active >= 0 && items[active]) {
+                text.setAttribute("aria-activedescendant", uid + "-opt-" + active);
+            } else {
+                text.removeAttribute("aria-activedescendant");
+            }
+        }
+
+        /* The menu is attached to <body> (position: fixed) so a modal's
+           overflow: hidden can never cut it off. */
+        function place() {
+            var r = text.getBoundingClientRect();
+            var below = window.innerHeight - r.bottom - 12;
+            var above = r.top - 12;
+            var flip = below < 180 && above > below;
+            var maxH = Math.max(120, Math.min(232, flip ? above : below));
+            menu.style.width = r.width + "px";
+            menu.style.left = r.left + "px";
+            menu.style.maxHeight = maxH + "px";
+            if (flip) {
+                menu.style.top = "auto";
+                menu.style.bottom = (window.innerHeight - r.top + 4) + "px";
+            } else {
+                menu.style.bottom = "auto";
+                menu.style.top = (r.bottom + 4) + "px";
+            }
+        }
+
+        function scrollToSelected() {
+            var el = menu.querySelector(".is-active") || menu.querySelector(".is-selected");
+            if (el) { menu.scrollTop = Math.max(0, el.offsetTop - 60); }
+        }
+
+        function open() {
+            if (text.disabled) { return; }
+            if (openInst && openInst !== api) { openInst.close(); }
+            openInst = api;
+            isOpen = true;
+            if (!menu.parentNode) { document.body.appendChild(menu); }
+            renderMenu();
+            menu.classList.add("is-open");
+            text.setAttribute("aria-expanded", "true");
+            place();
+            scrollToSelected();
+        }
+
+        function close() {
+            if (!isOpen) { return; }
+            isOpen = false;
+            active = -1;
+            filtering = false;
+            menu.classList.remove("is-open");
+            text.setAttribute("aria-expanded", "false");
+            text.removeAttribute("aria-activedescendant");
+            if (menu.parentNode) { menu.parentNode.removeChild(menu); }
+            if (openInst === api) { openInst = null; }
+        }
+
+        /* While a value is being applied, the page may move focus elsewhere
+           (e.g. to an "Other" text box). That blur must not re-commit text. */
+        var applying = false;
+
+        function choose(v) {
+            applying = true;
+            text.value = cfg.textFor(v);        /* show it BEFORE the page reacts */
+            cfg.set(v);
+            text.value = cfg.textFor(cfg.get());
+            cfg.note("");
+            applying = false;
+            close();
+            if (cfg.onChosen) { cfg.onChosen(); }
+        }
+
+        /* Turn what was typed into the real value (or explain why not) */
+        function commitTyped() {
+            var raw = text.value.trim();
+            if (!raw) { cfg.set(""); cfg.note(""); return; }
+
+            var v = cfg.parse(raw);
+            if (v === null) { cfg.set(""); cfg.note(cfg.msgs.bad); return; }
+            if (!cfg.allowed(v)) { cfg.set(""); cfg.note(cfg.msgs.notAllowed(v)); return; }
+            applying = true;
+            text.value = cfg.textFor(v);
+            cfg.set(v);
+            text.value = cfg.textFor(cfg.get());
+            cfg.note("");
+            applying = false;
+        }
+
+        function move(delta) {
+            if (!isOpen) { open(); }
+            if (!items.length) { return; }
+            active = active < 0 ? (delta > 0 ? 0 : items.length - 1)
+                                : (active + delta + items.length) % items.length;
+            renderMenu();
+            var el = menu.querySelector(".is-active");
+            if (el && el.scrollIntoView) { el.scrollIntoView({ block: "nearest" }); }
+        }
+
+        text.addEventListener("input", function () {
+            filtering = true;
+            active = -1;
+            cfg.note("");
+            open();
+        });
+
+        text.addEventListener("click", function () {
+            if (!isOpen) { filtering = false; open(); }
+        });
+
+        text.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowDown") { e.preventDefault(); move(1); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
+            else if (e.key === "Enter") {
+                if (isOpen && active >= 0 && items[active]) {
+                    e.preventDefault();
+                    choose(items[active].value);
+                } else if (isOpen || text.value.trim() !== cfg.textFor(cfg.get())) {
+                    e.preventDefault();             /* do not submit the form on the first Enter */
+                    commitTyped();
+                    close();
+                    if (cfg.onChosen && cfg.get()) { cfg.onChosen(); }
+                }
+            } else if (e.key === "Escape" && isOpen) {
+                e.stopPropagation();                /* close the list, not the modal */
+                e.preventDefault();
+                close();
+            } else if (e.key === "Tab") {
+                commitTyped();
+                close();
+            }
+        });
+
+        text.addEventListener("blur", function () {
+            if (applying) { return; }
+            commitTyped();
+            close();
+        });
+
+        /* Keep focus in the field while the list is used */
+        menu.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        menu.addEventListener("click", function (e) {
+            var li = e.target.closest ? e.target.closest(".dt-combo-option") : null;
+            if (li) { text.focus(); choose(li.getAttribute("data-value")); }
+        });
+        menu.addEventListener("mousemove", function (e) {
+            var li = e.target.closest ? e.target.closest(".dt-combo-option") : null;
+            if (!li) { return; }
+            var idx = parseInt(li.id.split("-opt-")[1], 10);
+            if (idx !== active) {
+                active = idx;
+                var prev = menu.querySelector(".is-active");
+                if (prev) { prev.classList.remove("is-active"); }
+                li.classList.add("is-active");
+            }
+        });
+
+        toggle.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        toggle.addEventListener("click", function () {
+            text.focus();
+            if (isOpen) { close(); } else { filtering = false; open(); }
+        });
+
+        var api = {
+            field: field,
+            text: text,
+            close: close,
+            place: function () { if (isOpen) { place(); } },
+            syncText: function () { text.value = cfg.textFor(cfg.get()); },
+            refreshMenu: function () { if (isOpen) { renderMenu(); place(); } },
+            setDisabled: function (off) {
+                text.disabled = off;
+                toggle.disabled = off;
+                if (off) { close(); }
+            }
+        };
+        return api;
+    }
+
+    function inputClasses(input) {
+        return (input.className || "").split(/\s+/).filter(function (c) {
+            return c && c !== "dt-source" && c !== "form-select";
+        }).join(" ");
+    }
+
+    function hideSource(input, wrap) {
+        input.classList.add("dt-source");
+        input.setAttribute("tabindex", "-1");
+        input.setAttribute("aria-hidden", "true");
+        input.parentNode.insertBefore(wrap, input.nextSibling);
+    }
+
+    function fireEvents(input) {
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    /* ---------- the date field: Month + Day, year fixed ---------- */
+
+    function enhanceDate(input) {
+        var wrap = document.createElement("div");
+        wrap.className = "dt-combo";
+        var row = document.createElement("div");
+        row.className = "dt-date";
+        var yearTag = document.createElement("span");
+        yearTag.className = "dt-date-year";
+        var note = document.createElement("div");
+        note.className = "dt-combo-note";
+        note.setAttribute("role", "alert");
+        note.hidden = true;
+
+        var m = "", d = "";          /* chosen month / day, as "1".."12" / "1".."31" */
+        var fixedYear = 0;           /* 0 = this year; set only to avoid a dead end */
+        var touched = false;         /* the admin changed the fields themselves */
+        var monthP, dayP;
+
+        function value() { return NATIVE_VALUE.get.call(input); }
+        function baseYear() {
+            return Math.max(parseInt(manilaNow(input).date.slice(0, 4), 10),
+                            parseInt(dateLimits(input).lo.slice(0, 4), 10));
+        }
+        function year() { return fixedYear || baseYear(); }
+        function isoOf(mm, dd) { return year() + "-" + pad(mm) + "-" + pad(dd); }
+        function daysIn(mm) { return new Date(Date.UTC(year(), mm, 0)).getUTCDate(); }
+        function allowedIso(iso) {
+            var lim = dateLimits(input);
+            return iso.slice(0, 4) === String(year()) && iso >= lim.lo && (!lim.hi || iso <= lim.hi);
+        }
+        function monthName(mm) { return MONTHS[mm - 1].charAt(0).toUpperCase() + MONTHS[mm - 1].slice(1); }
+
+        /* Months that still have at least one allowed day */
+        function monthItems() {
+            var lim = dateLimits(input), list = [], mm;
+            for (mm = 1; mm <= 12; mm++) {
+                if (isoOf(mm, daysIn(mm)) >= lim.lo && (!lim.hi || isoOf(mm, 1) <= lim.hi)) {
+                    list.push({ value: String(mm), label: monthName(mm), alt: String(mm) });
+                }
+            }
+            return list;
+        }
+
+        /* Days of the chosen month that can still be picked */
+        function dayItems() {
+            var list = [], dd;
+            if (!m) { return list; }
+            for (dd = 1; dd <= daysIn(+m); dd++) {
+                if (allowedIso(isoOf(+m, dd))) { list.push({ value: String(dd), label: String(dd), alt: "" }); }
+            }
+            return list;
+        }
+
+        function has(list, v) {
+            for (var i = 0; i < list.length; i++) { if (list[i].value === v) { return true; } }
+            return false;
+        }
+
+        function showNote(msg, isError, which) {
+            note.textContent = msg || "";
+            note.hidden = !msg;
+            note.classList.toggle("is-info", !isError);
+            monthP.text.classList.remove("is-invalid");
+            dayP.text.classList.remove("is-invalid");
+            if (msg && isError && which) { which.text.classList.add("is-invalid"); }
+        }
+
+        /* This year has nothing left (e.g. end of December): move to next year
+           instead of leaving the admin with an empty list. */
+        function ensureYear() {
+            if (fixedYear && fixedYear <= baseYear()) { fixedYear = 0; }
+            var any = monthItems().length > 0;
+            if (!any && !fixedYear) { fixedYear = baseYear() + 1; any = monthItems().length > 0; }
+            return any;
+        }
+
+        /* A date typed or set by the page in another year is kept, not dropped */
+        function adoptYearFrom(v) {
+            var lim = dateLimits(input);
+            var y = v ? parseInt(v.slice(0, 4), 10) : 0;
+            fixedYear = (y && y !== baseYear() && v >= lim.lo && (!lim.hi || v <= lim.hi)) ? y : 0;
+        }
+
+        /* Month + Day -> the real input */
+        function sync() {
+            var v = (m && d) ? isoOf(+m, +d) : "";
+            if (v === value()) { return; }
+            NATIVE_VALUE.set.call(input, v);
+            fireEvents(input);
+        }
+
+        function paint() {
+            var any = ensureYear();
+            yearTag.textContent = String(year());
+            if (document.activeElement !== monthP.text) { monthP.syncText(); }
+            if (document.activeElement !== dayP.text) { dayP.syncText(); }
+            dayP.setDisabled(!m);
+            if (!any) { showNote("No dates are available.", false); }
+            else if (note.classList.contains("is-info")) { showNote(""); }
+            monthP.refreshMenu();
+            dayP.refreshMenu();
+        }
+
+        /* Real input -> Month + Day (also drops a value that is not allowed) */
+        function load() {
+            adoptYearFrom(value());
+            var v = value();
+            if (v && !allowedIso(v)) { NATIVE_VALUE.set.call(input, ""); v = ""; }
+            if (v) { m = String(parseInt(v.slice(5, 7), 10)); d = String(parseInt(v.slice(8, 10), 10)); }
+            else if (!touched) { m = ""; d = ""; }
+            paint();
+        }
+
+        function refresh() {
+            ensureYear();
+            if (m && !has(monthItems(), m)) { m = ""; d = ""; }
+            if (d && !has(dayItems(), d)) { d = ""; }
+            sync();
+            paint();
+        }
+
+        function parseMonth(raw) {
+            var s = raw.toLowerCase().replace(/\./g, "").trim();
+            if (/^\d{1,2}$/.test(s)) {
+                var n = parseInt(s, 10);
+                return n >= 1 && n <= 12 ? String(n) : null;
+            }
+            if (s.length < 3) { return null; }
+            for (var i = 0; i < 12; i++) { if (MONTHS[i].indexOf(s) === 0) { return String(i + 1); } }
+            return null;
+        }
+
+        function parseDay(raw) {
+            var r = /^(\d{1,2})(st|nd|rd|th)?$/.exec(raw.toLowerCase().trim());
+            if (!r) { return null; }
+            var n = parseInt(r[1], 10);
+            return n >= 1 && n <= 31 ? String(n) : null;
+        }
+
+        var base = inputClasses(input);
+        var id = input.id || "";
+
+        monthP = createPicker({
+            inputClass: base, id: id ? id + "-month" : "", fieldClass: "dt-date-month",
+            placeholder: "Month", label: "Month",
+            items: monthItems,
+            parse: parseMonth,
+            allowed: function (v) { return has(monthItems(), v); },
+            textFor: function (v) { return v ? monthName(+v) : ""; },
+            get: function () { return m; },
+            set: function (v) {
+                if (v === m) { return; }
+                touched = true;
+                m = v;
+                if (!m || (d && !has(dayItems(), d))) { d = ""; }
+                dayP.syncText();
+                dayP.setDisabled(!m);
+                sync();
+            },
+            note: function (msg) { showNote(msg, true, monthP); },
+            msgs: {
+                empty: function (f) { return f ? "No match. Type a month, e.g. Nov or 11." : "No months available."; },
+                bad: "Enter a month like Nov or 11.",
+                notAllowed: function () { return "That month has already passed."; }
+            },
+            onChosen: function () { if (m) { dayP.text.focus(); } }
+        });
+
+        dayP = createPicker({
+            inputClass: base, id: id ? id + "-day" : "", fieldClass: "dt-date-day",
+            placeholder: "Day", label: "Day",
+            items: dayItems,
+            parse: parseDay,
+            allowed: function (v) { return has(dayItems(), v); },
+            textFor: function (v) { return v || ""; },
+            get: function () { return d; },
+            set: function (v) {
+                if (v === d) { return; }
+                touched = true;
+                d = v;
+                sync();
+            },
+            note: function (msg) { showNote(msg, true, dayP); },
+            msgs: {
+                empty: function (f) { return f ? "No match. Type a day, e.g. 12." : "No days left in this month."; },
+                bad: "Enter a day like 12.",
+                notAllowed: function (v) {
+                    var n = parseInt(v, 10);
+                    return n > daysIn(+m) ? "That month only has " + daysIn(+m) + " days." : "That date has already passed.";
+                }
+            }
+        });
+
+        row.appendChild(monthP.field);
+        row.appendChild(dayP.field);
+        row.appendChild(yearTag);
+        wrap.appendChild(row);
+        wrap.appendChild(note);
+        hideSource(input, wrap);
+
+        if (input.id) {
+            var lab = document.querySelector('label[for="' + input.id + '"]');
+            if (lab) { lab.addEventListener("click", function (e) { e.preventDefault(); monthP.text.focus(); }); }
+        }
+
+        /* Submitting with the date empty: say so and go to the field, instead
+           of the browser trying to focus the hidden input. */
+        input.addEventListener("invalid", function (e) {
+            e.preventDefault();
+            var target = m ? dayP : monthP;
+            showNote(m ? "Please choose a day." : "Please choose a month and a day.", true, target);
+            target.text.focus();
+        });
+
+        /* The page sets  input.value = ...  from its own code */
+        Object.defineProperty(input, "value", {
+            configurable: true,
+            get: function () { return NATIVE_VALUE.get.call(input); },
+            set: function (v) {
+                NATIVE_VALUE.set.call(input, v);
+                touched = false;
+                showNote("");
+                load();
+            }
+        });
+
+        new MutationObserver(refresh).observe(input, {
+            attributes: true,
+            attributeFilter: ["min", "max", "data-now"]
+        });
+
+        var modal = input.closest(".modal");
+        if (modal) {
+            modal.addEventListener("shown.bs.modal", refresh);
+            modal.addEventListener("hidden.bs.modal", function () { monthP.close(); dayP.close(); });
+        }
+
+        if (input.form) {
+            input.form.addEventListener("reset", function () {
+                setTimeout(function () { touched = false; showNote(""); load(); }, 0);
+            });
+        }
+
+        instances.push({ wrap: wrap, refresh: refresh });
+        load();
+    }
+
+    /* ---------- the time field ---------- */
+
+    function enhanceTime(input) {
+        var wrap = document.createElement("div");
+        wrap.className = "dt-combo";
+        var note = document.createElement("div");
+        note.className = "dt-combo-note";
+        note.setAttribute("role", "alert");
+        note.hidden = true;
+
+        var p;
+
+        function value() { return NATIVE_VALUE.get.call(input); }
+
+        function showNote(msg, info) {
+            note.textContent = msg || "";
+            note.hidden = !msg;
+            note.classList.toggle("is-info", !!info);
+            p.text.classList.toggle("is-invalid", !!msg && !info);
+        }
+
+        function setValue(v) {
+            if (v === value()) { return; }
+            NATIVE_VALUE.set.call(input, v);
+            fireEvents(input);
+        }
+
+        function allowed(v) {
+            var lim = timeLimits(input), t = toMin(v);
+            return t >= lim.lo && t <= lim.hi;
+        }
+
+        function timeItems() {
+            var lim = timeLimits(input), list = [];
+            var step = Math.max(1, parseInt(input.getAttribute("data-list-step"), 10) || 15);
+            for (var t = Math.ceil(lim.lo / step) * step; t <= lim.hi; t += step) {
+                list.push({ value: hhmm(t), label: label12(t), alt: "" });
+            }
+            return list;
+        }
+
+        function problem(v) {
+            var lim = timeLimits(input);
+            var t = toMin(v);
+            var th = terminalHours(input);
+            var hoursMsg = th
+                ? "Terminal hours are " + label12(th.open) + " to " + label12(th.close) + "."
+                : "That time is outside the allowed hours.";
+            if (lim.hi < 0) { return "That date has already passed."; }
+            if (t < lim.lo) {
+                var after = input.getAttribute("data-after");
+                if (after && t <= toMin(after)) { return "Choose a time later than " + label12(toMin(after)) + "."; }
+                if (th && t < th.open) { return hoursMsg; }
+                return "That time has already passed.";
+            }
+            return hoursMsg;
+        }
+
+        p = createPicker({
+            inputClass: inputClasses(input), id: input.id ? input.id + "-text" : "",
+            placeholder: "Type or pick a time", label: "Times",
+            items: timeItems,
+            parse: function (raw) {
+                var t = parseTime(raw, timeLimits(input));
+                return t === null ? null : hhmm(t);
+            },
+            allowed: allowed,
+            textFor: function (v) { return v ? label12(toMin(v)) : ""; },
+            get: value,
+            set: setValue,
+            note: function (msg) { showNote(msg); },
+            msgs: {
+                empty: function (f) { return f ? "No match. Type a time, e.g. 9:30 AM." : "No times left for this date."; },
+                bad: "Enter a time like 9:30 AM.",
+                notAllowed: problem
+            }
+        });
+
+        wrap.appendChild(p.field);
+        wrap.appendChild(note);
+        hideSource(input, wrap);
+
+        if (input.id) {
+            var lab = document.querySelector('label[for="' + input.id + '"]');
+            if (lab) { lab.addEventListener("click", function (e) { e.preventDefault(); p.text.focus(); }); }
+        }
+
+        /* A value that is no longer allowed (time passed, limit moved) is dropped */
+        function refresh() {
+            var v = value();
+            if (v && !allowed(v)) {
+                var why = problem(v);               /* tell the admin why it vanished */
+                NATIVE_VALUE.set.call(input, "");
+                p.text.value = "";
+                showNote(why);
+            } else if (v) {
+                p.syncText();
+            }
+            var lim = timeLimits(input);
+            var noneLeft = lim.hi < lim.lo;
+            if (!v && !p.text.value) {
+                showNote(noneLeft ? "No departure times are left for this date. Choose another date." : "", true);
+            } else if (note.classList.contains("is-info")) {
+                showNote("");
+            }
+            /* Fields marked data-disable-when-none cannot be used while the
+               selected date has no departure times left; they switch back on
+               as soon as another date (with times) is chosen. */
+            if (input.hasAttribute("data-disable-when-none")) {
+                p.setDisabled(noneLeft);
+            }
+            p.refreshMenu();
+        }
+
+        /* Submitting with the time empty: say so and go to the visible field */
+        input.addEventListener("invalid", function (e) {
+            e.preventDefault();
+            showNote("Please choose a time.");
+            p.text.focus();
+        });
+
+        /* The page sets  input.value = ...  from its own code */
+        Object.defineProperty(input, "value", {
+            configurable: true,
+            get: function () { return NATIVE_VALUE.get.call(input); },
+            set: function (v) {
+                NATIVE_VALUE.set.call(input, v);
+                p.syncText();
+                showNote("");
+                refresh();
+            }
+        });
+
+        new MutationObserver(refresh).observe(input, {
+            attributes: true,
+            attributeFilter: ["min", "max", "data-after", "data-date", "data-now", "data-list-step"]
+        });
+
+        var modal = input.closest(".modal");
+        if (modal) {
+            modal.addEventListener("shown.bs.modal", refresh);
+            modal.addEventListener("hidden.bs.modal", p.close);
+        }
+
+        if (input.form) {
+            input.form.addEventListener("reset", function () {
+                setTimeout(function () { p.text.value = ""; showNote(""); refresh(); }, 0);
+            });
+        }
+
+        instances.push({ wrap: wrap, refresh: refresh });
+        p.syncText();
+        refresh();
+    }
+
+    /* ---------- a <select data-pick>: type it or pick it ---------- */
+
+    function enhanceSelect(select) {
+        var wrap = document.createElement("div");
+        wrap.className = "dt-combo";
+        var note = document.createElement("div");
+        note.className = "dt-combo-note";
+        note.setAttribute("role", "alert");
+        note.hidden = true;
+
+        var lab = select.id ? document.querySelector('label[for="' + select.id + '"]') : null;
+        var name = select.getAttribute("aria-label") || (lab ? lab.textContent.trim() : "") || "Options";
+        var p;
+
+        function value() { return NATIVE_SELECT_VALUE.get.call(select); }
+
+        /* every option that has a value (the empty "Select ..." one is the placeholder) */
+        function items() {
+            var list = [];
+            for (var i = 0; i < select.options.length; i++) {
+                var o = select.options[i];
+                if (o.value !== "") { list.push({ value: o.value, label: o.text.trim(), alt: "" }); }
+            }
+            return list;
+        }
+
+        function labelOf(v) {
+            var list = items();
+            for (var i = 0; i < list.length; i++) { if (list[i].value === v) { return list[i].label; } }
+            return "";
+        }
+
+        function showNote(msg) {
+            note.textContent = msg || "";
+            note.hidden = !msg;
+            p.text.classList.toggle("is-invalid", !!msg);
+        }
+
+        function setValue(v) {
+            if (v === value()) { return; }
+            NATIVE_SELECT_VALUE.set.call(select, v);
+            fireEvents(select);
+        }
+
+        /* typed text -> an option: exact match, else the only option that starts with it */
+        function parse(raw) {
+            var s = raw.toLowerCase().replace(/\s+/g, " ").trim(), list = items(), hits = [], i;
+            for (i = 0; i < list.length; i++) {
+                if (list[i].label.toLowerCase() === s) { return list[i].value; }
+                if (list[i].label.toLowerCase().indexOf(s) === 0) { hits.push(list[i].value); }
+            }
+            return hits.length === 1 ? hits[0] : null;
+        }
+
+        var cls = inputClasses(select).split(/\s+/).filter(function (c) { return c && c !== "form-control"; });
+        cls.push("form-control");
+
+        p = createPicker({
+            inputClass: cls.join(" "), id: select.id ? select.id + "-text" : "",
+            placeholder: select.getAttribute("data-placeholder") || "Type or pick a " + name.toLowerCase(),
+            label: name,
+            items: items,
+            parse: parse,
+            allowed: function () { return true; },
+            textFor: labelOf,
+            get: value,
+            set: setValue,
+            note: showNote,
+            msgs: {
+                empty: function (f) { return f ? "No match. Pick one from the list." : "No options available."; },
+                bad: "Pick one of the options from the list.",
+                notAllowed: function () { return "Pick one of the options from the list."; }
+            }
+        });
+        if (select.getAttribute("aria-describedby")) {
+            p.text.setAttribute("aria-describedby", select.getAttribute("aria-describedby"));
+        }
+
+        wrap.appendChild(p.field);
+        wrap.appendChild(note);
+        hideSource(select, wrap);
+
+        if (lab) { lab.addEventListener("click", function (e) { e.preventDefault(); p.text.focus(); }); }
+
+        /* The page sets  select.value = ...  from its own code */
+        Object.defineProperty(select, "value", {
+            configurable: true,
+            get: function () { return NATIVE_SELECT_VALUE.get.call(select); },
+            set: function (v) {
+                NATIVE_SELECT_VALUE.set.call(select, v);
+                p.syncText();
+                showNote("");
+            }
+        });
+
+        var modal = select.closest(".modal");
+        if (modal) { modal.addEventListener("hidden.bs.modal", p.close); }
+
+        /* form.reset() puts the first option back */
+        if (select.form) {
+            select.form.addEventListener("reset", function () {
+                setTimeout(function () { p.syncText(); showNote(""); }, 0);
+            });
+        }
+
+        p.syncText();
+    }
+
+    function enhance(input) {
+        if (input._dtc) { return; }
+        input._dtc = true;
+        if (input.tagName === "SELECT") { enhanceSelect(input); }
+        else if (input.type === "date") { enhanceDate(input); }
+        else { enhanceTime(input); }
+    }
+
+    function init() {
+        var list = document.querySelectorAll(
+            '.modal input[type="date"]:not([data-native-date]), .modal input[type="time"]:not([data-native-time]), ' +
+            '.modal select[data-pick]:not([data-native-select])'
+        );
+        for (var i = 0; i < list.length; i++) { enhance(list[i]); }
+    }
+
+    /* A time that passes while the modal stays open disappears by itself */
+    setInterval(function () {
+        instances.forEach(function (it) { if (it.wrap.offsetParent !== null) { it.refresh(); } });
+    }, 15000);
+
+    /* The open list follows its field when the page scrolls or resizes */
+    function reposition(e) {
+        if (!openInst) { return; }
+        if (e && e.target && e.target.classList && e.target.classList.contains("dt-combo-menu")) { return; }
+        openInst.place();
+    }
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+
+    window.WaveTechCombo = {
+        init: init, enhance: enhance,
+        _test: { parseTime: parseTime, label12: label12 }
+    };
+})();
+</script>
+<script>
 document.addEventListener("DOMContentLoaded", function () {
   var modalEl = document.getElementById("addSlotModal");
   var form = document.getElementById("addSlotForm");
@@ -584,6 +1813,9 @@ document.addEventListener("DOMContentLoaded", function () {
     var t = (timeInput.value || "").slice(0, 5);
     if (!d) return "Please choose a date.";
     if (d < todayStr()) return "That date has already passed.";
+    if (!t && timeInput.min && timeInput.max && timeInput.min > timeInput.max) {
+      return "No departure times are left for this date. Choose another date.";
+    }
     if (!t) return "Please choose a departure time.";
     if (t < OPEN || t > CLOSE) {
       return "That time is outside terminal hours (8:00 AM to 5:00 PM).";
@@ -622,6 +1854,12 @@ document.addEventListener("DOMContentLoaded", function () {
   window.addEventListener("pageshow", function () { submitBtn.disabled = false; });
 
   applyLimits();
+
+  // While the modal stays open, a time that has just passed drops out of
+  // the time list on its own.
+  setInterval(function () {
+    if (modalEl.classList.contains("show")) { applyLimits(); }
+  }, 15000);
 
   // The server rejected the submission: reopen the modal with the error.
   if (modalEl.getAttribute("data-reopen") === "true" && window.bootstrap) {

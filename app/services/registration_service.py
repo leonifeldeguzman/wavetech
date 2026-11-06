@@ -146,6 +146,20 @@ def refresh_parent_status(parent, passengers, now=None):
     return parent.status
 
 
+def mark_registration_approved(parent, now=None):
+    """Called after a passenger of ``parent`` has been approved by an admin.
+
+    Records ``approved_at`` the first time only (an existing value is never
+    overwritten) and re-derives the parent status. ``created_at`` is never
+    touched. Safe to call with None (legacy passenger with no parent)."""
+    if parent is None:
+        return
+    now = now or _now()
+    if parent.approved_at is None:
+        parent.approved_at = now
+    refresh_parent_status(parent, parent.passengers, now)
+
+
 def load_registration(reference_code):
     """Return (parent, passengers) or (None, [])."""
     ref = normalize_reference(reference_code)

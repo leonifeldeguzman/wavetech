@@ -10,6 +10,11 @@ from app.models.environmental_reading import EnvironmentalReading
 from app.services import historical_baseline_service, manifest_service, monitoring_service, scheduling_service, settings_service, trip_state_service
 
 
+# Only a trip that is fully assigned (boat, operator, crew) and still live can
+# be assessed. "Unassigned" slots are left out until they are assigned.
+ASSESSABLE_STATUSES = ("Open", "Full", "Delayed")
+
+
 @dashboard_bp.route("/dashboard")
 @login_required
 def index():
@@ -63,6 +68,13 @@ def index():
         for t in all_trips_today
     }
 
+    # The assessment dropdown lists Open, Full and Delayed trips only, so an
+    # Unassigned slot appears once boat, operator and crew are all saved.
+    scheduled_trips = [
+        t for t in scheduled_trips
+        if display_status.get(t.id) in ASSESSABLE_STATUSES
+    ]
+
     trip_ids_today = [t.id for t in all_trips_today]
     passengers_today = 0
     if trip_ids_today:
@@ -96,13 +108,17 @@ def index():
         # A hand-edited URL for another day gets no assessment.
         if selected_trip is not None and selected_trip.departure_time.date() != today:
             selected_trip = None
+        # Same for a hand-edited URL naming an Unassigned (or otherwise
+        # non-assessable) trip: it is not in the dropdown, so no assessment.
+        if selected_trip is not None and display_status.get(selected_trip.id) not in ASSESSABLE_STATUSES:
+            selected_trip = None
         # A departed or expired trip is a closed record and can no longer be
         # assessed (hand-edited URL).
         if selected_trip is not None and trip_state_service.is_read_only(selected_trip, now=ph_now()):
             selected_trip = None
         if selected_trip is not None:
             scheduling_assessment = assessment
-            # Only offered for CAUTION/DELAY and UNSAFE results — see
+            # Only offered for DELAY and DO NOT DEPART results — see
             # scheduling_service.build_safety_alert(). This never creates
             # an Announcement itself; it only supplies the text used to
             # prefill the existing Create Notice form.
@@ -184,6 +200,15 @@ def dss_details(trip_id):
     # An expired trip is closed as well.
     if trip_state_service.is_expired(trip, now=ph_now()):
         response = jsonify({"error": "This trip has expired."})
+        response.status_code = 409
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    # An Unassigned slot (no boat, operator or crew yet) cannot be assessed.
+    if manifest_service.effective_status(trip) == "Unassigned":
+        response = jsonify({
+            "error": "Assign the boat, operator and crew before assessing conditions."
+        })
         response.status_code = 409
         response.headers["Cache-Control"] = "no-store"
         return response

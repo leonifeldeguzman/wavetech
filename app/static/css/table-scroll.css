@@ -12,10 +12,16 @@
 
    New tables: wrap them in <div class="table-scroll">. Change the limit for
    one table with  style="--table-max-height: 320px".
+
+   Non-table lists (e.g. the Timetable Slots list on the manifests page) use
+   <div class="list-scroll"> or the selectors in the LIST SCROLL section
+   at the bottom. Same rule: grows with its content, scrolls only when it
+   gets longer than --list-max-height.
    ========================================================= */
 
 :root {
     --table-max-height: 420px;
+    --list-max-height: 480px;   /* about 7 timetable rows */
 }
 
 .table-scroll,
@@ -55,5 +61,166 @@
     .activity-table-wrapper,
     .activity-log-table-wrapper {
         max-height: min(var(--table-max-height), 60vh);
+    }
+}
+
+
+/* =========================================================
+   DASHBOARD: ACTIVE TRIP MONITORING
+   Same behaviour as every other table. The extra selectors only make sure
+   dashboard styles cannot switch the scrolling off, and that the sticky
+   header is opaque (Bootstrap's .table header is transparent by default).
+   ========================================================= */
+
+.active-trip-section .table-responsive {
+    max-height: min(var(--table-max-height), 70vh);
+    overflow: auto;
+}
+
+.active-trip-section .active-trip-table > thead > tr > th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: var(--table-head-bg, #f1f8ff);
+}
+
+@media (max-width: 575.98px) {
+    .active-trip-section .table-responsive {
+        max-height: min(var(--table-max-height), 60vh);
+    }
+}
+
+
+/* =========================================================
+   LIST SCROLL (div-based lists, not tables)
+   The Timetable Slots list is made of <div> rows, so the table rules
+   above never applied to it. It now grows with its content and only
+   scrolls vertically once it passes --list-max-height. A short list (or
+   the "No timetable slots" empty state) keeps its natural height.
+
+   The .manifest-timetable-card prefix gives these rules enough
+   specificity to win over manifests.css regardless of load order.
+   ========================================================= */
+
+.list-scroll,
+.manifest-timetable-card .manifest-slot-list {
+    max-height: min(var(--list-max-height), 70vh);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+
+    /* Keep the scrollbar clear of the rows (status pill, arrow, delete
+       button): it always reserves its own lane, with a gap before it. */
+    padding-right: 14px;
+    scrollbar-gutter: stable;
+}
+
+@media (max-width: 575.98px) {
+    .list-scroll,
+    .manifest-timetable-card .manifest-slot-list {
+        max-height: min(var(--list-max-height), 60vh);
+    }
+}
+
+
+/* =========================================================
+   SCROLLBAR DESIGN (one look for every scroll area)
+   Slim, rounded, light gray-blue thumb on a transparent track; darker on
+   hover. Same colours as the Dashboard trip menu. Applies to every table
+   wrapper, the Timetable Slots list and the other scroll boxes below, so
+   no table or list falls back to the browser's default scrollbar.
+   ========================================================= */
+
+.table-scroll,
+.table-scroll-y,
+.table-responsive,
+.manifest-table-wrapper,
+.monitoring-table-wrapper,
+.activity-table-wrapper,
+.activity-log-table-wrapper,
+.analytics-capacity-list,
+.list-scroll,
+.manifest-timetable-card .manifest-slot-list {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Chrome / Edge / Safari: the standard properties above would replace the
+   rules below, so they are only used where ::-webkit-scrollbar is missing. */
+@supports selector(::-webkit-scrollbar) {
+
+    .table-scroll,
+    .table-scroll-y,
+    .table-responsive,
+    .manifest-table-wrapper,
+    .monitoring-table-wrapper,
+    .activity-table-wrapper,
+    .activity-log-table-wrapper,
+    .analytics-capacity-list,
+    .list-scroll,
+    .manifest-timetable-card .manifest-slot-list {
+        scrollbar-width: auto;
+        scrollbar-color: auto;
+    }
+
+    .table-scroll::-webkit-scrollbar,
+    .table-scroll-y::-webkit-scrollbar,
+    .table-responsive::-webkit-scrollbar,
+    .manifest-table-wrapper::-webkit-scrollbar,
+    .monitoring-table-wrapper::-webkit-scrollbar,
+    .activity-table-wrapper::-webkit-scrollbar,
+    .activity-log-table-wrapper::-webkit-scrollbar,
+    .analytics-capacity-list::-webkit-scrollbar,
+    .list-scroll::-webkit-scrollbar,
+    .manifest-timetable-card .manifest-slot-list::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .table-scroll::-webkit-scrollbar-track,
+    .table-scroll-y::-webkit-scrollbar-track,
+    .table-responsive::-webkit-scrollbar-track,
+    .manifest-table-wrapper::-webkit-scrollbar-track,
+    .monitoring-table-wrapper::-webkit-scrollbar-track,
+    .activity-table-wrapper::-webkit-scrollbar-track,
+    .activity-log-table-wrapper::-webkit-scrollbar-track,
+    .analytics-capacity-list::-webkit-scrollbar-track,
+    .list-scroll::-webkit-scrollbar-track,
+    .manifest-timetable-card .manifest-slot-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb,
+    .table-scroll-y::-webkit-scrollbar-thumb,
+    .table-responsive::-webkit-scrollbar-thumb,
+    .manifest-table-wrapper::-webkit-scrollbar-thumb,
+    .monitoring-table-wrapper::-webkit-scrollbar-thumb,
+    .activity-table-wrapper::-webkit-scrollbar-thumb,
+    .activity-log-table-wrapper::-webkit-scrollbar-thumb,
+    .analytics-capacity-list::-webkit-scrollbar-thumb,
+    .list-scroll::-webkit-scrollbar-thumb,
+    .manifest-timetable-card .manifest-slot-list::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb:hover,
+    .table-scroll-y::-webkit-scrollbar-thumb:hover,
+    .table-responsive::-webkit-scrollbar-thumb:hover,
+    .manifest-table-wrapper::-webkit-scrollbar-thumb:hover,
+    .monitoring-table-wrapper::-webkit-scrollbar-thumb:hover,
+    .activity-table-wrapper::-webkit-scrollbar-thumb:hover,
+    .activity-log-table-wrapper::-webkit-scrollbar-thumb:hover,
+    .analytics-capacity-list::-webkit-scrollbar-thumb:hover,
+    .list-scroll::-webkit-scrollbar-thumb:hover,
+    .manifest-timetable-card .manifest-slot-list::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8;
+    }
+
+    .table-scroll::-webkit-scrollbar-corner,
+    .table-responsive::-webkit-scrollbar-corner,
+    .manifest-table-wrapper::-webkit-scrollbar-corner {
+        background: transparent;
     }
 }

@@ -48,6 +48,27 @@ def _apply_search(query, term, *columns):
     like = f"%{term}%"
     return query.filter(db.or_(*[column.ilike(like) for column in columns]))
 
+CANCELLED_READ_ONLY_MESSAGE = (
+    "This trip was cancelled. Its details, registrations and manifest "
+    "are now read-only."
+)
+
+
+def _is_cancelled(trip):
+    return trip.status == "Cancelled"
+
+
+def _read_only_message(trip, now=None):
+    """trip_state_service's message for a departed/expired trip, plus the
+    same closed-record treatment for a cancelled trip."""
+    message = trip_state_service.read_only_message(trip, now=now or ph_now())
+    if message:
+        return message
+    if _is_cancelled(trip):
+        return CANCELLED_READ_ONLY_MESSAGE
+    return None
+
+
 def _block_if_read_only(trip):
     """Return a redirect if the trip is a closed record, else None.
 
@@ -56,7 +77,7 @@ def _block_if_read_only(trip):
     details, registrations and manifest must not change, so every
     modifying route calls this first. Other trips are never affected.
     """
-    message = trip_state_service.read_only_message(trip, now=ph_now())
+    message = _read_only_message(trip)
     if message:
         flash(message)
         return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
@@ -261,8 +282,38 @@ DELAY_REASONS = (
 )
 
 
+# "Other" in the reason dropdown: the admin types the reason, which is then
+# stored and shown to passengers exactly like a preset reason.
+OTHER_REASON = "Other"
+REASON_MAX_LENGTH = 100
+
+
 def _is_ajax():
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def _resolve_reason(choice, other_text, presets, field, missing_message):
+    """Turn the dropdown choice (+ the typed text for "Other") into the reason.
+
+    Returns (reason, errors). A preset is used as is. For "Other" the typed
+    text is the reason (spaces collapsed): required, at most 100 characters.
+    ``errors`` is {} when valid, else {field: message} for a missing choice or
+    {field + "_other": message} for the typed text.
+    """
+    choice = (choice or "").strip()
+    if choice in presets:
+        return choice, {}
+    if choice == OTHER_REASON:
+        text = " ".join((other_text or "").split())
+        if not text:
+            return None, {f"{field}_other": "Enter the reason."}
+        if len(text) > REASON_MAX_LENGTH:
+            return None, {
+                f"{field}_other":
+                    f"Reason must be {REASON_MAX_LENGTH} characters or fewer."
+            }
+        return text, {}
+    return None, {field: missing_message}
 
 
 def _parse_clock(value):
@@ -276,14 +327,21 @@ def _parse_clock(value):
 
 
 def _reason_phrase(reason):
-    """'Weather conditions' -> 'weather conditions' (keeps 'Coast Guard')."""
+    """'Weather conditions' -> 'weather conditions' (keeps 'Coast Guard').
+
+    A reason typed under "Other" is used as written (only trailing
+    punctuation is dropped) so names and acronyms keep their capitals.
+    """
+    if reason not in DELAY_REASONS and reason not in CANCEL_REASONS:
+        return reason.rstrip(" .,;:!")
     if reason.startswith("Coast Guard"):
         return reason
     return reason[:1].lower() + reason[1:]
 
 
-def _validate_delay(trip, time_str, reason):
-    """Server-side rules for Delay Trip.
+def _validate_delay(trip, time_str):
+    """Server-side rules for the Delay Trip time (the reason is resolved
+    separately by _resolve_reason).
 
     Returns (new_departure_datetime_or_None, {field: message}).
     Order: format, later than current, terminal hours, duplicate time.
@@ -317,9 +375,6 @@ def _validate_delay(trip, time_str, reason):
                     "Choose a different time"
                 )
 
-    if reason not in DELAY_REASONS:
-        errors["delay_reason"] = "Select a reason for the delay."
-
     return new_dt, errors
 
 
@@ -351,8 +406,40 @@ def _trip_audience(trip):
     return len(entries) + len(waiting), contacts, regs
 
 
-def _notify_passengers(trip, contacts, message, *, notice_type, title, expires_at):
-    """Publish the trip notice and text the trip's passengers.
+def _conditions_unavailable():
+    """True when the overall condition is "Unavailable".
+
+    Same source as the timetable's overall-condition indicator
+    (scheduling_service.get_current_overall_condition), so the Confirm
+    Departure warning and that indicator always agree. The service already
+    maps anything unknown or failed to Unavailable; a failure here is
+    treated the same way, because the operator must then verify by hand.
+    """
+    try:
+        condition = scheduling_service.get_current_overall_condition()
+    except Exception:
+        current_app.logger.exception("Overall condition lookup failed")
+        return True
+    return (condition or {}).get("status") == scheduling_service.STATUS_UNAVAILABLE
+
+
+def _notice_choices(form):
+    """Which channels the admin ticked: (announcement, sms).
+
+    The two are independent: publish in the system, text the passengers,
+    or both."""
+    return (
+        form.get("notify_announcement") == "yes",
+        form.get("notify_sms") == "yes",
+    )
+
+
+def _notify_passengers(trip, contacts, message, *, notice_type, title, expires_at,
+                       send_announcement=True, send_sms=True):
+    """Publish the trip notice and/or text the trip's passengers.
+
+    ``send_announcement`` and ``send_sms`` pick the channels; a channel that
+    is switched off is skipped entirely.
 
     Returns (notified, announced):
       * announced - True when the notice was published through the existing
@@ -369,7 +456,7 @@ def _notify_passengers(trip, contacts, message, *, notice_type, title, expires_a
     """
     announced = False
     try:
-        for expiry in (expires_at, None):     # no expiry rather than no notice
+        for expiry in (expires_at, None) if send_announcement else ():  # no expiry rather than no notice
             try:
                 announcement_service.create_announcement(
                     title=title,
@@ -390,7 +477,7 @@ def _notify_passengers(trip, contacts, message, *, notice_type, title, expires_a
         current_app.logger.exception("Trip notice failed for trip %s", trip.id)
 
     notified = 0
-    for number, passengers in contacts:
+    for number, passengers in (contacts if send_sms else ()):
         try:
             result = sms_service.send_sms(number, message)
         except Exception:
@@ -401,12 +488,14 @@ def _notify_passengers(trip, contacts, message, *, notice_type, title, expires_a
     return notified, announced
 
 
-def _notice_warning(notified, announced):
-    """Warning text for a partly failed notification, or None."""
+def _notice_warning(notified, announced, *, send_announcement=True, send_sms=True):
+    """Warning text for a partly failed notification, or None.
+
+    Only the channels that were actually requested can fail."""
     problems = []
-    if not announced:
+    if send_announcement and not announced:
         problems.append("the announcement could not be published")
-    if not notified:
+    if send_sms and not notified:
         problems.append("no SMS could be sent")
     if not problems:
         return None
@@ -638,7 +727,9 @@ def _render_trip_detail(trip, form_values=None, field_errors=None, status=200,
     }
     values = form_values or dict(saved_values)
     now = ph_now()
-    read_only = trip_state_service.is_read_only(trip, now=now)
+    read_only = (
+        trip_state_service.is_read_only(trip, now=now) or _is_cancelled(trip)
+    )
 
     return render_template(
         "manifests/detail.html",
@@ -668,7 +759,7 @@ def _render_trip_detail(trip, form_values=None, field_errors=None, status=200,
         # Departed or expired: a closed record. The template hides every
         # editing/management control; the routes refuse changes as well.
         read_only=read_only,
-        read_only_message=trip_state_service.read_only_message(trip, now=now),
+        read_only_message=_read_only_message(trip, now=now),
         summary_details_url=trip_state_service.summary_details_url(trip),
         # Saved trip information, used by the Back button to tell whether
         # the form holds unsaved changes.
@@ -680,6 +771,8 @@ def _render_trip_detail(trip, form_values=None, field_errors=None, status=200,
             and trip.departure_time.date() == ph_today()
         ),
         details_assigned=_details_assigned(trip),
+        # Same source as the timetable's overall-condition indicator
+        conditions_unavailable=_conditions_unavailable(),
         has_passengers=_has_passengers(trip),
         # Delay Trip modal
         terminal_open=TERMINAL_OPEN.strftime("%H:%M"),
@@ -923,16 +1016,22 @@ def delay_trip(trip_id):
             {"form": "This trip is cancelled and cannot be delayed."}, 409,
         )
 
-    reason = (request.form.get("delay_reason") or "").strip()
-    new_dt, errors = _validate_delay(
-        trip, request.form.get("new_departure_time"), reason
+    new_dt, errors = _validate_delay(trip, request.form.get("new_departure_time"))
+    reason, reason_errors = _resolve_reason(
+        request.form.get("delay_reason"),
+        request.form.get("delay_reason_other"),
+        DELAY_REASONS,
+        "delay_reason",
+        "Select a reason for the delay.",
     )
+    errors.update(reason_errors)
     if errors:
         return _delay_response(False, trip, errors, 400)
 
     original = trip.departure_time
     notice_count, contacts, _regs = _trip_audience(trip)
-    wants_notice = request.form.get("notify") == "yes" and notice_count > 0
+    send_announcement, send_sms = _notice_choices(request.form)
+    wants_notice = (send_announcement or send_sms) and notice_count > 0
 
     try:
         # The timetable, expiry rule and duplicate checks all read
@@ -976,8 +1075,13 @@ def delay_trip(trip_id):
             notice_type=Announcement.TYPE_DELAY,
             title="Trip delayed",
             expires_at=new_dt.strftime("%Y-%m-%dT%H:%M"),
+            send_announcement=send_announcement,
+            send_sms=send_sms,
         )
-        warning = _notice_warning(notified, announced)
+        warning = _notice_warning(
+            notified, announced,
+            send_announcement=send_announcement, send_sms=send_sms,
+        )
         if warning:
             flash(warning, "warning")
 
@@ -1001,15 +1105,20 @@ def cancel_trip(trip_id):
             False, trip, {"form": "This trip is already cancelled."}, 409
         )
 
-    reason = (request.form.get("cancel_reason") or "").strip()
-    if reason not in CANCEL_REASONS:
-        return _delay_response(
-            False, trip, {"cancel_reason": "Select a reason for the cancellation."}, 400
-        )
+    reason, reason_errors = _resolve_reason(
+        request.form.get("cancel_reason"),
+        request.form.get("cancel_reason_other"),
+        CANCEL_REASONS,
+        "cancel_reason",
+        "Select a reason for the cancellation.",
+    )
+    if reason_errors:
+        return _delay_response(False, trip, reason_errors, 400)
 
     # Taken before anything changes. Only THIS trip's passengers.
     passenger_count, contacts, active_regs = _trip_audience(trip)
-    wants_notice = request.form.get("notify") == "yes" and passenger_count > 0
+    send_announcement, send_sms = _notice_choices(request.form)
+    wants_notice = (send_announcement or send_sms) and passenger_count > 0
     departure_label = _fmt_time(trip.departure_time)
     now = ph_now()
 
@@ -1080,18 +1189,25 @@ def cancel_trip(trip_id):
             notice_type=Announcement.TYPE_CANCELLATION,
             title="Trip cancelled",
             expires_at=trip.departure_time.strftime("%Y-%m-%dT%H:%M"),
+            send_announcement=send_announcement,
+            send_sms=send_sms,
         )
 
     if notified:
         flash(
             f"Trip cancelled. {notified} passenger"
-            f"{'' if notified == 1 else 's'} notified.",
+            f"{'' if notified == 1 else 's'} notified by SMS.",
             "success",
         )
+    elif announced:
+        flash("Trip cancelled. Announcement published.", "success")
     else:
         flash("Trip cancelled.", "success")
     if wants_notice:
-        warning = _notice_warning(notified, announced)
+        warning = _notice_warning(
+            notified, announced,
+            send_announcement=send_announcement, send_sms=send_sms,
+        )
         if warning:
             flash(warning, "warning")
 
@@ -1141,13 +1257,15 @@ def approve_registration(trip_id, reg_id):
         address=registration.address,
         contact_number=registration.contact_number,
         passenger_type=registration.passenger_type,
-        source="online"
+        source="online",
+        registration_id=registration.registration_id,
     )
     db.session.add(new_entry)
 
     registration.status = "approved"
 
     db.session.flush()
+    registration_service.mark_registration_approved(registration.registration)
     manifest_service.sync_trip_status(trip, _confirmed_count(trip.id))
     db.session.commit()
 
@@ -1190,6 +1308,147 @@ def reject_registration(trip_id, reg_id):
     flash(f"{registration.full_name}'s registration was rejected.", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip_id))
 
+def _selected_pending(trip):
+    """The ticked registrations that are still pending on THIS trip."""
+    ids = set()
+    for raw in request.form.getlist("reg_ids"):
+        if raw.isdigit():
+            ids.add(int(raw))
+    if not ids:
+        return []
+    return (
+        PendingRegistration.query.filter(
+            PendingRegistration.trip_id == trip.id,
+            PendingRegistration.status == "pending",
+            PendingRegistration.id.in_(ids),
+        )
+        .order_by(PendingRegistration.submitted_at)
+        .all()
+    )
+
+
+@manifests_bp.route("/manifests/<int:trip_id>/pending/bulk-approve", methods=["POST"])
+@login_required
+def bulk_approve_registrations(trip_id):
+    trip = Trip.query.filter_by(id=trip_id).with_for_update().first_or_404()
+    blocked = _block_if_read_only(trip)
+    if blocked:
+        return blocked
+    unassigned = _block_if_unassigned(trip)
+    if unassigned:
+        return unassigned
+
+    back = redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+    registrations = _selected_pending(trip)
+    if not registrations:
+        flash("Select at least one pending registration.")
+        return back
+
+    capacity = trip.boat.capacity
+    approved, skipped_full, skipped_duplicate = [], 0, 0
+
+    for registration in registrations:
+        # Same rules as a single approval, re-checked for every passenger so
+        # the trip can never go over capacity or take a repeat.
+        if _confirmed_count(trip.id) >= capacity:
+            skipped_full += 1
+            continue
+        if manifest_service.find_duplicate_message(
+            trip.id,
+            registration.full_name,
+            age=registration.age,
+            contact_number=registration.contact_number,
+        ):
+            skipped_duplicate += 1
+            continue
+
+        db.session.add(ManifestEntry(
+            trip_id=trip.id,
+            full_name=manifest_service.clean_name(registration.full_name),
+            age=registration.age,
+            address=registration.address,
+            contact_number=registration.contact_number,
+            passenger_type=registration.passenger_type,
+            source="online",
+            registration_id=registration.registration_id,
+        ))
+        registration.status = "approved"
+        db.session.flush()
+        registration_service.mark_registration_approved(registration.registration)
+        approved.append(registration)
+
+    manifest_service.sync_trip_status(trip, _confirmed_count(trip.id))
+    db.session.commit()
+
+    for registration in approved:
+        activity_log_service.log_action(
+            user_id=session.get("user_id"),
+            admin_name=session.get("full_name", "Unknown"),
+            action=activity_log_service.ACTION_PASSENGER_APPROVED,
+            details=f"Approved {registration.full_name} for trip #{trip.id}.",
+        )
+
+    if approved:
+        flash(
+            f"{len(approved)} registration{'' if len(approved) == 1 else 's'} "
+            "approved and added to manifest.",
+            "success",
+        )
+    skipped = []
+    if skipped_full:
+        skipped.append(f"{skipped_full} not approved: trip is at full capacity")
+    if skipped_duplicate:
+        skipped.append(
+            f"{skipped_duplicate} not approved: already on this manifest "
+            "(reject them if they are repeats)"
+        )
+    if skipped:
+        if approved:
+            flash("; ".join(skipped) + ".", "warning")
+        else:
+            flash("; ".join(skipped) + ".")
+    return back
+
+
+@manifests_bp.route("/manifests/<int:trip_id>/pending/bulk-reject", methods=["POST"])
+@login_required
+def bulk_reject_registrations(trip_id):
+    trip = Trip.query.filter_by(id=trip_id).with_for_update().first_or_404()
+    blocked = _block_if_read_only(trip)
+    if blocked:
+        return blocked
+    unassigned = _block_if_unassigned(trip)
+    if unassigned:
+        return unassigned
+
+    back = redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+    registrations = _selected_pending(trip)
+    if not registrations:
+        flash("Select at least one pending registration.")
+        return back
+
+    for registration in registrations:
+        registration.status = "rejected"
+    db.session.flush()
+    manifest_service.sync_trip_status(trip, _confirmed_count(trip.id))
+    db.session.commit()
+
+    for registration in registrations:
+        activity_log_service.log_action(
+            user_id=session.get("user_id"),
+            admin_name=session.get("full_name", "Unknown"),
+            action=activity_log_service.ACTION_PASSENGER_REJECTED,
+            details=f"Rejected {registration.full_name} for trip #{trip.id}.",
+        )
+
+    flash(
+        f"{len(registrations)} registration"
+        f"{'' if len(registrations) == 1 else 's'} rejected.",
+        "success",
+    )
+    return back
+
+
 @manifests_bp.route("/manifests/<int:trip_id>/confirm-departure", methods=["POST"])
 @login_required
 def confirm_departure(trip_id):
@@ -1214,6 +1473,26 @@ def confirm_departure(trip_id):
     trip.status = "Departed"
     trip.departed_at = db.func.now()
     db.session.commit()
+
+    # Audit trail: which account confirmed the departure. The departure is
+    # already committed, so a logging problem must not turn it into an error.
+    try:
+        admin_name = session.get("full_name", "Unknown")
+        activity_log_service.log_action(
+            user_id=session.get("user_id"),
+            admin_name=admin_name,
+            action=activity_log_service.ACTION_TRIP_DEPARTED,
+            details=(
+                "Confirmed trip departure (Coast Guard audit confirmed). "
+                + activity_log_service.describe_trip(trip)
+                + f" | Confirmed by: {admin_name}"
+                + f" (account ID {session.get('user_id')})"
+            ),
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Could not write the departure activity log for trip %s", trip.id
+        )
 
     return redirect(url_for("manifests.departure_success", trip_id=trip.id))
 

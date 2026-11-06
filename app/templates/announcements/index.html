@@ -8,6 +8,122 @@
     rel="stylesheet"
     href="{{ url_for('static', filename='css/announcements.css') }}"
 >
+<style>
+    /* ---- Filter toolbar (new): tabs + search + type filter ---- */
+    .notice-filter-bar { margin: 0 0 18px; }
+    .notice-filter-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .notice-filter-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: -1px;
+        padding: 12px 16px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: #2d3a5c;
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 400;
+        cursor: pointer;
+        transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .notice-filter-tab:hover { color: #0f1b3c; }
+    .notice-filter-tab.is-active {
+        border-bottom-color: #0f1b3c;
+        color: #0f1b3c;
+        font-weight: 700;
+    }
+    .notice-filter-count {
+        min-width: 22px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: #0f1b3c;
+        color: #ffffff;
+        font-size: 0.74rem;
+        font-weight: 700;
+        line-height: 1.5;
+        text-align: center;
+    }
+    /* Like the design: only the open tab shows its count */
+    .notice-filter-tab:not(.is-active) .notice-filter-count { display: none; }
+    .notice-filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding-top: 14px;
+    }
+    .notice-filter-search,
+    .notice-filter-type {
+        height: 38px;
+        padding: 0 12px;
+        border: 1px solid #cbdff2;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #222222;
+        font-family: inherit;
+        font-size: 0.88rem;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .notice-filter-search { flex: 1 1 240px; min-width: 0; }
+    .notice-filter-controls .announcement-select-wrap { flex: 0 1 180px; width: auto; }
+    .notice-filter-search:focus,
+    .notice-filter-type:focus {
+        border-color: #9bbde0;
+        box-shadow: 0 0 0 3px rgba(155, 189, 224, 0.25);
+    }
+    .notice-filter-footer { margin: 4px 2px 0; font-size: 0.84rem; color: #666666; }
+
+    /* ---- Notice cards: action buttons pinned to the top-right corner ---- */
+    .announcement-item { position: relative; display: flex; align-items: center; gap: 14px; }
+    .announcement-item > .announcement-item-body { flex: 1 1 auto; min-width: 0; }
+    .announcement-item > .announcement-item-actions {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        margin: 0;
+        flex-wrap: nowrap;
+    }
+    /* keep the text clear of the pinned buttons */
+    .announcement-item .announcement-item-body { padding-right: 290px; }
+
+    /* Delete confirmation */
+    #deleteNoticeModal .notice-delete-confirm {
+        background: #b42318;
+        border-color: #b42318;
+        color: #ffffff;
+    }
+    #deleteNoticeModal .notice-delete-confirm:hover {
+        background: #912018;
+        border-color: #912018;
+    }
+    #deleteNoticeModal .notice-delete-title {
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    [data-notice-pane][hidden],
+    .announcement-item[hidden],
+    [data-filter-empty][hidden] { display: none !important; }
+
+    @media (max-width: 720px) {
+        .announcement-item { flex-wrap: wrap; }
+        .announcement-item > .announcement-item-body { flex-basis: calc(100% - 60px); }
+        .announcement-item > .announcement-item-actions {
+            position: static;
+            flex-basis: 100%;
+            flex-wrap: wrap;
+            margin-left: 0;
+        }
+        .announcement-item .announcement-item-body { padding-right: 0; }
+    }
+</style>
 {% endblock %}
 
 
@@ -15,9 +131,11 @@
    Shared pieces (one definition each, reused by every section below)
    --------------------------------------------------------------------- #}
 
+{# "November 03, 2026, 8:54 PM PHT" -> "November 3, 2026, 8:54 PM" #}
+{% macro fmt(dt) %}{{ dt | ph_time | replace('PHT', '') | replace(' 0', ' ') | trim }}{% endmacro %}
+
 {% macro type_badge(notice) %}
 <span class="announcement-type-badge announcement-type-{{ notice.type_slug }}">
-    <i class="bi {{ notice.type_icon }}" aria-hidden="true"></i>
     {{ notice.type }}
 </span>
 {% endmacro %}
@@ -29,19 +147,16 @@
 {% endmacro %}
 
 {% macro delete_form(notice, label='Delete') %}
-<form
-    method="POST"
-    action="{{ url_for('announcements.delete', announcement_id=notice.id) }}"
-    onsubmit="return confirm('Delete this notice? This cannot be undone.');"
+<button
+    type="button"
+    class="announcement-action-btn announcement-action-danger"
+    data-bs-toggle="modal"
+    data-bs-target="#deleteNoticeModal"
+    data-delete-action="{{ url_for('announcements.delete', announcement_id=notice.id) }}"
+    data-delete-title="{{ notice.title }}"
 >
-    <button
-        type="submit"
-        class="announcement-action-btn announcement-action-danger"
-    >
-        <i class="bi bi-trash3" aria-hidden="true"></i>
-        {{ label }}
-    </button>
-</form>
+    {{ label }}
+</button>
 {% endmacro %}
 
 {% macro publish_form(notice) %}
@@ -53,7 +168,6 @@
         type="submit"
         class="announcement-action-btn announcement-action-success"
     >
-        <i class="bi bi-send-check" aria-hidden="true"></i>
         Publish
     </button>
 </form>
@@ -66,7 +180,6 @@
     data-bs-toggle="modal"
     data-bs-target="#{{ modal_id }}"
 >
-    <i class="bi bi-pencil" aria-hidden="true"></i>
     Edit
 </button>
 {% endmacro %}
@@ -115,14 +228,17 @@
 
                     <div class="announcement-modal-field">
                         <label for="{{ modal_id }}-type">Notice Type</label>
-                        <select id="{{ modal_id }}-type" name="type" required>
-                            {% for notice_type in types %}
-                            <option
-                                value="{{ notice_type }}"
-                                {% if notice.type == notice_type %}selected{% endif %}
-                            >{{ notice_type }}</option>
-                            {% endfor %}
-                        </select>
+                        <div class="announcement-control-wrap announcement-select-wrap">
+                            <select id="{{ modal_id }}-type" name="type" required>
+                                {% for notice_type in types %}
+                                <option
+                                    value="{{ notice_type }}"
+                                    {% if notice.type == notice_type %}selected{% endif %}
+                                >{{ notice_type }}</option>
+                                {% endfor %}
+                            </select>
+                            <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
+                        </div>
                     </div>
 
                     <div class="announcement-modal-field">
@@ -156,6 +272,7 @@
                             type="datetime-local"
                             id="{{ modal_id }}-expires"
                             name="expires_at"
+                            data-dtp-min-from="{{ modal_id }}-schedule"
                             value="{{ notice.expires_at | ph_input }}"
                         >
                         <small class="announcement-field-hint">
@@ -187,27 +304,29 @@
 {# One list row. The caller supplies two slots via call(slot): "meta" (extra
    meta spans) and "actions" (the button row). #}
 {% macro notice_row(notice, row_class, icon_class=None) %}
-<article class="announcement-item announcement-{{ notice.type_slug }} {{ row_class }}">
-
-    <div class="announcement-item-icon">
-        <i class="bi {{ icon_class or notice.type_icon }}" aria-hidden="true"></i>
-    </div>
+<article
+    class="announcement-item announcement-{{ notice.type_slug }} {{ row_class }}"
+    data-title="{{ notice.title | lower }}"
+    data-type="{{ notice.type }}"
+>
 
     <div class="announcement-item-body">
 
-        <div class="announcement-item-title">{{ notice.title }}</div>
+        <div class="announcement-item-head">
+            {{ type_badge(notice) }}
+            <span class="announcement-item-title">{{ notice.title }}</span>
+        </div>
 
         <div class="announcement-item-message">{{ notice.content }}</div>
+        <button type="button" class="announcement-show-more" hidden>Show more</button>
 
         <div class="announcement-item-meta">
-            {{ type_badge(notice) }}
-            {{ status_badge(notice) }}
             {{ caller('meta') }}
         </div>
 
-        {{ caller('actions') }}
-
     </div>
+
+    {{ caller('actions') }}
 
 </article>
 {% endmacro %}
@@ -216,16 +335,6 @@
 {% block content %}
 
 <div class="announcement-page">
-
-    <nav class="announcement-jump" aria-label="Jump to section">
-        <span class="announcement-jump-label">Jump to</span>
-        <a href="#notice-create">Create</a>
-        <a href="#notice-published">Published</a>
-        <a href="#notice-scheduled">Scheduled</a>
-        <a href="#notice-drafts">Drafts</a>
-        <a href="#notice-unpublished">Unpublished</a>
-        <a href="#notice-expired">Expired</a>
-    </nav>
 
     <!-- =====================================================
          CREATE NOTICE
@@ -270,14 +379,17 @@
                 <!-- Type -->
                 <div class="announcement-field">
                     <label for="announcement-type">Notice Type</label>
-                    <select id="announcement-type" name="type" required>
-                        {% for notice_type in types %}
-                        <option
-                            value="{{ notice_type }}"
-                            {% if prefill.type == notice_type %}selected{% endif %}
-                        >{{ notice_type }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="announcement-control-wrap announcement-select-wrap">
+                        <select id="announcement-type" name="type" required>
+                            {% for notice_type in types %}
+                            <option
+                                value="{{ notice_type }}"
+                                {% if prefill.type == notice_type %}selected{% endif %}
+                            >{{ notice_type }}</option>
+                            {% endfor %}
+                        </select>
+                        <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
+                    </div>
                 </div>
 
                 <!-- Message -->
@@ -292,51 +404,59 @@
                     >{{ prefill.content }}</textarea>
                 </div>
 
-                <!-- Publishing -->
-                <div class="announcement-field">
-                    <label for="announcement-action">Publishing</label>
-                    <select id="announcement-action" name="action" required>
-                        <option value="publish_now" selected>Publish now</option>
-                        <option value="schedule">Schedule for later</option>
-                        <option value="save_draft">Save as draft (not visible to passengers)</option>
-                    </select>
-                </div>
+                <!-- Publishing, Expiry, and Schedule -->
+                <div class="announcement-publishing-row announcement-field-full">
 
-                <!-- Schedule (only when "Schedule for later" is chosen) -->
-                <div
-                    class="announcement-field"
-                    id="announcement-schedule-field"
-                    hidden
-                >
-                    <label for="announcement-schedule">
-                        Schedule Date &amp; Time
-                    </label>
-                    <input
-                        type="datetime-local"
-                        id="announcement-schedule"
-                        name="scheduled_at"
-                    >
-                    <small class="announcement-field-hint">
-                        Philippine Time. The notice is published
-                        automatically at this time.
-                    </small>
-                </div>
+                    <!-- Publishing -->
+                    <div class="announcement-field">
+                        <label for="announcement-action">Publishing</label>
+                        <div class="announcement-control-wrap announcement-select-wrap">
+                            <select id="announcement-action" name="action" required>
+                                <option value="publish_now" selected>Publish now</option>
+                                <option value="schedule">Schedule for later</option>
+                                <option value="save_draft">Save as draft (not visible to passengers)</option>
+                            </select>
+                            <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
+                        </div>
+                    </div>
 
-                <!-- Expiry -->
-                <div class="announcement-field">
-                    <label for="announcement-expires">
-                        Expiry Date &amp; Time (optional)
-                    </label>
-                    <input
-                        type="datetime-local"
-                        id="announcement-expires"
-                        name="expires_at"
+                    <!-- Expiry -->
+                    <div class="announcement-field">
+                        <label for="announcement-expires">
+                            Expiry Date &amp; Time (optional)
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="announcement-expires"
+                            name="expires_at"
+                            data-dtp-min-from="announcement-schedule"
+                        >
+                        <small class="announcement-field-hint">
+                            Philippine Time. The notice is automatically hidden
+                            from passengers after this time. Leave blank for no
+                            expiry (stays published until you unpublish it).
+                        </small>
+                    </div>
+
+                    <!-- Schedule -->
+                    <div
+                        class="announcement-field"
+                        id="announcement-schedule-field"
                     >
-                    <small class="announcement-field-hint">
-                        Philippine Time. The notice is automatically hidden
-                        from passengers after this time. Leave blank for no
-                        expiry (stays published until you unpublish it).
-                    </small>
+                        <label for="announcement-schedule">
+                            Schedule Date &amp; Time
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="announcement-schedule"
+                            name="scheduled_at"
+                        >
+                        <small class="announcement-field-hint">
+                            Philippine Time. The notice is published
+                            automatically at this time.
+                        </small>
+                    </div>
+
                 </div>
 
             </div>
@@ -356,12 +476,49 @@
 
     </section>
 
+    <!-- =====================================================
+         FILTER TOOLBAR (below the Create Notice card)
+         ===================================================== -->
+
+    <div class="notice-filter-bar" id="noticeFilterBar">
+
+        <div class="notice-filter-tabs" role="tablist" aria-label="Notice status">
+            <button type="button" class="notice-filter-tab is-active" role="tab" data-tab="all" aria-selected="true">All{% set total_notices = (published | length) + (scheduled | length) + (drafts | length) + (inactive | length) + (expired | length) %}{% if total_notices %} <span class="notice-filter-count">{{ total_notices }}</span>{% endif %}</button>
+            <button type="button" class="notice-filter-tab" role="tab" data-tab="published" aria-selected="false">Published{% if published %} <span class="notice-filter-count">{{ published | length }}</span>{% endif %}</button>
+            <button type="button" class="notice-filter-tab" role="tab" data-tab="scheduled" aria-selected="false">Scheduled{% if scheduled %} <span class="notice-filter-count">{{ scheduled | length }}</span>{% endif %}</button>
+            <button type="button" class="notice-filter-tab" role="tab" data-tab="drafts" aria-selected="false">Drafts{% if drafts %} <span class="notice-filter-count">{{ drafts | length }}</span>{% endif %}</button>
+            <button type="button" class="notice-filter-tab" role="tab" data-tab="unpublished" aria-selected="false">Unpublished{% if inactive %} <span class="notice-filter-count">{{ inactive | length }}</span>{% endif %}</button>
+            <button type="button" class="notice-filter-tab" role="tab" data-tab="expired" aria-selected="false">Expired{% if expired %} <span class="notice-filter-count">{{ expired | length }}</span>{% endif %}</button>
+        </div>
+
+        <div class="notice-filter-controls">
+            <input
+                type="search"
+                id="noticeSearch"
+                class="notice-filter-search"
+                placeholder="Search by title"
+                aria-label="Search notices by title"
+                autocomplete="off"
+            >
+            <div class="announcement-control-wrap announcement-select-wrap">
+                <select id="noticeTypeFilter" class="notice-filter-type" aria-label="Filter by notice type">
+                    <option value="">All types</option>
+                    {% for notice_type in types %}
+                    <option value="{{ notice_type }}">{{ notice_type }}</option>
+                    {% endfor %}
+                </select>
+                <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
+            </div>
+        </div>
+
+    </div>
+
 
     <!-- =====================================================
          PUBLISHED NOTICES
          ===================================================== -->
 
-    <section class="announcement-panel" id="notice-published">
+    <section class="announcement-panel" id="notice-published" data-notice-pane="published">
 
         <div class="announcement-panel-header">
             <div class="announcement-panel-title">
@@ -382,18 +539,16 @@
             {% call(slot) notice_row(announcement, 'announcement-published') %}
             {% if slot == 'meta' %}
                 <span>
-                    <i class="bi bi-calendar3" aria-hidden="true"></i>
-                    Published:
+                    Published
                     {% if announcement.published_at %}
-                        {{ announcement.published_at | ph_time }}
+                        {{ fmt(announcement.published_at) }}
                     {% else %}
                         —
                     {% endif %}
                 </span>
                 <span>
-                    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
                     {% if announcement.expires_at %}
-                        Expires: {{ announcement.expires_at | ph_time }}
+                        Expires {{ fmt(announcement.expires_at) }}
                     {% else %}
                         No expiry
                     {% endif %}
@@ -410,7 +565,6 @@
                         type="submit"
                         class="announcement-action-btn announcement-action-warning"
                     >
-                        <i class="bi bi-eye-slash" aria-hidden="true"></i>
                         Unpublish
                     </button>
                 </form>
@@ -428,6 +582,8 @@
 
             {% endfor %}
 
+            <div class="announcement-empty" data-filter-empty hidden>No notices match your search.</div>
+
         </div>
 
     </section>
@@ -437,7 +593,7 @@
          SCHEDULED NOTICES
          ===================================================== -->
 
-    <section class="announcement-panel" id="notice-scheduled">
+    <section class="announcement-panel" id="notice-scheduled" data-notice-pane="scheduled">
 
         <div class="announcement-panel-header">
             <div class="announcement-panel-title">
@@ -458,18 +614,16 @@
             {% call(slot) notice_row(announcement, 'announcement-scheduled', 'bi-clock') %}
             {% if slot == 'meta' %}
                 <span>
-                    <i class="bi bi-calendar3" aria-hidden="true"></i>
-                    Scheduled:
+                    Scheduled
                     {% if announcement.scheduled_at %}
-                        {{ announcement.scheduled_at | ph_time }}
+                        {{ fmt(announcement.scheduled_at) }}
                     {% else %}
                         —
                     {% endif %}
                 </span>
                 <span>
-                    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
                     {% if announcement.expires_at %}
-                        Expires: {{ announcement.expires_at | ph_time }}
+                        Expires {{ fmt(announcement.expires_at) }}
                     {% else %}
                         No expiry
                     {% endif %}
@@ -486,7 +640,6 @@
                         type="submit"
                         class="announcement-action-btn announcement-action-warning"
                     >
-                        <i class="bi bi-x-circle" aria-hidden="true"></i>
                         Cancel Schedule
                     </button>
                 </form>
@@ -504,6 +657,8 @@
 
             {% endfor %}
 
+            <div class="announcement-empty" data-filter-empty hidden>No notices match your search.</div>
+
         </div>
 
     </section>
@@ -513,7 +668,7 @@
          DRAFT NOTICES
          ===================================================== -->
 
-    <section class="announcement-panel" id="notice-drafts">
+    <section class="announcement-panel" id="notice-drafts" data-notice-pane="drafts">
 
         <div class="announcement-panel-header">
             <div class="announcement-panel-title">
@@ -534,9 +689,8 @@
             {% call(slot) notice_row(announcement, 'announcement-draft', 'bi-file-earmark-text') %}
             {% if slot == 'meta' %}
                 <span>
-                    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
                     {% if announcement.expires_at %}
-                        Expires: {{ announcement.expires_at | ph_time }}
+                        Expires {{ fmt(announcement.expires_at) }}
                     {% else %}
                         No expiry
                     {% endif %}
@@ -558,6 +712,8 @@
 
             {% endfor %}
 
+            <div class="announcement-empty" data-filter-empty hidden>No notices match your search.</div>
+
         </div>
 
     </section>
@@ -567,7 +723,7 @@
          UNPUBLISHED NOTICES
          ===================================================== -->
 
-    <section class="announcement-panel announcement-inactive-panel" id="notice-unpublished">
+    <section class="announcement-panel announcement-inactive-panel" id="notice-unpublished" data-notice-pane="unpublished">
 
         <div class="announcement-panel-header">
             <div class="announcement-panel-title">
@@ -589,15 +745,13 @@
             {% if slot == 'meta' %}
                 {% if announcement.published_at %}
                 <span>
-                    <i class="bi bi-calendar3" aria-hidden="true"></i>
-                    Previously published:
-                    {{ announcement.published_at | ph_time }}
+                    Previously published
+                    {{ fmt(announcement.published_at) }}
                 </span>
                 {% endif %}
                 <span>
-                    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
                     {% if announcement.expires_at %}
-                        Expires: {{ announcement.expires_at | ph_time }}
+                        Expires {{ fmt(announcement.expires_at) }}
                     {% else %}
                         No expiry
                     {% endif %}
@@ -619,6 +773,8 @@
 
             {% endfor %}
 
+            <div class="announcement-empty" data-filter-empty hidden>No notices match your search.</div>
+
         </div>
 
     </section>
@@ -628,11 +784,10 @@
          EXPIRED NOTICES
          ===================================================== -->
 
-    <section class="announcement-panel announcement-inactive-panel" id="notice-expired">
+    <section class="announcement-panel announcement-inactive-panel" id="notice-expired" data-notice-pane="expired">
 
         <div class="announcement-panel-header">
             <div class="announcement-panel-title">
-                <i class="bi bi-hourglass-bottom" aria-hidden="true"></i>
                 <div>
                     <h2>Expired</h2>
                     <p>Notices whose expiry date/time has passed. They are no longer shown to passengers and are kept as history.</p>
@@ -649,13 +804,11 @@
             {% call(slot) notice_row(announcement, 'announcement-inactive announcement-expired', 'bi-hourglass-bottom') %}
             {% if slot == 'meta' %}
                 <span>
-                    <i class="bi bi-calendar3" aria-hidden="true"></i>
-                    Published:
-                    {{ announcement.published_at | ph_time }}
+                    Published
+                    {{ fmt(announcement.published_at) }}
                 </span>
                 <span>
-                    <i class="bi bi-hourglass-bottom" aria-hidden="true"></i>
-                    Expired: {{ announcement.expires_at | ph_time }}
+                    Expired {{ fmt(announcement.expires_at) }}
                 </span>
             {% else %}
             <div class="announcement-item-actions announcement-row-actions">
@@ -673,16 +826,69 @@
 
             {% endfor %}
 
+            <div class="announcement-empty" data-filter-empty hidden>No notices match your search.</div>
+
         </div>
 
     </section>
 
+    <p class="notice-filter-footer" id="noticeFilterFooter" aria-live="polite"></p>
+
+    <!-- =====================================================
+         DELETE NOTICE (modal, shared by every Delete button)
+         ===================================================== -->
+
+    <div class="modal fade" id="deleteNoticeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content announcement-modal">
+                <form id="deleteNoticeForm" method="POST" action="">
+
+                    <div class="modal-header announcement-modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                            Delete Notice
+                        </h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"
+                        ></button>
+                    </div>
+
+                    <div class="modal-body announcement-modal-body">
+                        <p class="mb-2">Are you sure you want to delete this notice?</p>
+                        <p class="notice-delete-title mb-2" id="deleteNoticeTitle"></p>
+                        <p class="mb-0">This cannot be undone.</p>
+                    </div>
+
+                    <div class="modal-footer announcement-modal-footer">
+                        <button
+                            type="button"
+                            class="announcement-modal-cancel"
+                            data-bs-dismiss="modal"
+                        >Cancel</button>
+                        <button
+                            type="submit"
+                            class="announcement-modal-confirm notice-delete-confirm"
+                            id="deleteNoticeConfirm"
+                        >
+                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                            Delete Notice
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
-/* Show the Schedule Date & Time field only when "Schedule for later" is
-   chosen, and make it required then. The backend validates all of this
-   again; this is just a convenience. */
+/* The Schedule Date & Time field is always visible, but only enabled (and
+   required) when "Schedule for later" is chosen. The backend validates all
+   of this again; this is just a convenience. */
 (function () {
     var action = document.getElementById("announcement-action");
     var field = document.getElementById("announcement-schedule-field");
@@ -691,14 +897,825 @@
 
     function sync() {
         var scheduling = action.value === "schedule";
-        field.hidden = !scheduling;
+        var trigger = field.querySelector(".dtp-trigger");
+        var box = trigger ? trigger.closest(".dtp") : null;
         input.required = scheduling;
-        if (!scheduling) { input.value = ""; }
+        if (trigger) { trigger.disabled = !scheduling; }
+        if (box) {
+            if (scheduling) { box.removeAttribute("data-note"); }
+            else { box.setAttribute("data-note", "Choose \u201cSchedule for later\u201d in Publishing to set a date and time."); }
+        }
+        if (!scheduling) {
+            if (input._dtp) { input._dtp.set(""); } else { input.value = ""; }
+        }
     }
 
     action.addEventListener("change", sync);
     sync();
+    /* the date picker script below builds its button after this runs */
+    document.addEventListener("DOMContentLoaded", sync);
 })();
+
+/* Delete modal: one shared dialog, filled in from the Delete button that
+   opened it. The notice is only deleted when the form is submitted. */
+(function () {
+    var modal = document.getElementById("deleteNoticeModal");
+    var form = document.getElementById("deleteNoticeForm");
+    var title = document.getElementById("deleteNoticeTitle");
+    var confirmBtn = document.getElementById("deleteNoticeConfirm");
+    if (!modal || !form || !title || !confirmBtn) { return; }
+
+    modal.addEventListener("show.bs.modal", function (event) {
+        var trigger = event.relatedTarget;
+        if (!trigger) { return; }
+        form.action = trigger.getAttribute("data-delete-action") || "";
+        title.textContent = trigger.getAttribute("data-delete-title") || "";
+        confirmBtn.disabled = false;
+    });
+
+    /* A double click must not send the delete twice */
+    form.addEventListener("submit", function () {
+        confirmBtn.disabled = true;
+    });
+})();
+
+/* Filter toolbar: one status panel at a time, plus search by title and type.
+   Client-side over the rows already on the page; without JavaScript every
+   panel simply shows. */
+(function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll(".notice-filter-tab"));
+    var panes = Array.prototype.slice.call(document.querySelectorAll("[data-notice-pane]"));
+    var search = document.getElementById("noticeSearch");
+    var typeFilter = document.getElementById("noticeTypeFilter");
+    var footer = document.getElementById("noticeFilterFooter");
+    if (!tabs.length || !panes.length || !search || !typeFilter) { return; }
+
+    var KEYS = tabs.map(function (t) { return t.dataset.tab; });
+    var active = KEYS[0];
+
+    function remember() {
+        try { sessionStorage.setItem("noticeTab", active); } catch (e) { /* ignore */ }
+    }
+    function initialTab() {
+        var fromHash = (location.hash || "").replace("#notice-", "");
+        if (KEYS.indexOf(fromHash) !== -1) { return fromHash; }
+        try {
+            var saved = sessionStorage.getItem("noticeTab");
+            if (KEYS.indexOf(saved) !== -1) { return saved; }
+        } catch (e) { /* storage unavailable: default tab */ }
+        return KEYS[0];
+    }
+
+    function apply() {
+        var query = (search.value || "").trim().toLowerCase();
+        var type = typeFilter.value;
+
+        tabs.forEach(function (tab) {
+            var on = tab.dataset.tab === active;
+            tab.classList.toggle("is-active", on);
+            tab.setAttribute("aria-selected", on ? "true" : "false");
+        });
+
+        var showAll = active === "all";
+        var totalShown = 0;
+        var totalRows = 0;
+
+        panes.forEach(function (pane) {
+            var on = showAll || pane.dataset.noticePane === active;
+            pane.hidden = !on;
+            if (!on) { return; }
+
+            var rows = Array.prototype.slice.call(pane.querySelectorAll(".announcement-item"));
+            var shown = 0;
+            rows.forEach(function (row) {
+                var match =
+                    (!query || (row.dataset.title || "").indexOf(query) !== -1) &&
+                    (!type || row.dataset.type === type);
+                row.hidden = !match;
+                if (match) { shown += 1; }
+            });
+
+            totalShown += shown;
+            totalRows += rows.length;
+
+            var noMatch = pane.querySelector("[data-filter-empty]");
+            if (showAll) {
+                /* In "All", a panel with no matches is hidden while filtering */
+                if (noMatch) { noMatch.hidden = true; }
+                if ((query || type) && shown === 0) { pane.hidden = true; }
+            } else if (noMatch) {
+                noMatch.hidden = !(rows.length && shown === 0);
+            }
+        });
+
+        if (window.refreshNoticeClamps) { window.refreshNoticeClamps(); }
+
+        footer.textContent =
+            "Showing " + totalShown + " of " + totalRows + " notice" + (totalRows === 1 ? "" : "s");
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+            active = tab.dataset.tab;
+            remember();
+            apply();
+        });
+    });
+    search.addEventListener("input", apply);
+    typeFilter.addEventListener("change", apply);
+
+    active = initialTab();
+    apply();
+})();
+/* Messages are limited to two lines; "Show more" appears only when the text
+   is actually longer, and toggles the full message. */
+(function () {
+    function refresh() {
+        Array.prototype.forEach.call(document.querySelectorAll(".announcement-item"), function (row) {
+            var msg = row.querySelector(".announcement-item-message");
+            var btn = row.querySelector(".announcement-show-more");
+            if (!msg || !btn || row.offsetParent === null) { return; }   /* hidden: measure later */
+            if (msg.classList.contains("is-expanded")) { btn.hidden = false; return; }
+            btn.hidden = !(msg.scrollHeight > msg.clientHeight + 1);
+        });
+    }
+    window.refreshNoticeClamps = refresh;
+
+    document.addEventListener("click", function (event) {
+        var btn = event.target.closest(".announcement-show-more");
+        if (!btn) { return; }
+        var msg = btn.closest(".announcement-item").querySelector(".announcement-item-message");
+        var open = msg.classList.toggle("is-expanded");
+        btn.textContent = open ? "Show less" : "Show more";
+    });
+
+    window.addEventListener("resize", refresh);
+    window.addEventListener("load", refresh);
+    refresh();
+})();
+/* Custom date & time picker.
+   Replaces every <input type="datetime-local"> on the page with a styled
+   dropdown (calendar + hour / minute / AM-PM lists). The original input stays
+   in the form as a hidden field and still submits "YYYY-MM-DDTHH:MM", so the
+   backend is unchanged. Past dates and times are disabled; "now" is taken in
+   Philippine Time, matching the hint text on the fields. */
+(function () {
+    var TZ = "Asia/Manila";
+    var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+                  "August", "September", "October", "November", "December"];
+    var WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+    var openState = null;
+
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    function dayKey(y, m, d) { return y + "-" + pad(m) + "-" + pad(d); }
+    function to24(h12, ap) { return (h12 % 12) + (ap === "PM" ? 12 : 0); }
+
+    function nowKey() {
+        var parts = new Intl.DateTimeFormat("en-GB", {
+            timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+        }).formatToParts(new Date());
+        var o = {};
+        parts.forEach(function (p) { o[p.type] = p.value; });
+        return o.year + "-" + o.month + "-" + o.day + "T" + pad(parseInt(o.hour, 10) % 24) + ":" + o.minute;
+    }
+
+    function parse(v) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || "");
+        if (!m) { return null; }
+        return { y: +m[1], m: +m[2], d: +m[3], h: +m[4], i: +m[5] };
+    }
+
+    function toDraft(v) {
+        var p = parse(v);
+        if (!p) { return { date: null, h12: null, i: null, ap: null }; }
+        return { date: dayKey(p.y, p.m, p.d), h12: (p.h % 12) || 12, i: p.i, ap: p.h >= 12 ? "PM" : "AM" };
+    }
+
+    function draftKey(d) {
+        return d.date + "T" + pad(to24(d.h12, d.ap)) + ":" + pad(d.i);
+    }
+
+    function pretty(v) {
+        var p = parse(v);
+        if (!p) { return ""; }
+        return MONTHS[p.m - 1] + " " + p.d + ", " + p.y + ", " + ((p.h % 12) || 12) + ":" + pad(p.i) + " " + (p.h >= 12 ? "PM" : "AM");
+    }
+
+    /* ---------- one picker per input ---------- */
+
+    function enhance(input) {
+        if (input._dtp) { return; }
+        var wrap = document.createElement("div");
+        wrap.className = "dtp";
+
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "dtp-trigger";
+        btn.setAttribute("aria-haspopup", "dialog");
+        btn.setAttribute("aria-expanded", "false");
+        btn.innerHTML = '<span class="dtp-value"></span><i class="bi bi-calendar-event dtp-icon" aria-hidden="true"></i>';
+
+        var err = document.createElement("span");
+        err.className = "dtp-error";
+        err.hidden = true;
+
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(btn);
+        wrap.appendChild(err);
+        wrap.appendChild(input);
+        input.type = "hidden";
+        input.setAttribute("data-dtp", "");
+
+        var api = {
+            input: input, btn: btn, dirty: false,
+            minFrom: input.getAttribute("data-dtp-min-from") || "",
+            minKey: function () {
+                var n = nowKey();
+                var other = api.minFrom ? document.getElementById(api.minFrom) : null;
+                var ov = other ? other.value : "";
+                return (ov && ov > n) ? ov : n;
+            },
+            show: function () {
+                var label = btn.querySelector(".dtp-value");
+                var text = pretty(input.value);
+                label.textContent = text || "Select date & time";
+                label.classList.toggle("is-placeholder", !text);
+            },
+            setError: function (msg) {
+                err.textContent = msg || "";
+                err.hidden = !msg;
+                btn.classList.toggle("is-invalid", !!msg);
+            },
+            set: function (v) {
+                input.value = v;
+                api.show();
+                api.setError("");
+                input.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        };
+        input._dtp = api;
+        api.show();
+
+        btn.addEventListener("click", function () {
+            if (openState && openState.dtp === api) { closePanel(); } else { openPanel(api); }
+        });
+
+        /* clicking the <label> opens the picker, like it would focus an input */
+        if (input.id) {
+            var label = document.querySelector('label[for="' + input.id + '"]');
+            if (label) {
+                label.addEventListener("click", function (e) { e.preventDefault(); btn.focus(); });
+            }
+        }
+    }
+
+    /* ---------- the dropdown panel ---------- */
+
+    function clamp(st) {
+        var d = st.draft;
+        if (!d.date) { return; }
+        var min = st.dtp.minKey();
+        if (draftKey(d) >= min) { return; }
+        var mh = +min.slice(11, 13);
+        d.date = d.date < min.slice(0, 10) ? min.slice(0, 10) : d.date;
+        d.ap = mh >= 12 ? "PM" : "AM";
+        d.h12 = (mh % 12) || 12;
+        d.i = +min.slice(14, 16);
+    }
+
+    function commit(st) {
+        st.dtp.dirty = true;
+        st.dtp.set(draftKey(st.draft));
+    }
+
+    function render(st, keepScroll) {
+        var panel = st.panel, d = st.draft;
+        var min = st.dtp.minKey();
+        var minDay = min.slice(0, 10), minH = +min.slice(11, 13), minI = +min.slice(14, 16);
+        var today = nowKey().slice(0, 10);
+        var y = st.view.y, m = st.view.m;
+
+        var saved = {};
+        if (keepScroll) {
+            Array.prototype.forEach.call(panel.querySelectorAll(".dtp-list"), function (el) {
+                saved[el.getAttribute("data-col")] = el.scrollTop;
+            });
+        }
+
+        var atMinMonth = (y * 12 + m) <= (+minDay.slice(0, 4) * 12 + +minDay.slice(5, 7));
+        var html = '<div class="dtp-head">' +
+            '<button type="button" class="dtp-nav" data-nav="-1" aria-label="Previous month"' + (atMinMonth ? " disabled" : "") + '><i class="bi bi-chevron-left" aria-hidden="true"></i></button>' +
+            '<div class="dtp-title">' + MONTHS[m - 1] + " " + y + '</div>' +
+            '<button type="button" class="dtp-nav" data-nav="1" aria-label="Next month"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>' +
+            '</div><div class="dtp-weekdays">';
+        WEEKDAYS.forEach(function (w) { html += "<span>" + w + "</span>"; });
+        html += '</div><div class="dtp-days">';
+
+        var first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+        var dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        var i;
+        for (i = 0; i < first; i++) { html += '<span class="dtp-blank"></span>'; }
+        for (i = 1; i <= dim; i++) {
+            var k = dayKey(y, m, i);
+            var cls = "dtp-day";
+            if (k === today) { cls += " is-today"; }
+            if (k === d.date) { cls += " is-selected"; }
+            html += '<button type="button" class="' + cls + '" data-day="' + k + '"' + (k < minDay ? " disabled" : "") + ">" + i + "</button>";
+        }
+        html += "</div>";
+
+        var hasDate = !!d.date;
+        var restricted = hasDate && d.date <= minDay;
+        var h24 = hasDate ? to24(d.h12, d.ap) : -1;
+
+        html += '<div class="dtp-time' + (hasDate ? "" : " is-off") + '">';
+
+        html += '<div class="dtp-col"><div class="dtp-col-label">Hour</div><div class="dtp-list" data-col="h">';
+        for (i = 1; i <= 12; i++) {
+            var offH = !hasDate || (restricted && to24(i, d.ap) < minH);
+            html += '<button type="button" class="dtp-opt' + (d.h12 === i ? " is-selected" : "") + '" data-col="h" data-val="' + i + '"' + (offH ? " disabled" : "") + ">" + pad(i) + "</button>";
+        }
+        html += "</div></div>";
+
+        html += '<div class="dtp-col"><div class="dtp-col-label">Minute</div><div class="dtp-list" data-col="i">';
+        for (i = 0; i < 60; i++) {
+            var offM = !hasDate || (restricted && h24 === minH && i < minI);
+            html += '<button type="button" class="dtp-opt' + (d.i === i ? " is-selected" : "") + '" data-col="i" data-val="' + i + '"' + (offM ? " disabled" : "") + ">" + pad(i) + "</button>";
+        }
+        html += "</div></div>";
+
+        html += '<div class="dtp-col dtp-col-ap"><div class="dtp-col-label">&nbsp;</div><div class="dtp-list dtp-list-ap" data-col="ap">';
+        ["AM", "PM"].forEach(function (ap) {
+            var offA = !hasDate || (restricted && ap === "AM" && minH >= 12);
+            html += '<button type="button" class="dtp-opt' + (d.ap === ap ? " is-selected" : "") + '" data-col="ap" data-val="' + ap + '"' + (offA ? " disabled" : "") + ">" + ap + "</button>";
+        });
+        html += "</div></div></div>";
+
+        html += '<div class="dtp-foot">' +
+            '<button type="button" class="dtp-link" data-act="clear"' + (st.dtp.input.required ? " hidden" : "") + ">Clear</button>" +
+            '<span class="dtp-hint">' + (hasDate ? "" : "Pick a date first") + "</span>" +
+            '<button type="button" class="dtp-done" data-act="done">Done</button></div>';
+
+        panel.innerHTML = html;
+
+        Array.prototype.forEach.call(panel.querySelectorAll(".dtp-list"), function (el) {
+            var col = el.getAttribute("data-col");
+            if (keepScroll && saved[col] !== undefined) {
+                el.scrollTop = saved[col];
+            } else {
+                var sel = el.querySelector(".is-selected");
+                if (sel) { el.scrollTop = sel.offsetTop - (el.clientHeight - sel.offsetHeight) / 2; }
+            }
+        });
+    }
+
+    function place(st) {
+        var panel = st.panel;
+        var r = st.dtp.btn.getBoundingClientRect();
+        var vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+        var w = Math.min(300, vw - 16);
+        panel.style.width = w + "px";
+        var left = Math.max(8, Math.min(r.left, vw - w - 8));
+        var h = panel.offsetHeight;
+        var top = r.bottom + 6;
+        if (top + h > vh - 8) {
+            top = (r.top - h - 6 >= 8) ? r.top - h - 6 : Math.max(8, vh - h - 8);
+        }
+        panel.style.left = left + "px";
+        panel.style.top = top + "px";
+    }
+
+    function openPanel(dtp) {
+        closePanel();
+        var min = dtp.minKey();
+        var draft = toDraft(dtp.input.value);
+        var base = draft.date || min.slice(0, 10);
+        var st = {
+            dtp: dtp, draft: draft,
+            view: { y: +base.slice(0, 4), m: +base.slice(5, 7) },
+            panel: document.createElement("div")
+        };
+        st.panel.className = "dtp-panel";
+        st.panel.setAttribute("role", "dialog");
+        st.panel.setAttribute("aria-label", "Choose date and time");
+        st.panel.style.visibility = "hidden";
+        (dtp.btn.closest(".modal") || document.body).appendChild(st.panel);
+        render(st, false);
+        place(st);
+        st.panel.style.visibility = "";
+        dtp.btn.setAttribute("aria-expanded", "true");
+        openState = st;
+
+        st.panel.addEventListener("click", function (e) {
+            var t = e.target.closest("button");
+            if (!t || t.disabled) { return; }
+
+            if (t.hasAttribute("data-nav")) {
+                st.view.m += +t.getAttribute("data-nav");
+                if (st.view.m < 1) { st.view.m = 12; st.view.y -= 1; }
+                if (st.view.m > 12) { st.view.m = 1; st.view.y += 1; }
+                render(st, false);
+                place(st);
+            } else if (t.hasAttribute("data-day")) {
+                st.draft.date = t.getAttribute("data-day");
+                if (st.draft.h12 === null) { st.draft.h12 = 9; st.draft.i = 0; st.draft.ap = "AM"; }
+                clamp(st);
+                commit(st);
+                render(st, false);
+            } else if (t.hasAttribute("data-col")) {
+                var col = t.getAttribute("data-col"), val = t.getAttribute("data-val");
+                if (col === "h") { st.draft.h12 = +val; }
+                if (col === "i") { st.draft.i = +val; }
+                if (col === "ap") { st.draft.ap = val; }
+                clamp(st);
+                commit(st);
+                render(st, true);
+            } else if (t.getAttribute("data-act") === "clear") {
+                st.dtp.dirty = false;
+                st.dtp.set("");
+                closePanel(true);
+            } else if (t.getAttribute("data-act") === "done") {
+                closePanel(true);
+            }
+        });
+    }
+
+    function closePanel(refocus) {
+        if (!openState) { return; }
+        var st = openState;
+        openState = null;
+        st.dtp.btn.setAttribute("aria-expanded", "false");
+        if (st.panel.parentNode) { st.panel.parentNode.removeChild(st.panel); }
+        if (refocus) { st.dtp.btn.focus(); }
+    }
+
+    document.addEventListener("mousedown", function (e) {
+        if (!openState) { return; }
+        if (openState.panel.contains(e.target) || openState.dtp.btn.contains(e.target)) { return; }
+        closePanel();
+    }, true);
+
+    document.addEventListener("keydown", function (e) {
+        if (openState && e.key === "Escape") {
+            e.stopPropagation();          /* don't also close the Bootstrap modal */
+            closePanel(true);
+        }
+    }, true);
+
+    window.addEventListener("resize", function () { if (openState) { place(openState); } });
+    window.addEventListener("scroll", function (e) {
+        if (openState && !openState.panel.contains(e.target)) { place(openState); }
+    }, true);
+    document.addEventListener("hide.bs.modal", function () { closePanel(); });
+
+    /* An expiry can't be earlier than the schedule time it belongs to */
+    document.addEventListener("change", function (e) {
+        var src = e.target;
+        if (!src || !src.id) { return; }
+        Array.prototype.forEach.call(document.querySelectorAll("input[data-dtp]"), function (inp) {
+            var dep = inp._dtp;
+            if (dep && dep.minFrom === src.id && inp.value && inp.value < dep.minKey()) { dep.set(""); }
+        });
+    });
+
+    /* Native validation skips hidden inputs, so check required / past here */
+    document.addEventListener("submit", function (e) {
+        var bad = null;
+        Array.prototype.forEach.call(e.target.querySelectorAll("input[data-dtp]"), function (inp) {
+            var d = inp._dtp, msg = "";
+            if (!d) { return; }
+            if (inp.required && !inp.value) { msg = "Please select a date and time."; }
+            else if (inp.value && d.dirty && inp.value < d.minKey()) { msg = "That date and time has already passed."; }
+            d.setError(msg);
+            if (msg && !bad) { bad = d; }
+        });
+        if (bad) {
+            e.preventDefault();
+            e.stopPropagation();
+            bad.btn.focus();
+        }
+    }, true);
+
+    Array.prototype.forEach.call(document.querySelectorAll('input[type="datetime-local"]'), enhance);
+})();
+</script>
+
+
+<script>
+
+/* Styled dropdown list for the Notice Type and Publishing selects, the same
+
+   look as the Manifest Detail dropdowns (.wt-select-menu / .wt-select-option
+
+   in announcements.css). The real <select> stays in the form, still holds the
+
+   value and still fires "change"; only its native list is replaced. */
+
+(function () {
+
+    var SELECTOR = ".announcement-select-wrap > select";
+
+    var cur = null;     /* { select, menu, items, active } */
+
+
+
+    function enabled(select, i) {
+
+        return select.options[i] && !select.options[i].disabled;
+
+    }
+
+
+
+    function setActive(st, i, scroll) {
+
+        if (st.active > -1 && st.items[st.active]) { st.items[st.active].classList.remove("is-active"); }
+
+        st.active = i;
+
+        var el = st.items[i];
+
+        if (!el) { return; }
+
+        el.classList.add("is-active");
+
+        if (scroll) {
+
+            if (el.offsetTop < st.menu.scrollTop) { st.menu.scrollTop = el.offsetTop; }
+
+            else if (el.offsetTop + el.offsetHeight > st.menu.scrollTop + st.menu.clientHeight) {
+
+                st.menu.scrollTop = el.offsetTop + el.offsetHeight - st.menu.clientHeight;
+
+            }
+
+        }
+
+    }
+
+
+
+    function move(st, step) {
+
+        var i = st.active, n = st.select.options.length;
+
+        do { i += step; } while (i >= 0 && i < n && !enabled(st.select, i));
+
+        if (i >= 0 && i < n) { setActive(st, i, true); }
+
+    }
+
+
+
+    function place(st) {
+
+        var r = st.select.getBoundingClientRect();
+
+        var vh = document.documentElement.clientHeight;
+
+        var menu = st.menu;
+
+        menu.style.width = r.width + "px";
+
+        menu.style.left = r.left + "px";
+
+        menu.style.maxHeight = Math.min(240, vh - 16) + "px";
+
+        var h = menu.offsetHeight;
+
+        var top = r.bottom + 4;
+
+        if (top + h > vh - 8) {
+
+            top = (r.top - h - 4 >= 8) ? r.top - h - 4 : Math.max(8, vh - h - 8);
+
+        }
+
+        menu.style.top = top + "px";
+
+    }
+
+
+
+    function close() {
+
+        if (!cur) { return; }
+
+        var st = cur;
+
+        cur = null;
+
+        st.select.setAttribute("aria-expanded", "false");
+
+        st.select.parentNode.classList.remove("is-open");
+
+        if (st.menu.parentNode) { st.menu.parentNode.removeChild(st.menu); }
+
+    }
+
+
+
+    function choose(st, i) {
+
+        if (!enabled(st.select, i)) { return; }
+
+        var select = st.select;
+
+        close();
+
+        if (select.selectedIndex !== i) {
+
+            select.selectedIndex = i;
+
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+
+        }
+
+        select.focus();
+
+    }
+
+
+
+    function open(select) {
+
+        close();
+
+        var st = { select: select, menu: document.createElement("ul"), items: [], active: -1 };
+
+        st.menu.className = "wt-select-menu";
+
+        st.menu.setAttribute("role", "listbox");
+
+
+
+        Array.prototype.forEach.call(select.options, function (opt, i) {
+
+            var li = document.createElement("li");
+
+            li.className = "wt-select-option" +
+
+                (i === select.selectedIndex ? " is-selected" : "") +
+
+                (opt.disabled ? " is-disabled" : "");
+
+            li.setAttribute("role", "option");
+
+            li.setAttribute("aria-selected", i === select.selectedIndex ? "true" : "false");
+
+            li.textContent = opt.text.trim();
+
+            st.items.push(li);
+
+            st.menu.appendChild(li);
+
+        });
+
+
+
+        st.menu.addEventListener("mousedown", function (e) {
+
+            e.preventDefault();                     /* keep focus on the select */
+
+            var li = e.target.closest(".wt-select-option");
+
+            if (li) { choose(st, st.items.indexOf(li)); }
+
+        });
+
+        st.menu.addEventListener("mouseover", function (e) {
+
+            var li = e.target.closest(".wt-select-option");
+
+            var i = li ? st.items.indexOf(li) : -1;
+
+            if (i > -1 && enabled(select, i)) { setActive(st, i, false); }
+
+        });
+
+
+
+        /* inside the modal when there is one, so the modal's focus trap stays happy */
+
+        (select.closest(".modal") || document.body).appendChild(st.menu);
+
+        st.menu.classList.add("is-open");
+
+        st.menu.style.visibility = "hidden";
+
+        place(st);
+
+        st.menu.style.visibility = "";
+
+
+
+        select.setAttribute("aria-expanded", "true");
+
+        select.parentNode.classList.add("is-open");
+
+        cur = st;
+
+        setActive(st, enabled(select, select.selectedIndex) ? select.selectedIndex : -1, false);
+
+        if (st.active < 0) { move(st, 1); }
+
+        setActive(st, st.active, true);
+
+    }
+
+
+
+    document.addEventListener("mousedown", function (e) {
+
+        var sel = e.target.closest ? e.target.closest(SELECTOR) : null;
+
+        if (sel && !sel.disabled && e.button === 0) {
+
+            e.preventDefault();                     /* no native list */
+
+            if (cur && cur.select === sel) { close(); } else { sel.focus(); open(sel); }
+
+            return;
+
+        }
+
+        if (cur && !cur.menu.contains(e.target)) { close(); }
+
+    }, true);
+
+
+
+    document.addEventListener("keydown", function (e) {
+
+        if (cur) {
+
+            if (e.key === "Escape") {
+
+                e.preventDefault();
+
+                e.stopPropagation();                /* don't also close the Bootstrap modal */
+
+                var s = cur.select;
+
+                close();
+
+                s.focus();
+
+            } else if (e.key === "ArrowDown") { e.preventDefault(); move(cur, 1); }
+
+            else if (e.key === "ArrowUp") { e.preventDefault(); move(cur, -1); }
+
+            else if (e.key === "Home") { e.preventDefault(); setActive(cur, -1, false); move(cur, 1); }
+
+            else if (e.key === "End") { e.preventDefault(); setActive(cur, cur.select.options.length, false); move(cur, -1); }
+
+            else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(cur, cur.active); }
+
+            else if (e.key === "Tab") { close(); }
+
+            return;
+
+        }
+
+        var sel = e.target.closest ? e.target.closest(SELECTOR) : null;
+
+        if (sel && !sel.disabled &&
+
+            (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ")) {
+
+            e.preventDefault();
+
+            open(sel);
+
+        }
+
+    }, true);
+
+
+
+    window.addEventListener("resize", function () { if (cur) { place(cur); } });
+
+    window.addEventListener("scroll", function (e) {
+
+        if (cur && !cur.menu.contains(e.target)) { place(cur); }
+
+    }, true);
+
+    document.addEventListener("hide.bs.modal", close);
+
+
+
+    Array.prototype.forEach.call(document.querySelectorAll(SELECTOR), function (s) {
+
+        s.setAttribute("aria-haspopup", "listbox");
+
+        s.setAttribute("aria-expanded", "false");
+
+    });
+
+})();
+
 </script>
 
 {% endblock %}

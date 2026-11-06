@@ -37,7 +37,13 @@ class Registration(db.Model):
         db.String(20), nullable=False, default=REG_PENDING
     )  # pending | approved | rejected | cancelled
 
+    # When the passenger submitted the pre-registration. Set once on insert
+    # (PH wall-clock) and never rewritten.
     created_at = db.Column(db.DateTime, default=ph_now)
+    # When an admin first approved the registration (PH wall-clock, same
+    # convention as created_at). NULL until approved; legacy approved rows
+    # stay NULL (not backfilled). Set once, never overwritten.
+    approved_at = db.Column(db.DateTime, nullable=True)
     cancelled_at = db.Column(db.DateTime, nullable=True)
 
     __table_args__ = (

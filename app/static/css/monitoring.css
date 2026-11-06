@@ -671,6 +671,82 @@
 }
 
 
+.monitoring-form-field .form-select {
+    width: 100%;
+    height: 40px;
+
+    border: 1px solid #cbdced;
+    border-radius: 7px;
+
+    background-color: #ffffff;
+
+    color: #111111;
+
+    font-size: 0.8rem;
+
+    box-shadow: none;
+}
+
+
+.monitoring-form-field .form-select:focus {
+    border-color: #173f62;
+
+    box-shadow:
+        0 0 0 2px rgba(23, 63, 98, 0.06);
+}
+
+
+/* Locked field: a live reading is available, so manual entry is off */
+.monitoring-form-field .form-control:disabled,
+.monitoring-form-field .form-select:disabled {
+    border-color: #e1e8f0;
+
+    background-color: #f1f5f9;
+
+    color: #9ca3af;
+
+    cursor: not-allowed;
+
+    opacity: 1;
+}
+
+
+.monitoring-form-field .form-control:disabled::placeholder {
+    color: #9ca3af;
+}
+
+
+/* Notice above the Manual Weather form while live wind is available */
+.monitoring-lock-note {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin: 22px 38px 0;
+    padding: 12px 16px;
+
+    border: 1px solid #cbdced;
+    border-radius: 7px;
+
+    background: #f1f5f9;
+
+    color: #374151;
+
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+
+.monitoring-lock-note i {
+    flex-shrink: 0;
+
+    margin-top: 2px;
+
+    color: #173f62;
+}
+
+
 .monitoring-form-submit {
     display: flex;
     align-items: flex-end;
@@ -700,6 +776,20 @@
         background-color 0.18s ease,
         box-shadow 0.18s ease,
         transform 0.18s ease;
+}
+
+
+.monitoring-add-btn:disabled,
+.monitoring-add-btn:disabled:hover {
+    background-color: #cbd5e1;
+
+    color: #6b7280;
+
+    box-shadow: none;
+
+    cursor: not-allowed;
+
+    transform: none;
 }
 
 
@@ -954,6 +1044,11 @@
     }
 
 
+    .monitoring-lock-note {
+        margin: 18px 20px 0;
+    }
+
+
     .monitoring-form-grid {
         grid-template-columns: 1fr;
 
@@ -1184,9 +1279,49 @@
 .monitoring-age { margin-top: 3px; color: #6b7280; font-size: 0.75rem; }
 .monitoring-age.stale { color: #d92d20; font-weight: 600; }
 
-/* Reusable scrolling table with sticky header (QA 23 / Analytics 10) */
-.table-scroll { max-height: 420px; overflow: auto; border-radius: 9px; }
-.table-scroll .monitoring-table thead th { position: sticky; top: 0; z-index: 1; }
+/* Reusable scrolling table with sticky header (QA 23 / Analytics 10).
+   Recent Readings and Historical Baseline both use it. Grows with its rows
+   and scrolls only past the limit (same limit as table-scroll.css).
+
+   The scrollbar sits OUTSIDE the table's outline, in the card's right
+   padding, so it never touches the last column: --scroll-gap is the space
+   between the table and the scrollbar, and the negative margin gives that
+   space back so the table keeps its width. */
+.table-scroll {
+    --scroll-gap: 14px;
+    --scroll-bar: 6px;
+
+    max-height: min(var(--table-max-height, 420px), 70vh);
+    overflow: auto;
+    padding-right: var(--scroll-gap);
+    margin-right: calc(-1 * (var(--scroll-gap) + var(--scroll-bar)));
+    scrollbar-gutter: stable;
+}
+
+/* overflow: hidden on the table would trap the sticky header, so the
+   rounded outline is kept by rounding the corner cells instead. */
+.table-scroll .monitoring-table {
+    overflow: visible;
+}
+
+.table-scroll .monitoring-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #f1f8ff;
+}
+
+.table-scroll .monitoring-table thead th:first-child { border-top-left-radius: 8px; }
+.table-scroll .monitoring-table thead th:last-child  { border-top-right-radius: 8px; }
+.table-scroll .monitoring-table tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }
+.table-scroll .monitoring-table tbody tr:last-child td:last-child  { border-bottom-right-radius: 8px; }
+
+@media (max-width: 575.98px) {
+    .table-scroll {
+        --scroll-gap: 8px;
+        max-height: min(var(--table-max-height, 420px), 60vh);
+    }
+}
 
 
 html { scroll-behavior: smooth; }
@@ -1228,4 +1363,152 @@ html { scroll-behavior: smooth; }
 
 .monitoring-page section[id] {
     scroll-margin-top: 70px;
+}
+
+
+/* =========================================================
+   UNUSUAL WATER LEVEL CONFIRMATION (modal)
+   ========================================================= */
+
+.monitoring-unusual-value {
+    margin-bottom: 12px;
+    padding: 12px 14px;
+
+    border: 1px solid #f1d9a6;
+    border-radius: 8px;
+
+    background-color: #fff8e6;
+    color: #8a5a00;
+
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+
+/* =========================================================
+   CHECK WATER LEVEL MODAL — compact, minimal layout
+   ========================================================= */
+
+#unusualReadingModal .modal-dialog {
+    max-width: 440px;
+    margin: 1rem auto;
+}
+
+#unusualReadingModal .modal-content {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 12px 32px rgba(15, 27, 60, 0.16);
+}
+
+#unusualReadingModal .modal-header {
+    min-height: 0;
+    padding: 15px 18px;
+    background: #ffffff !important;
+    color: #172033 !important;
+    border-bottom: 1px solid #edf0f3;
+}
+
+#unusualReadingModal .modal-title {
+    margin: 0;
+    color: #172033;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+#unusualReadingModal .btn-close {
+    opacity: 0.55;
+    filter: none;
+    transform: scale(0.82);
+}
+
+#unusualReadingModal .modal-body {
+    padding: 18px;
+    color: #4b5563;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+#unusualReadingModal .monitoring-unusual-value {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border: 1px solid #f1dfb8;
+    border-radius: 7px;
+    background: #fffbf2;
+    color: #8a5a00;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: left;
+}
+
+#unusualReadingModal .modal-body p {
+    margin-bottom: 8px !important;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+#unusualReadingModal #unusualReadingText {
+    color: #4b5563;
+}
+
+#unusualReadingModal .modal-body p:last-child {
+    margin: 12px 0 0 !important;
+    color: #273449;
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+#unusualReadingModal .modal-footer {
+    gap: 8px;
+    padding: 12px 18px 16px;
+    border-top: 0;
+}
+
+#unusualReadingModal .modal-footer .btn {
+    min-height: 34px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.25;
+    box-shadow: none;
+}
+
+#unusualReadingModal #unusualReadingConfirm {
+    background: var(--navy) !important;
+    border: 1px solid var(--navy);
+    color: #ffffff;
+}
+
+#unusualReadingModal #unusualReadingConfirm:hover {
+    background: var(--navy-dark) !important;
+    border-color: var(--navy-dark);
+}
+
+#unusualReadingModal #unusualReadingFix {
+    border-color: #d1d5db;
+    color: #4b5563;
+}
+
+#unusualReadingModal #unusualReadingFix:hover {
+    background: #f8fafc;
+    border-color: #9ca3af;
+}
+
+@media (max-width: 576px) {
+    #unusualReadingModal .modal-dialog {
+        margin: 0.75rem;
+    }
+
+    #unusualReadingModal .modal-footer {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    #unusualReadingModal .modal-footer .btn {
+        width: 100%;
+    }
 }

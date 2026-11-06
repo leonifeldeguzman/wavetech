@@ -45,7 +45,7 @@
 
                                 {% if announcement.published_at %}
                                     <span class="home-announcement-date">
-                                        {{ announcement.published_at | ph_time }}
+                                        {% set d = announcement.published_at %}{{ d.strftime('%B') }} {{ d.day }}, {{ d.year }}, {{ d.hour % 12 or 12 }}:{{ '%02d' % d.minute }} {{ 'AM' if d.hour < 12 else 'PM' }}
                                     </span>
                                 {% endif %}
 
@@ -57,7 +57,16 @@
 
                         </div>
 
-                        <p>{{ announcement.content }}</p>
+                        <p class="home-announcement-text">{{ announcement.content | trim }}</p>
+
+                        <button
+                            type="button"
+                            class="home-announcement-show-more"
+                            aria-expanded="false"
+                            hidden
+                        >
+                            Show more
+                        </button>
 
                     </div>
 
@@ -86,5 +95,51 @@
     </main>
 
 </div>
+
+<script>
+function initAnnouncementShowMore() {
+    document.querySelectorAll(".home-announcement").forEach(function (notice) {
+        const message = notice.querySelector(".home-announcement-text");
+        const button = notice.querySelector(".home-announcement-show-more");
+
+        if (!message || !button || button.dataset.ready) return;
+        button.dataset.ready = "true";
+
+        function checkOverflow() {
+            if (message.classList.contains("is-expanded")) return;
+
+            const clampedHeight = message.getBoundingClientRect().height;
+            message.classList.add("is-expanded");
+            const fullHeight = message.getBoundingClientRect().height;
+            message.classList.remove("is-expanded");
+
+            const hasMore = fullHeight > clampedHeight + 1;
+            button.hidden = !hasMore;
+            button.textContent = "Show more";
+            button.setAttribute("aria-expanded", "false");
+        }
+
+        button.addEventListener("click", function () {
+            const expanded = message.classList.toggle("is-expanded");
+
+            button.textContent = expanded ? "Show less" : "Show more";
+            button.setAttribute("aria-expanded", String(expanded));
+        });
+
+        checkOverflow();
+        window.addEventListener("resize", checkOverflow);
+        window.addEventListener("load", checkOverflow);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(checkOverflow);
+        }
+    });
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAnnouncementShowMore);
+} else {
+    initAnnouncementShowMore();
+}
+</script>
 
 {% endblock %}

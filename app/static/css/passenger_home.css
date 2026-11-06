@@ -3,6 +3,28 @@
    PASSENGER HOME PAGE
    ========================================================= */
 
+/* =========================================================
+   NOTICE TYPE COLOURS (text on background)
+   Safety Alert          #B91C1C on #FEE2E2   bi-shield-exclamation
+   Delay                 #B45309 on #FEF3C7   bi-clock
+   Cancellation          #DC2626 on #FEE2E2   bi-x-circle
+   General Announcement  #1D4ED8 on #DBEAFE   bi-info-circle
+   ========================================================= */
+
+:root {
+    --notice-safety-text: #B91C1C;
+    --notice-safety-bg: #FEE2E2;
+
+    --notice-delay-text: #B45309;
+    --notice-delay-bg: #FEF3C7;
+
+    --notice-cancellation-text: #DC2626;
+    --notice-cancellation-bg: #FEE2E2;
+
+    --notice-general-text: #1D4ED8;
+    --notice-general-bg: #DBEAFE;
+}
+
 .passenger-home {
     min-height: 100vh;
     background: #f5f6f8;
@@ -855,40 +877,22 @@
     font-size: 0.9rem;
 }
 
-/* Notice type emphasis. Safety Alert is the most prominent; Cancellation
-   next; Delay amber; General Notice neutral. */
-.home-announcement.safety {
-    border-color: #efc4c0;
-    border: 1px solid #efc4c0;
-    background: #fff5f5;
-}
+/* Notice type emphasis (see NOTICE TYPE COLOURS at top of file). */
+.home-announcement.safety { border-color: #e1e7ed; }
+.home-announcement.safety .home-announcement-icon { background: var(--notice-safety-bg); color: var(--notice-safety-text); }
 
-.home-announcement.safety .home-announcement-icon {
-    background: #b42318;
-    color: #ffffff;
-}
 
-.home-announcement.safety h3 {
-    color: #7a1b13;
-}
+.home-announcement.delay { border-color: #e1e7ed; }
+.home-announcement.delay .home-announcement-icon { background: var(--notice-delay-bg); color: var(--notice-delay-text); }
 
-.home-announcement.cancellation {
-    border: 1px solid #e2c4c4;
-}
 
-.home-announcement.cancellation .home-announcement-icon {
-    background: #7a1212;
-    color: #ffffff;
-}
+.home-announcement.cancellation { border-color: #e1e7ed; }
+.home-announcement.cancellation .home-announcement-icon { background: var(--notice-cancellation-bg); color: var(--notice-cancellation-text); }
 
-.home-announcement.delay {
-    border: 1px solid #ead9b8;
-}
 
-.home-announcement.delay .home-announcement-icon {
-    background: #fff1d6;
-    color: #7a4100;
-}
+.home-announcement.general { border-color: #e1e7ed; }
+.home-announcement.general .home-announcement-icon { background: var(--notice-general-bg); color: var(--notice-general-text); }
+
 
 .home-announcement-content {
     flex: 1;
@@ -942,29 +946,29 @@
     line-height: 1.2;
 }
 
-/* Type badge colours (all text/background pairs meet WCAG AA >= 4.5:1). */
+/* Type badge colours */
 .home-announcement-type.safety {
-    border-color: #b42318;
-    background: #b42318;
-    color: #ffffff !important;
+    border-color: var(--notice-safety-text);
+    background: var(--notice-safety-bg);
+    color: var(--notice-safety-text) !important;
 }
 
 .home-announcement-type.delay {
-    border-color: #e9b45f;
-    background: #fff1d6;
-    color: #7a4100 !important;
+    border-color: var(--notice-delay-text);
+    background: var(--notice-delay-bg);
+    color: var(--notice-delay-text) !important;
 }
 
 .home-announcement-type.cancellation {
-    border-color: #7a1212;
-    background: #7a1212;
-    color: #ffffff !important;
+    border-color: var(--notice-cancellation-text);
+    background: var(--notice-cancellation-bg);
+    color: var(--notice-cancellation-text) !important;
 }
 
 .home-announcement-type.general {
-    border-color: #c9d8e6;
-    background: #eaf2f9;
-    color: #2c5272 !important;
+    border-color: var(--notice-general-text);
+    background: var(--notice-general-bg);
+    color: var(--notice-general-text) !important;
 }
 
 .home-announcement-expiry {
@@ -1218,7 +1222,7 @@
 
 /* =========================================================
    NOTICE CARDS — PASSENGER VIEW
-   Minimal 1px full-border treatment
+   Minimal 1px full-border treatment, coloured by notice type
    ========================================================= */
 
 .home-announcement {
@@ -1227,22 +1231,278 @@
     background: #ffffff;
 }
 
-.home-announcement.safety {
-    border: 1px solid #efc4c0;
-    background: #fffafa;
+.home-announcement.safety       { border: 1px solid #e1e7ed; background: #ffffff; }
+.home-announcement.delay        { border: 1px solid #e1e7ed; background: #ffffff; }
+.home-announcement.cancellation { border: 1px solid #e1e7ed; background: #ffffff; }
+.home-announcement.general      { border: 1px solid #e1e7ed; background: #ffffff; }
+
+
+/* =========================================================
+   PASSENGER ANNOUNCEMENTS
+   Match the current Notice Management announcement styling
+   ========================================================= */
+
+:root {
+    --notice-safety-text: #7A1712;
+    --notice-safety-bg: #FDECEA;
+    --notice-delay-text: #6B4E00;
+    --notice-delay-bg: #FFF4D6;
+    --notice-cancellation-text: #7A1712;
+    --notice-cancellation-bg: #FDECEA;
+    --notice-general-text: #17418A;
+    --notice-general-bg: #E9EDF8;
 }
 
+.home-announcements {
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 0;
+    background: #ffffff;
+}
+
+.home-announcement,
+.home-announcement.safety,
+.home-announcement.delay,
+.home-announcement.cancellation,
+.home-announcement.general {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 13px 16px 13px 18px;
+    gap: 0;
+    border: 0 !important;
+    border-left: 4px solid #cbd5e1 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none;
+    transition: none;
+}
+
+.home-announcement + .home-announcement {
+    border-top: 1px solid #eef0f3 !important;
+}
+
+.home-announcement.safety,
 .home-announcement.cancellation {
-    border: 1px solid #e2c4c4;
-    background: #fffafa;
+    border-left-color: #B3261E !important;
 }
 
 .home-announcement.delay {
-    border: 1px solid #ead9b8;
-    background: #fffdf8;
+    border-left-color: #E0A800 !important;
 }
 
 .home-announcement.general {
-    border: 1px solid #dfe5eb;
-    background: #ffffff;
+    border-left-color: #2F5FB3 !important;
+}
+
+/* No icons */
+.home-announcement-icon {
+    display: none !important;
+}
+
+.home-announcement-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+}
+
+/* Badge and title */
+.home-announcement-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 12px;
+}
+
+.home-announcement-header > div {
+    flex: 1;
+    min-width: 0;
+}
+
+.home-announcement-header h3 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    color: #111b33;
+    font-size: .88rem;
+    font-weight: 650;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.home-announcement-type {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 3px 9px;
+    border: none;
+    border-radius: 999px;
+    font-size: .65rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Type colors */
+.home-announcement-type.safety {
+    background: #FDECEA;
+    color: #7A1712 !important;
+}
+
+.home-announcement-type.delay {
+    background: #FFF4D6;
+    color: #6B4E00 !important;
+}
+
+.home-announcement-type.cancellation {
+    background: #FDECEA;
+    color: #7A1712 !important;
+}
+
+.home-announcement-type.general {
+    background: #E9EDF8;
+    color: #17418A !important;
+}
+
+.home-announcement-date {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 7px;
+    color: #6b7280;
+    font-size: .69rem;
+    line-height: 1.4;
+}
+
+.home-announcement-date i {
+    font-size: .7rem;
+}
+
+/* Message */
+.home-announcement-content p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    margin: 6px 0 0;
+    color: #374151;
+    font-size: .78rem;
+    line-height: 1.5;
+    white-space: pre-line;
+    overflow: hidden;
+}
+
+/* Announcement message */
+.home-announcement-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    margin: 6px 0 0;
+    color: #374151;
+    font-size: .78rem;
+    line-height: 1.5;
+    white-space: pre-line;
+    overflow: hidden;
+}
+
+/* Expanded message */
+.home-announcement-text.is-expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
+}
+
+.home-announcement-show-more {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #17418A;
+    font-size: .76rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.home-announcement-show-more:hover {
+    text-decoration: underline;
+}
+
+.home-announcement-show-more[hidden] {
+    display: none;
+}
+
+/* Expiry */
+.home-announcement-expiry {
+    margin-top: 7px;
+    color: #6b7280;
+    font-size: .69rem;
+    line-height: 1.4;
+}
+
+/* No hover effects */
+.home-announcement:hover {
+    border-color: inherit;
+    background: #ffffff !important;
+}
+
+/* Empty state */
+.home-announcement-empty {
+    min-height: 130px;
+    padding: 28px 20px;
+}
+
+.home-announcement-empty i {
+    display: none;
+}
+
+.home-announcement-empty h3 {
+    margin-bottom: 5px;
+    color: #374151;
+    font-size: .88rem;
+    font-weight: 600;
+}
+
+.home-announcement-empty p {
+    color: #89929d;
+    font-size: .76rem;
+    line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 767.98px) {
+    .home-announcement,
+    .home-announcement.safety,
+    .home-announcement.delay,
+    .home-announcement.cancellation,
+    .home-announcement.general {
+        padding: 13px 14px 13px 16px;
+    }
+
+    .home-announcement-header {
+        align-items: flex-start;
+        flex-direction: row;
+        gap: 6px 9px;
+    }
+
+    .home-announcement-header h3 {
+        font-size: .88rem;
+    }
+
+    .home-announcement-type {
+        align-self: flex-start;
+    }
+
+    .home-announcement-content p {
+        font-size: .78rem;
+    }
 }

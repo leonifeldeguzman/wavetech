@@ -1,13 +1,28 @@
+import json
+
 from flask import Response, abort, flash, redirect, render_template, request, session, url_for
 
 from app.blueprints.settings import settings_bp
 from app.extensions import db
 from app.models.user import User
-from app.services import activity_log_service, profile_picture_service, settings_service
+from app.services import (
+    activity_log_service,
+    observation_rules_service,
+    profile_picture_service,
+    settings_service,
+)
+from app.services.observation_rules_service import ObservationRuleError
 from app.services.profile_picture_service import ProfilePictureError
 from app.services.settings_service import SettingsValidationError
 from app.utils.decorators import login_required
 from app.utils.security import hash_password, verify_password
+
+def _back(section: str):
+    """Return to Settings on the same tab the form was on. Without this the
+    page reloads on My Profile, so a save (or its error message) in another
+    tab looks like it did nothing."""
+    return redirect(url_for("settings.index", section=section))
+
 
 @settings_bp.route("/settings")
 @login_required
@@ -35,6 +50,7 @@ def index():
         refresh_interval=refresh_interval,
         refresh_interval_options=settings_service.REFRESH_INTERVAL_OPTIONS,
         session_timeout=session_timeout,
+        observation_rules=observation_rules_service.list_rules(),
         activity_logs=activity_logs,
         active_page="settings",
     )
@@ -55,15 +71,15 @@ def change_password():
 
     if user is None or not verify_password(current_password, user.password_hash):
         flash("Current password is incorrect.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     if len(new_password) < 8:
         flash("New password must be at least 8 characters long.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     if new_password != confirm_password:
         flash("New password and confirmation do not match.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     user.password_hash = hash_password(new_password)
     db.session.commit()
@@ -76,7 +92,7 @@ def change_password():
     )
 
     flash("Password updated successfully.", "success")
-    return redirect(url_for("settings.index"))
+    return _back("account-section")
 
 @settings_bp.route("/settings/update-display-name", methods=["POST"])
 @login_required
@@ -85,17 +101,17 @@ def update_display_name():
 
     if user is None:
         flash("User account could not be found.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     display_name = request.form.get("display_name", "").strip()
 
     if not display_name:
         flash("Display name cannot be empty.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     if len(display_name) > 100:
         flash("Display name must be 100 characters or less.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     user.full_name = display_name
 
@@ -105,7 +121,7 @@ def update_display_name():
     db.session.commit()
 
     flash("Display name updated successfully.", "success")
-    return redirect(url_for("settings.index"))
+    return _back("account-section")
 
 
 @settings_bp.route("/settings/profile-picture")
@@ -130,24 +146,24 @@ def upload_profile_picture():
     user = db.session.get(User, session["user_id"])
     if user is None:
         flash("User account could not be found.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     uploaded = request.files.get("profile_picture")
     if not uploaded or not uploaded.filename:
         flash("Please choose an image to upload.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     try:
         data, content_type = profile_picture_service.read_and_validate(uploaded)
     except ProfilePictureError as exc:
         flash(str(exc), "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     profile_picture_service.save_picture(user.id, data, content_type)
     db.session.commit()
 
     flash("Profile picture updated successfully.", "success")
-    return redirect(url_for("settings.index"))
+    return _back("account-section")
 
 
 @settings_bp.route("/settings/profile-picture/remove", methods=["POST"])
@@ -161,7 +177,7 @@ def remove_profile_picture():
         flash("Profile picture removed.", "success")
     else:
         flash("There is no profile picture to remove.", "warning")
-    return redirect(url_for("settings.index"))
+    return _back("account-section")
 
 @settings_bp.route("/settings/update-personal-info", methods=["POST"])
 @login_required
@@ -170,7 +186,7 @@ def update_personal_info():
 
     if user is None:
         flash("User account could not be found.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     first_name = request.form.get("first_name", "").strip()
     last_name = request.form.get("last_name", "").strip()
@@ -178,19 +194,19 @@ def update_personal_info():
 
     if not first_name:
         flash("First name cannot be empty.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     if not last_name:
         flash("Last name cannot be empty.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     if len(first_name) > 50:
         flash("First name must be 50 characters or less.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     if len(last_name) > 50:
         flash("Last name must be 50 characters or less.", "danger")
-        return redirect(url_for("settings.index"))
+        return _back("account-section")
 
     full_name = f"{first_name} {last_name}"
 
@@ -201,7 +217,7 @@ def update_personal_info():
     db.session.commit()
 
     flash("Personal information updated successfully.", "success")
-    return redirect(url_for("settings.index"))
+    return _back("account-section")
     
 # ---------------------------------------------------------------------------
 # Safety Thresholds (shared Admin/Operator access)
@@ -226,7 +242,7 @@ def update_safety_thresholds():
         )
     except SettingsValidationError as exc:
         flash(str(exc), "danger")
-        return redirect(url_for("settings.index"))
+        return _back("safety-section")
 
     activity_log_service.log_action(
         user_id=session.get("user_id"),
@@ -236,7 +252,45 @@ def update_safety_thresholds():
     )
 
     flash("Safety thresholds updated successfully.", "success")
-    return redirect(url_for("settings.index"))
+    return _back("safety-section")
+
+
+# ---------------------------------------------------------------------------
+# Operator Observation Rules (Admin can add / edit / delete)
+# ---------------------------------------------------------------------------
+
+@settings_bp.route("/settings/observation-rules", methods=["POST"])
+@login_required
+def update_observation_rules():
+    try:
+        items = json.loads(request.form.get("observation_rules_json", "[]"))
+        changes = observation_rules_service.save_rules(
+            items, updated_by_user_id=session.get("user_id")
+        )
+    except (ValueError, TypeError, AttributeError) as exc:
+        # json errors and ObservationRuleError are both ValueError
+        message = str(exc) if isinstance(exc, ObservationRuleError) else "Invalid observation data."
+        flash(message, "danger")
+        return _back("safety-section")
+
+    if changes:
+        activity_log_service.log_action(
+            user_id=session.get("user_id"),
+            admin_name=session.get("full_name", "Unknown"),
+            # Add ACTION_UPDATED_OBSERVATION_RULES to activity_log_service to
+            # give it its own label; until then it is logged as a threshold change.
+            action=getattr(
+                activity_log_service,
+                "ACTION_UPDATED_OBSERVATION_RULES",
+                activity_log_service.ACTION_UPDATED_SAFETY_THRESHOLDS,
+            ),
+            details=" ".join(changes),
+        )
+        flash("Operator observation rules updated successfully.", "success")
+    else:
+        flash("No changes to save.", "warning")
+
+    return _back("safety-section")
 
 
 # ---------------------------------------------------------------------------
@@ -254,7 +308,7 @@ def update_refresh_interval():
         )
     except SettingsValidationError as exc:
         flash(str(exc), "danger")
-        return redirect(url_for("settings.index"))
+        return _back("refresh-section")
 
     if old_seconds != seconds:
         activity_log_service.log_action(
@@ -269,7 +323,7 @@ def update_refresh_interval():
     else:
         flash(f"Refresh interval set to {seconds} seconds.", "success")
 
-    return redirect(url_for("settings.index"))
+    return _back("refresh-section")
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +339,7 @@ def update_session_timeout():
         )
     except SettingsValidationError as exc:
         flash(str(exc), "danger")
-        return redirect(url_for("settings.index"))
+        return _back("security-section")
 
     activity_log_service.log_action(
         user_id=session.get("user_id"),
@@ -295,7 +349,7 @@ def update_session_timeout():
     )
 
     flash(f"Session timeout set to {minutes} minutes.", "success")
-    return redirect(url_for("settings.index"))
+    return _back("security-section")
 
 
 @settings_bp.route("/settings/activity-log")

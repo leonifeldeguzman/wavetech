@@ -241,12 +241,6 @@
     font-size: 0.9rem;
 }
 
-.manifest-save-row {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 20px;
-}
-
 .manifest-save-btn {
     display: inline-flex;
     align-items: center;
@@ -313,10 +307,6 @@
     gap: 12px;
 }
 
-.manifest-search-form {
-    margin: 0;
-}
-
 .manifest-search-box {
     display: flex;
     align-items: center;
@@ -347,21 +337,6 @@
 
 .manifest-search-input::placeholder {
     color: #6b7280;
-}
-
-.manifest-search-btn {
-    height: 36px;
-    padding: 0 15px;
-    border: 0;
-    border-radius: 8px;
-    background-color: var(--navy);
-    color: #ffffff;
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.manifest-search-btn:hover {
-    background-color: var(--navy-dark);
 }
 
 .manifest-add-btn {
@@ -460,73 +435,90 @@
 
 /* =========================================================
    PENDING REGISTRATIONS
-   Reference Code | Name | Time | Actions
+   [ ] | Reference Code | Name | Date | Time | Actions
+   Widths are set by class (not position) so the optional
+   checkbox / actions columns never shift the other cells.
    ========================================================= */
 
-/* Reference Code */
-#pendingRegistrationsTable th:nth-child(1),
-#pendingRegistrationsTable td:nth-child(1) {
-    width: 25%;
+#pendingRegistrationsTable {
+    min-width: 900px;
 }
 
-/* Name */
-#pendingRegistrationsTable th:nth-child(2),
-#pendingRegistrationsTable td:nth-child(2) {
-    width: 30%;
+#pendingRegistrationsTable th,
+#pendingRegistrationsTable td {
+    padding-left: 22px;
+    padding-right: 22px;
 }
 
-/* Time */
-#pendingRegistrationsTable th:nth-child(3),
-#pendingRegistrationsTable td:nth-child(3) {
-    width: 18%;
+#pendingRegistrationsTable .col-select {
+    width: 48px;
+    padding-left: 14px;
+    padding-right: 6px;
 }
 
-/* Actions */
-#pendingRegistrationsTable th:nth-child(4),
-#pendingRegistrationsTable td:nth-child(4) {
-    width: 27%;
+#pendingRegistrationsTable .col-ref     { width: 19%; }
+#pendingRegistrationsTable .col-name    { width: 23%; }
+#pendingRegistrationsTable .col-date    { width: 15%; min-width: 130px; }
+#pendingRegistrationsTable .col-time    { width: 9%;  min-width: 80px; }
+#pendingRegistrationsTable .col-actions { min-width: 210px; padding-left: 28px; }
+
+#pendingRegistrationsTable .manifest-action-group {
+    gap: 12px;
 }
 
 
 /* =========================================================
    PASSENGER MANIFEST
-   # | Name | Age | Type | Check-In | Actions
+   # | Name | Age | Type | Date | Check-In | Actions
    ========================================================= */
+
+#passengerManifestTable {
+    min-width: 900px;
+}
 
 /* # */
 #passengerManifestTable th:nth-child(1),
 #passengerManifestTable td:nth-child(1) {
-    width: 8%;
+    width: 6%;
 }
 
 /* Name */
 #passengerManifestTable th:nth-child(2),
 #passengerManifestTable td:nth-child(2) {
-    width: 27%;
+    width: 23%;
 }
 
 /* Age */
 #passengerManifestTable th:nth-child(3),
 #passengerManifestTable td:nth-child(3) {
-    width: 10%;
+    width: 8%;
 }
 
 /* Type */
 #passengerManifestTable th:nth-child(4),
 #passengerManifestTable td:nth-child(4) {
-    width: 17%;
+    width: 14%;
+}
+
+/* Date */
+#passengerManifestTable th:nth-child(5),
+#passengerManifestTable td:nth-child(5) {
+    width: 15%;
+    min-width: 130px;
 }
 
 /* Check-In */
-#passengerManifestTable th:nth-child(5),
-#passengerManifestTable td:nth-child(5) {
-    width: 18%;
+#passengerManifestTable th:nth-child(6),
+#passengerManifestTable td:nth-child(6) {
+    width: 13%;
+    min-width: 100px;
 }
 
 /* Actions */
-#passengerManifestTable th:nth-child(6),
-#passengerManifestTable td:nth-child(6) {
-    width: 20%;
+#passengerManifestTable th:nth-child(7),
+#passengerManifestTable td:nth-child(7) {
+    width: 21%;
+    min-width: 190px;
 }
 
 
@@ -603,6 +595,53 @@
 
 
 /* =========================================================
+   PENDING REGISTRATIONS: count badge + bulk actions
+   ========================================================= */
+
+/* Less gap under the header so the bulk bar sits right below the search */
+.manifest-section-header--pending {
+    margin-bottom: 10px;
+}
+
+.manifest-count-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: #fff4d6;
+    color: #8a5a00;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Right-aligned, directly under the search box. The space stays reserved
+   when nothing is selected so the table does not jump. */
+.manifest-bulk-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-height: 32px;
+    margin: 0 0 14px;
+}
+
+.manifest-bulk-bar.is-idle {
+    visibility: hidden;
+}
+
+.manifest-bulk-count {
+    color: #4a5160;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.col-select {
+    text-align: center;
+}
+
+
+/* =========================================================
    EMPTY STATES
    ========================================================= */
 
@@ -640,6 +679,15 @@
     min-height: 170px;
 }
 
+/* Back button only (cancelled / closed trips): height follows the content */
+.manifest-confirm-card--compact {
+    min-height: 0;
+}
+
+.manifest-confirm-card--compact .manifest-confirm-body {
+    padding: 20px 40px;
+}
+
 .manifest-confirm-body {
     display: flex;
     flex-direction: column;
@@ -651,7 +699,6 @@
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    max-width: 650px;
 }
 
 .manifest-audit-check .form-check-input {
@@ -669,6 +716,23 @@
 
 .manifest-audit-check .form-check-input:checked + .form-check-label {
     color: #000;
+}
+
+/* Shown above Confirm Departure when conditions cannot be assessed */
+.manifest-condition-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    margin-top: -12px;
+    padding: 9px 14px;
+    border: 1px solid #f1d58a;
+    border-radius: 8px;
+    background-color: #fff8e1;
+    color: #8a5a00;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.4;
 }
 
 .manifest-confirm-wrap {
@@ -776,10 +840,6 @@
         width: 100%;
     }
 
-    .manifest-search-form {
-        flex: 1;
-    }
-
     .manifest-search-box {
         width: 100%;
     }
@@ -791,6 +851,10 @@
     .manifest-detail-card-body,
     .manifest-confirm-body {
         padding: 24px 20px;
+    }
+
+    .manifest-confirm-card--compact .manifest-confirm-body {
+        padding: 16px 20px;
     }
 
     .manifest-trip-header {
@@ -808,10 +872,6 @@
 
     .manifest-section-tools {
         flex-wrap: wrap;
-    }
-
-    .manifest-search-form {
-        width: 100%;
     }
 
     .manifest-search-box {
@@ -874,44 +934,6 @@
     position: relative;
     width: 100%;
     z-index: 1000;
-}
-
-
-/* Closed dropdown */
-
-.manifest-boat-toggle {
-    width: 100%;
-    height: 38px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    padding: 0 0 8px;
-
-    border: none;
-    border-bottom: 1px solid #555;
-    border-radius: 0;
-
-    background: transparent;
-    color: #111;
-
-    font-size: 0.92rem;
-    text-align: left;
-
-    cursor: pointer;
-
-    box-shadow: none;
-    outline: none;
-
-    position: relative;
-    z-index: 1001;
-}
-
-.manifest-boat-toggle:hover,
-.manifest-boat-toggle:focus {
-    border-bottom-color: #173f62;
-    outline: none;
 }
 
 
@@ -1034,35 +1056,10 @@
 }
 
 
-/* Capacity */
-
-.manifest-boat-capacity {
-    font-size: 0.72rem;
-    color: #6b7280;
-}
-
 .manifest-boat-option:hover .manifest-boat-name,
 .manifest-boat-option.selected .manifest-boat-name {
     color: #173f62;
 }
-
-.manifest-boat-option:hover .manifest-boat-capacity,
-.manifest-boat-option.selected .manifest-boat-capacity {
-    color: #476b8d;
-}
-
-
-/* Check */
-
-.manifest-boat-check {
-    flex-shrink: 0;
-
-    margin-left: 12px;
-
-    color: #173f62;
-    font-size: 0.9rem;
-}
-
 
 /* Hidden input */
 
@@ -1196,19 +1193,16 @@
 }
 
 
-
 .manifest-assess-btn:focus-visible {
     outline: 2px solid #1f6feb;
     outline-offset: 2px;
 }
 
 
-
 .manifest-assess-error {
     color: #b42318;
     font-size: 0.8rem;
 }
-
 
 
 @media (max-width: 992px) {

@@ -11,7 +11,12 @@ from flask import (
 from app.blueprints.monitoring import monitoring_bp
 from app.extensions import db
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import historical_baseline_service, monitoring_service, settings_service
+from app.services import (
+    historical_baseline_service,
+    monitoring_service,
+    observation_rules_service,
+    settings_service,
+)
 from app.utils.ph_clock import ph_today
 from app.utils.decorators import login_required
 from datetime import date, datetime, timedelta, timezone
@@ -24,6 +29,11 @@ WATER_PLAUSIBLE_MIN_M = 10.0
 WATER_PLAUSIBLE_MAX_M = 14.0
 STALE_WEATHER_AFTER = timedelta(hours=3)
 WIND_DIRECTIONS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+
+# Open-Meteo data states that lock manual weather entry. Only LIVE locks it:
+# when the data is cached (refresh failed) or unavailable, manual entry is
+# accepted and stands in for the weather model.
+WEATHER_MANUAL_LOCKED_STATUSES = ("live",)
 
 
 def _age_info(taken_utc, stale_after=None):
@@ -298,6 +308,9 @@ def index():
         # Active sidebar page
         active_page="monitoring",
 
+        # Operator Observation dropdown (managed in Settings)
+        observation_options=observation_rules_service.list_rules(),
+
         baseline=baseline,
         trend=trend,
         station_trend=station_trend,
@@ -332,9 +345,10 @@ def add_reading():
     observed_condition = (request.form.get("observed_condition") or "").strip().lower()
     observer_comment = (request.form.get("observer_comment") or "").strip()
 
-    # Only the three known values are accepted ("" means not observed).
-    if observed_condition and observed_condition not in EnvironmentalReading.OBSERVED_CONDITIONS:
-        flash("Invalid water condition selected.")
+    # Only observations an Admin has defined in Settings are accepted
+    # ("" means not observed).
+    if observed_condition and observed_condition not in observation_rules_service.valid_keys():
+        flash("Invalid water condition selected.", "danger")
         return redirect(url_for("monitoring.index"))
 
     # Water level is required
@@ -409,7 +423,21 @@ def add_reading():
 def add_weather_reading():
     """Manual weather for the reference station only (Cardona, XXI). Saved
     as a NEW manual row; Open-Meteo rows are never edited. It stands in for
-    the weather model only while that is cached or unavailable."""
+    the weather model whenever the model data is not live (cached or
+    unavailable)."""
+    # Manual weather is rejected only while Open-Meteo is live. Cached or
+    # unavailable data accepts it. The form is disabled while live too, but
+    # the server enforces it because a disabled field can be re-enabled in
+    # the browser.
+    weather_status = monitoring_service.get_station_weather()["status"]
+    if weather_status in WEATHER_MANUAL_LOCKED_STATUSES:
+        flash(
+            "Manual weather entry is not accepted while live weather "
+            "data is available.",
+            "warning",
+        )
+        return redirect(url_for("monitoring.index"))
+
     station = LakeStation.query.filter_by(
         station_no=monitoring_service.DSS_STATION_NO
     ).first()

@@ -289,16 +289,17 @@
     background: #ffffff;
 }
 
-/* Scrolling table with a sticky header (reusable on other tables) */
-.table-scroll-y {
-    max-height: 420px;
-    overflow-y: auto;
-}
+/* Scrolling, sticky header and scrollbar design for the records table come
+   from the shared table-scroll.css (.table-responsive / .table-scroll-y), so
+   nothing is redefined here.
 
-.table-scroll-y thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
+   The scrollbar sits inside the wrapper's right edge. The negative margin
+   pushes the wrapper (and so the scrollbar) 14px to the right, into the
+   container's padding, and the matching padding-right keeps the table
+   itself exactly where it was. */
+.analytics-table-container .table-responsive {
+    margin-right: -14px;
+    padding-right: 14px;
 }
 
 
@@ -345,9 +346,10 @@
     background: #ffffff;
 }
 
-/* Slightly stronger line where a new date starts */
+/* New-date rows use the same light divider as every other row,
+   so no extra border is added here. */
 .analytics-records-table tbody tr.analytics-date-start td {
-    border-top: 2px solid #c9d8e8;
+    border-top: 0;
 }
 
 
@@ -809,4 +811,209 @@
     font-size: 1.05rem !important;
     line-height: 1.5;
     font-weight: 700;
+}
+
+
+/* ---------- Boat / Status combo (same look as the manifest dropdown) ---------- */
+
+#recordFilters .analytics-combo {
+    position: relative;
+    z-index: 5;
+}
+
+#recordFilters .analytics-combo:focus-within,
+#recordFilters .analytics-combo.open {
+    z-index: 300;
+}
+
+#recordFilters .analytics-combo-input {
+    height: 38px;
+    padding: 0 28px 0 12px;
+
+    border: 1px solid #d7e1ef;
+    border-radius: 7px;
+
+    box-shadow: none;
+    font-size: 0.88rem;
+    text-overflow: ellipsis;
+}
+
+#recordFilters .analytics-combo-input:focus {
+    border-color: #0f1b3c;
+    box-shadow: none;
+}
+
+#recordFilters .analytics-combo-input::placeholder {
+    color: #9ca3af;
+}
+
+/* Arrow button inside the input */
+.analytics-combo-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 30px;
+    height: 38px;
+    padding: 0;
+
+    border: none;
+    background: transparent;
+    color: #6b7280;
+
+    cursor: pointer;
+}
+
+.analytics-combo-chevron {
+    font-size: 0.75rem;
+    transition: transform 0.18s ease;
+}
+
+.analytics-combo.open .analytics-combo-chevron {
+    transform: rotate(180deg);
+}
+
+/* Suggestion list */
+.analytics-combo-menu {
+    position: absolute;
+    top: calc(100% + 7px);
+    left: 0;
+
+    width: 100%;
+    min-width: 180px;
+    max-height: 232px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    padding: 6px;
+
+    background: #fff;
+    border: 1px solid #d7e1ef;
+    border-radius: 9px;
+    box-shadow: 0 10px 25px rgba(15, 27, 60, 0.18);
+
+    z-index: 99999;
+
+    /* display:none (not just invisible) so a closed list never adds
+       overflow or layout while the filter panel is collapsing/expanding */
+    display: none;
+}
+
+.analytics-combo.open .analytics-combo-menu {
+    display: block;
+    animation: analytics-combo-in 0.15s ease;
+}
+
+@keyframes analytics-combo-in {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#recordFilters.collapsing .analytics-combo-menu {
+    display: none !important;
+}
+
+.analytics-combo-option {
+    width: 100%;
+    min-height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 8px 11px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: transparent;
+    color: #374151;
+
+    text-align: left;
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.analytics-combo-option:hover,
+.analytics-combo-option.active {
+    background-color: #f1f8ff;
+    color: #173f62;
+}
+
+.analytics-combo-option.selected {
+    background-color: #eef6ff;
+    color: #173f62;
+}
+
+.analytics-combo-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #111;
+}
+
+.analytics-combo-option:hover .analytics-combo-name,
+.analytics-combo-option.active .analytics-combo-name,
+.analytics-combo-option.selected .analytics-combo-name {
+    color: #173f62;
+}
+
+.analytics-combo-empty {
+    padding: 10px 11px;
+    color: #6b7280;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.analytics-combo-empty[hidden] {
+    display: none;
+}
+
+
+/* ---------- From / To date fields (match the Boat / Status inputs) ---------- */
+
+#recordFilters input[type="date"].form-control {
+    height: 38px;
+    padding: 0 12px;
+
+    border: 1px solid #d7e1ef;
+    border-radius: 7px;
+
+    background-color: #ffffff;
+    box-shadow: none;
+
+    color: #111827;
+    font-size: 0.88rem;
+}
+
+#recordFilters input[type="date"].form-control:focus {
+    border-color: #0f1b3c;
+    box-shadow: none;
+}
+
+#recordFilters input[type="date"]::-webkit-calendar-picker-indicator {
+    margin-left: 4px;
+    color: #6b7280;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+#recordFilters input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
 }
