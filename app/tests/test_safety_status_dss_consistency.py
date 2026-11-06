@@ -5,6 +5,7 @@ disagree for the same data.
 Run with:
     python -m pytest app/tests/test_safety_status_dss_consistency.py -v
 """
+import re
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -121,7 +122,11 @@ def test_dashboard_page_shows_same_condition_in_both_places(
     with patch(WATER, return_value=_water(level)), patch(WEATHER, return_value=weather):
         html = admin_client.get(f"/dashboard?trip_id={trip_id}").get_data(as_text=True)
 
-    kpi = html.split("Advisory Status", 1)[1].split("dashboard-kpi-sub", 1)[0]
+    # Anchor on the KPI label element: "Advisory Status" also appears in a CSS
+    # comment at the top of the page.
+    kpi = re.search(
+        r'dashboard-kpi-label">\s*Advisory Status(.*?)dashboard-kpi-sub', html, re.S
+    ).group(1)
     assert overall.upper() in kpi.upper()
     assert recommendation in html
     # Decision Support "Overall Safety" badge shows the same word.

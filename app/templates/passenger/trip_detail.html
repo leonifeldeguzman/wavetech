@@ -42,36 +42,6 @@
         </div>
 
 
-        <!-- Journey -->
-        <div class="trip-section">
-
-            <h2>Journey</h2>
-
-            <div class="trip-route-box">
-
-                <div class="trip-location">
-                    <span class="trip-detail-label">From</span>
-                    <span class="trip-location-name">
-                        {{ trip.route_origin }}
-                    </span>
-                </div>
-
-                <div class="trip-route-arrow">
-                    <i class="bi bi-arrow-right"></i>
-                </div>
-
-                <div class="trip-location">
-                    <span class="trip-detail-label">To</span>
-                    <span class="trip-location-name">
-                        {{ trip.route_destination }}
-                    </span>
-                </div>
-
-            </div>
-
-        </div>
-
-
         <!-- Schedule -->
         <div class="trip-section">
 
@@ -149,32 +119,54 @@
         </div>
 
 
-        <!-- Capacity -->
+        <!-- Availability -->
         <div class="trip-section">
 
             <h2>Availability</h2>
 
-            <div class="trip-capacity">
+            <div class="availability-card">
 
-                <div>
-                    <span class="trip-detail-label">Seats remaining</span>
-
-                    <span class="trip-capacity-value">
+                <div class="availability-main">
+                    <span class="availability-main-value">
                         {% if trip.remaining_capacity is not none %}
                             {{ trip.remaining_capacity }}
                         {% else %}
                             —
                         {% endif %}
                     </span>
+
+                    <span class="availability-main-label">Seat Remaining</span>
                 </div>
 
-                {% if trip.capacity is not none %}
-                    <span class="trip-capacity-total">
-                        of {{ trip.capacity }} seats
-                    </span>
-                {% endif %}
+                <div class="availability-stats">
+
+                    <div class="availability-stat">
+                        <span class="availability-stat-value">
+                            {{ trip.confirmed_count }}
+                        </span>
+                        <span class="availability-stat-label">
+                            Confirmed Passengers
+                        </span>
+                    </div>
+
+                    <div class="availability-stat">
+                        <span class="availability-stat-value">
+                            {{ trip.pending_count }}
+                        </span>
+                        <span class="availability-stat-label">
+                            Pending Registrations
+                        </span>
+                    </div>
+
+                </div>
 
             </div>
+
+            {% if trip.pending_count %}
+                <p class="availability-note">
+                    Pending registrations are not included in the passenger count until they have been reviewed and approved.
+                </p>
+            {% endif %}
 
         </div>
 
@@ -231,10 +223,7 @@
             {% if trip.accepts_registration %}
 
                 <a
-                    href="{{ url_for(
-                        'passenger.registration_form_page',
-                        trip_id=trip.trip_id
-                    ) }}"
+                    href="{{ url_for('passenger.register_page', trip=trip.trip_id) }}"
                     class="trip-register-button"
                 >
                     Register for this trip

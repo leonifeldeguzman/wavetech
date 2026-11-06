@@ -19,7 +19,13 @@ ACTION_PASSENGER_APPROVED = "Passenger approval"
 ACTION_PASSENGER_REJECTED = "Passenger rejection"
 ACTION_REPORT_GENERATED = "Report generation"
 ACTION_MANIFEST_EDITED = "Edited Passenger Manifest"
-ACTION_MANIFEST_DELETED = "Deleted Passenger Manifest"
+ACTION_MANIFEST_DELETED = "Manifest Deleted"
+ACTION_MANIFEST_CREATED = "Manifest Created"
+ACTION_TRIP_DELAYED = "Trip Delayed"
+ACTION_TRIP_CANCELLED = "Trip Cancelled"
+ACTION_TIME_SLOT_DELETED = "Time Slot Deleted"
+ACTION_TIME_SLOT_CREATED = "Time Slot Created"
+ACTION_ADMIN_LOGIN_FAILED = "Failed login attempt"
 
 ACTION_ANNOUNCEMENT_PUBLISHED = "Published Notice"
 ACTION_ANNOUNCEMENT_SCHEDULED = "Scheduled Notice"
@@ -45,10 +51,38 @@ def _format_threshold_changes(changes: dict) -> str:
     return "; ".join(parts)
 
 
-def log_action(*, user_id, admin_name: str, action: str, details=None) -> ActivityLog:
+def describe_trip(trip) -> str:
+    """Readable one-line summary of a trip for Activity Log details.
+
+    Trip.departure_time is stored as naive Philippine wall-clock time, so it
+    is formatted as-is (no timezone conversion). Boat and operator are left
+    out when the slot has none. Call this BEFORE deleting the trip so the
+    log keeps the details after the record is gone.
+    """
+    if trip is None:
+        return ""
+    when = trip.departure_time
+    parts = [
+        f"Scheduled: {when.strftime('%b')} {when.day}, {when.year} "
+        f"{when.strftime('%I:%M %p').lstrip('0')}"
+    ]
+    boat = getattr(trip, "boat", None)
+    if boat is not None and boat.name:
+        parts.append(f"Boat: {boat.name}")
+    if trip.operator_name:
+        parts.append(f"Operator: {trip.operator_name}")
+    return " | ".join(parts)
+
+
+def log_action(*, user_id, admin_name: str, action: str, details=None,
+               commit: bool = True) -> ActivityLog:
     """Create one Activity Log entry. `details` may be a plain string or a
     dict of before/after values (e.g. from settings_service), which is
-    rendered into a readable string before being stored."""
+    rendered into a readable string before being stored.
+
+    Pass ``commit=False`` to stage the entry in the caller's open
+    transaction so the audited change and its log row succeed or fail
+    together (used by time slot deletion)."""
     if isinstance(details, dict):
         details_text = _format_threshold_changes(details)
     else:
@@ -61,8 +95,26 @@ def log_action(*, user_id, admin_name: str, action: str, details=None) -> Activi
         details=details_text,
     )
     db.session.add(entry)
-    db.session.commit()
+    if commit:
+        db.session.commit()
     return entry
+
+
+def log_failed_login(*, username, user_id=None,
+                     reason: str = "Incorrect username or password.") -> ActivityLog:
+    """Record a failed sign-in attempt.
+
+    Only the username/email that was typed is stored, trimmed and length
+    capped. The password the person entered must NEVER be passed in or
+    logged. Pass ``user_id`` only when the username matched a real account.
+    """
+    typed = (username or "").strip()[:100] or "(blank)"
+    return log_action(
+        user_id=user_id,
+        admin_name=typed,
+        action=ACTION_ADMIN_LOGIN_FAILED,
+        details=f"Username entered: {typed} | Reason: {reason}",
+    )
 
 
 def get_recent_logs(limit: int = 50):

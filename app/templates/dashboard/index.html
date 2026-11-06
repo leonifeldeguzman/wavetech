@@ -8,6 +8,31 @@
 {% block content %}
 
 
+<style>
+    /* Trip not yet fully assigned (boat, operator, crew) */
+    .dashboard-status-pill.unassigned {
+        background-color: #eef0f3;
+        color: #5b6470;
+    }
+
+    /* "Enter manually" under Advisory Status: plain text link, no button */
+    .dashboard-manual-link {
+        display: inline-block;
+        margin-top: 6px;
+        color: #0f1b3c;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+    }
+
+    .dashboard-manual-link:hover,
+    .dashboard-manual-link:focus-visible {
+        color: #0f1b3c;
+        border-bottom-color: #0f1b3c;
+    }
+</style>
+
 <div class="dashboard-page">
 
     <!-- =====================================================
@@ -117,7 +142,7 @@
 
                 </div>
                 {% if safety_status not in ['safe', 'caution', 'unsafe'] %}
-                <a href="{{ url_for('monitoring.index') }}" class="small">
+                <a href="{{ url_for('monitoring.index') }}" class="dashboard-manual-link">
                     Enter manually
                 </a>
                 {% endif %}
@@ -185,7 +210,7 @@
                                     </span>
 
                                     <span class="selected-trip-crew">
-                                        Crew: {{ selected_trip.crew_name }}
+                                        Operator: {{ selected_trip.operator_name or '-' }}
                                     </span>
 
                                 {% else %}
@@ -235,7 +260,7 @@
                                     <div class="trip-option-details">
                                         <span>
                                             <i class="bi bi-person"></i>
-                                            Crew: {{ trip.crew_name }}
+                                            Operator: {{ trip.operator_name or '-' }}
                                         </span>
 
                                         <span>
@@ -657,8 +682,9 @@
                                 {% if trip.id in expired_ids %}
                                     <span class="dashboard-status-pill expired">Expired</span>
                                 {% else %}
-                                    <span class="dashboard-status-pill {{ trip.status|lower }}">
-                                        {{ trip.status }}
+                                    {% set shown_status = display_status[trip.id] %}
+                                    <span class="dashboard-status-pill {{ shown_status|lower|replace(' ', '-') }}">
+                                        {{ shown_status }}
                                     </span>
                                 {% endif %}
                             </td>
@@ -746,7 +772,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     this.querySelector(".trip-option-main")?.textContent
                 );
 
-                const crewText = clean(
+                const operatorText = clean(
                     this.querySelector(".trip-option-details span")?.textContent
                 );
 
@@ -755,10 +781,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 main.textContent = mainText;
                 selectedText.appendChild(main);
 
-                if (crewText) {
+                if (operatorText) {
                     const crew = document.createElement("span");
                     crew.className = "selected-trip-crew";
-                    crew.textContent = crewText;
+                    crew.textContent = operatorText;
                     selectedText.appendChild(crew);
                 }
             }

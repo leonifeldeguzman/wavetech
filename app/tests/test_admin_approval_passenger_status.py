@@ -55,7 +55,8 @@ def test_status_pending_before_admin_action(client, make_boat, make_trip):
     assert body["data"]["reference_code"] == reference_code
     assert body["data"]["trip_id"] == trip_id
     assert body["data"]["status"] == "pending"
-    assert body["data"]["full_name"] == "T*** P."
+    # Privacy: the public status payload must never expose the real name.
+    assert "Test Passenger" not in resp.get_data(as_text=True)
 
 
 # ---------------------------------------------------------------------------

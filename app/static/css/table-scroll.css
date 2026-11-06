@@ -1,0 +1,59 @@
+/* =========================================================
+   SCROLLABLE TABLES (shared by every page)
+   Loaded from base.html (admin) and passenger/base.html.
+
+   For any table inside one of the wrappers below you get, in ONE scroll
+   container (so no nested scrollbars):
+     - vertical scroll only when the content is taller than the limit;
+       short tables keep their natural height,
+     - horizontal scroll when the table is wider than the screen
+       (each table keeps its own min-width and column widths),
+     - a sticky header that stays visible while scrolling.
+
+   New tables: wrap them in <div class="table-scroll">. Change the limit for
+   one table with  style="--table-max-height: 320px".
+   ========================================================= */
+
+:root {
+    --table-max-height: 420px;
+}
+
+.table-scroll,
+.table-responsive,
+.manifest-table-wrapper,
+.activity-table-wrapper,
+.activity-log-table-wrapper {
+    max-width: 100%;
+    max-height: min(var(--table-max-height), 70vh);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Sticky header. Background is a zero-specificity fallback (:where) so each
+   table's own header colour still wins; the header must be opaque so rows
+   do not show through while scrolling. */
+.table-scroll > table thead th,
+.table-responsive > table thead th,
+.manifest-table-wrapper > table thead th,
+.activity-table-wrapper > table thead th,
+.activity-log-table-wrapper > table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+:where(.table-scroll, .table-responsive, .manifest-table-wrapper,
+       .activity-table-wrapper, .activity-log-table-wrapper) > table thead th {
+    background-color: var(--table-head-bg, #f1f8ff);
+}
+
+/* Smaller screens: a little less height so the page itself stays reachable */
+@media (max-width: 575.98px) {
+    .table-scroll,
+    .table-responsive,
+    .manifest-table-wrapper,
+    .activity-table-wrapper,
+    .activity-log-table-wrapper {
+        max-height: min(var(--table-max-height), 60vh);
+    }
+}

@@ -12,17 +12,21 @@ def _register(client, trip_id, phone="09123456789"):
 def test_cancel_needs_matching_phone(client, make_boat, make_trip):
     trip_id = make_trip(boat_id=make_boat(capacity=3), status="Open")
     code = _register(client, trip_id)
-    bad = client.post(f"/passenger/registrations/{code}/cancel", data={"contact_number": "09999999999"})
-    assert bad.status_code == 404
+    # Cancelling now needs the verification step (last 4 digits of the contact
+    # number); a wrong number never verifies and the cancel is refused.
+    wrong = client.post(f"/passenger/registrations/{code}/verify", json={"last_four": "9999"})
+    assert wrong.status_code == 403
+    bad = client.post(f"/passenger/registrations/{code}/cancel", json={})
+    assert bad.status_code == 403
     assert PendingRegistration.query.filter_by(reference_code=code).first().status == "pending"
 
 
-def test_cancel_accepts_plus63_and_frees_seat(client, make_boat, make_trip):
+def test_cancel_after_verification_cancels_registration(client, make_boat, make_trip):
     trip_id = make_trip(boat_id=make_boat(capacity=1), status="Open")
     code = _register(client, trip_id)
-    assert Trip.query.get(trip_id).status == "Full"
-    ok = client.post(f"/passenger/registrations/{code}/cancel",
-                     data={"contact_number": "+639123456789", "reason": "Typo"})
+    assert client.post(f"/passenger/registrations/{code}/verify",
+                       json={"last_four": "6789"}).status_code == 200
+    ok = client.post(f"/passenger/registrations/{code}/cancel", json={"reason": "Typo"})
     assert ok.status_code == 200
     assert PendingRegistration.query.filter_by(reference_code=code).first().status == "cancelled"
     assert Trip.query.get(trip_id).status == "Open"

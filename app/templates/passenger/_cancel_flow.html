@@ -4,7 +4,9 @@
    page behind it can be made inert while a card is open.
 
    Backend is unchanged: the script posts to the existing verify and cancel
-   routes passed in through WTCancelFlow.init(). #}
+   routes passed in through WTCancelFlow.init(). After a successful cancel the
+   same card swaps to a result view ("Registration Cancelled" for a whole
+   registration, "N Passenger(s) Removed" when only some passengers go). #}
 <div class="rs-modal" id="rsModal" hidden>
 
   <!-- ============ Confirm It's You ============ -->
@@ -92,6 +94,29 @@
       <button type="button" class="rs-btn rs-btn-danger" id="rsConfirmGo">Yes, Cancel Registration</button>
     </div>
   </section>
+
+  <!-- ============ Result: cancelled / passengers removed ============ -->
+  <section class="rs-modal-card rs-done-card" id="rsDone" role="dialog" aria-modal="true" aria-labelledby="rsDoneTitle" hidden>
+    <div class="success-icon"><i class="bi bi-check-circle" aria-hidden="true"></i></div>
+    <h3 class="rs-title" id="rsDoneTitle" tabindex="-1"></h3>
+
+    <div class="rs-refbig">
+      <span>Your Reference Code</span>
+      <strong id="rsDoneRef"></strong>
+    </div>
+
+    <div class="rs-done-body" id="rsDoneBody"></div>
+
+    <div class="rs-sms">
+      <i class="bi bi-envelope" aria-hidden="true"></i>
+      <span>A confirmation was sent to your registered mobile number</span>
+    </div>
+
+    <div class="rs-actions">
+      <a href="#" class="rs-btn rs-btn-outline" id="rsDoneAgain">Register Again</a>
+      <a href="#" class="rs-btn rs-btn-primary" id="rsDoneHome">Back to Home</a>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -101,12 +126,12 @@
   document.body.appendChild(overlay);   // outside <main>, so the page can be made inert
 
   var $ = function (id) { return document.getElementById(id); };
-  var cardIds = ["rsVerify", "rsScope", "rsConfirm"];
+  var cardIds = ["rsVerify", "rsScope", "rsConfirm", "rsDone"];
   var cfg = null, inFlight = false, isOpen = false, lastFocus = null, bg = [];
   var st = fresh();
 
   function fresh() {
-    return { token: null, type: null, people: [], hasApproved: false, mode: null, selected: [] };
+    return { token: null, type: null, people: [], hasApproved: false, mode: null, selected: [], done: null };
   }
 
   /* ---------- helpers ---------- */
@@ -253,9 +278,12 @@
     overlay.hidden = true;
     lockBackground(false);
     isOpen = false;
+    var finished = st.done;
     st = fresh();
     resetDigits();
     if (lastFocus && document.body.contains(lastFocus) && lastFocus.focus) lastFocus.focus();
+    // The result card was dismissed (Esc / click outside): bring the page behind up to date.
+    if (finished && cfg.onCancelled) cfg.onCancelled(finished);
   }
 
   Array.prototype.forEach.call(overlay.querySelectorAll("[data-rs-close]"),
@@ -280,7 +308,7 @@
     var card = cardIds.map($).filter(function (c) { return !c.hidden; })[0];
     if (!card) return;
     var f = Array.prototype.filter.call(
-      card.querySelectorAll('button, input, select, [tabindex]:not([tabindex="-1"])'),
+      card.querySelectorAll('button, input, select, a[href], [tabindex]:not([tabindex="-1"])'),
       function (n) { return !n.disabled && !n.hidden && n.offsetParent !== null; });
     if (!f.length) return;
     var first = f[0], last = f[f.length - 1];
@@ -422,6 +450,46 @@
     }
   }
 
+  /* ---------- 4. Result ---------- */
+  function section(title, rows) {
+    var s = el("div", "rs-result-sec");
+    if (title) s.appendChild(el("h4", "rs-result-h", title));
+    rows.forEach(function (r) { s.appendChild(r); });
+    return s;
+  }
+
+  function buildDone(d) {
+    var whole = d.registration_status === "cancelled";
+    var removed = st.selected.map(function (p) { return p.name; });
+    var removedN = d.cancelled_count || removed.length;
+    var released = d.seats_released != null ? d.seats_released : removedN;
+    var body = $("rsDoneBody");
+    body.textContent = "";
+
+    $("rsDoneTitle").textContent = whole ? "Registration Cancelled"
+                                         : plural(removedN, "Passenger", "Passengers") + " Removed";
+    $("rsDoneRef").textContent = cfg.ref;
+    $("rsDoneAgain").href = cfg.registerUrl || "#";
+    $("rsDoneHome").href = cfg.homeUrl || "#";
+
+    if (!whole) {
+      body.appendChild(section("Removed", removed.map(function (name, i) {
+        return row(removed.length > 1 ? "Passenger " + (i + 1) : "Passenger", name, "rs-removed");
+      })));
+      var staying = d.remaining_passengers || [];
+      if (staying.length) {
+        body.appendChild(section("Still Registered", staying.map(function (p, i) {
+          return row(String(i + 1), p.name);
+        })));
+      }
+    }
+    body.appendChild(section(whole ? null : "Trip", [
+      row("Departure", cfg.time),
+      row("Date", cfg.date),
+      row("Seats Released", String(released))
+    ]));
+  }
+
   $("rsKeep").addEventListener("click", close);
 
   $("rsConfirmGo").addEventListener("click", function () {
@@ -438,9 +506,9 @@
     postJson(cfg.cancelUrl, payload).then(function (r) {
       if (r.ok) {
         busy(btn, false);
-        var data = r.data.data;
-        close();                                  // card closes, page updates in place
-        if (cfg.onCancelled) cfg.onCancelled(data);
+        st.done = r.data.data;
+        buildDone(st.done);                       // card swaps to the result view
+        showCard("rsDone");
         return;
       }
       busy(btn, false);
@@ -462,7 +530,8 @@
                  rejected: "Rejected", cancelled: "Cancelled by passenger" };
 
   window.WTCancelFlow = {
-    // cfg: { ref, verifyUrl, cancelUrl, date, time, route, onCancelled(data) }
+    // cfg: { ref, verifyUrl, cancelUrl, date, time, route, homeUrl, registerUrl,
+    //        onCancelled(data) }  (onCancelled runs when the result card is dismissed)
     init: function (c) { cfg = c; },
     open: open,
     close: close,
@@ -473,20 +542,6 @@
     statusKey: function (s) {
       var k = String(s || "").toLowerCase();
       return LABELS[k] ? k : "other";
-    },
-    message: function (d) {
-      if (d.registration_status === "cancelled") {
-        return "Registration cancelled. " + plural(d.seats_released || 0, "seat", "seats") +
-               " released. A confirmation was sent to your registered mobile number.";
-      }
-      return plural(d.cancelled_count || 0, "passenger", "passengers") + " removed. " +
-             (d.remaining_count || 0) + " still registered.";
-    },
-    flash: function (d) {
-      var f = el("div", "rs-flash", this.message(d));
-      f.setAttribute("role", "status");
-      f.tabIndex = -1;
-      return f;
     }
   };
 })();

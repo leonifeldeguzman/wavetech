@@ -6,6 +6,61 @@
 
 {% block extra_css %}
 
+<style>
+
+    /* Delay / Cancel trip modals */
+    .manifest-trip-modal .modal-dialog { max-width: 400px; }
+    .manifest-trip-modal .modal-content { border: 0; border-radius: 10px; overflow: hidden; }
+    .manifest-trip-modal .modal-body { padding: 20px 24px 8px; }
+    .manifest-trip-modal-footer { justify-content: space-between; border-top: 0; padding: 12px 24px 22px; }
+    .manifest-trip-modal-footer .btn { min-width: 90px; }
+    /* Assess Condition when the trip is not scheduled for today */
+    .manifest-assess-btn.manifest-assess-unavailable,
+    .manifest-assess-btn.manifest-assess-unavailable:hover {
+        background-color: #eef0f3;
+        border-color: #d5d9e0;
+        color: #8a919c;
+        cursor: not-allowed;
+        box-shadow: none;
+        opacity: 1;
+    }
+
+    /* Shown instead of registrations until trip details are assigned */
+    .manifest-unassigned-state {
+        text-align: center;
+        padding: 40px 16px 8px;
+    }
+
+    .manifest-unassigned-title {
+        margin: 0 0 6px;
+        color: #111111;
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .manifest-unassigned-text {
+        margin: 0 0 40px;
+        color: #8a919c;
+        font-size: 0.82rem;
+    }
+
+    .manifest-unassigned-state .manifest-change-slot-btn {
+        float: left;
+    }
+
+    .manifest-unassigned-state::after {
+        content: "";
+        display: block;
+        clear: both;
+    }
+
+    .manifest-assess-note {
+        color: #8a919c;
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
+</style>
+
 <link rel="stylesheet"
       href="{{ url_for('static', filename='css/manifest-detail.css') }}">
 {% endblock %}
@@ -17,6 +72,14 @@
 </div>
 
 <div class="manifest-detail-page">
+
+{% if read_only %}
+<!-- Departed / expired trip: closed record -->
+<div class="manifest-readonly-banner" role="status">
+    <i class="bi bi-lock-fill" aria-hidden="true"></i>
+    <span>{{ read_only_message }}</span>
+</div>
+{% endif %}
 
 <!-- =====================================================
      TRIP HEADER
@@ -50,6 +113,7 @@
         </div>
 
 
+        {% if not read_only %}
         <div class="manifest-trip-actions">
 
             <button
@@ -71,6 +135,7 @@
             </button>
 
         </div>
+        {% endif %}
 
     </div>
 
@@ -95,6 +160,9 @@
 
                 <span class="manifest-assess-error" role="alert" hidden></span>
 
+                {% if read_only %}
+                {# Closed trip: no condition assessment, nothing rendered #}
+                {% elif can_assess %}
                 <!-- Opens the shared Dashboard DSS result card (no navigation) -->
                 <button
                     type="button"
@@ -105,14 +173,30 @@
                     <i class="bi bi-activity" aria-hidden="true"></i>
                     <span class="manifest-assess-label">Assess Condition</span>
                 </button>
+                {% else %}
+                <!-- Weather cannot be forecast, so assessment is for today's trips only -->
+                <button
+                    type="button"
+                    class="manifest-assess-btn manifest-assess-unavailable"
+                    disabled
+                    aria-disabled="true"
+                    title="Conditions can only be assessed on the day of the trip."
+                >
+                    <i class="bi bi-slash-circle" aria-hidden="true"></i>
+                    <span class="manifest-assess-label">Assess Condition</span>
+                </button>
+                <span class="manifest-assess-note">
+                    Available on the trip date only
+                </span>
+                {% endif %}
 
                 {% if is_expired %}
                 <span class="manifest-checkin-status manifest-checkin-expired">
                     Expired
                 </span>
                 {% else %}
-                <span class="manifest-checkin-status manifest-checkin-{{ trip.status|lower }}">
-                    {{ trip.status }}
+                <span class="manifest-checkin-status manifest-checkin-{{ display_status|lower }}">
+                    {{ display_status }}
                 </span>
                 {% endif %}
 
@@ -147,12 +231,14 @@
                     aria-haspopup="listbox"
                     aria-expanded="false"
                     aria-controls="manifest_{{ name }}_list"
+                    {% if read_only %}readonly aria-readonly="true"{% endif %}
                     {% if field_errors.get(name) %}
                     aria-invalid="true"
                     aria-describedby="manifest_{{ name }}_error"
                     {% endif %}
                 >
 
+                {% if not read_only %}
                 <button
                     type="button"
                     class="manifest-combo-toggle"
@@ -161,6 +247,7 @@
                 >
                     <i class="bi bi-chevron-down manifest-boat-chevron"></i>
                 </button>
+                {% endif %}
 
                 <div
                     class="manifest-boat-menu"
@@ -180,6 +267,7 @@
         {% endmacro %}
 
         <script type="application/json" id="manifestSuggestions">{{ suggestions|tojson }}</script>
+        <script type="application/json" id="tripSavedValues">{{ saved_values|tojson }}</script>
 
         <form
             method="POST"
@@ -187,7 +275,9 @@
             id="tripInfoForm"
             novalidate
             data-current-count="{{ current_count }}"
+            data-has-passengers="{{ 'true' if has_passengers else 'false' }}"
             data-max-capacity="500"
+            data-read-only="{{ 'true' if read_only else 'false' }}"
         >
 
             <div class="manifest-trip-info-grid">
@@ -221,6 +311,7 @@
                         aria-invalid="true"
                         {% endif %}
                         aria-describedby="manifest_boat_capacity_error"
+                        {% if read_only %}readonly aria-readonly="true"{% endif %}
                     >
 
                     <div class="manifest-field-error"
@@ -264,9 +355,10 @@
             </div>
 
 
+            {% if not read_only %}
             <div class="manifest-trip-info-footer">
                 <div class="manifest-trip-info-hint">
-                    Update the trip details and save your changes.
+                    All trip details are required. Update them and save your changes.
                 </div>
 
                 <button type="submit" class="manifest-save-btn">
@@ -274,6 +366,7 @@
                     Save Changes
                 </button>
             </div>
+            {% endif %}
 
         </form>
 
@@ -281,6 +374,8 @@
 
 </div>
 
+
+{% if details_assigned %}
 
 <!-- =====================================================
      PENDING REGISTRATIONS
@@ -334,7 +429,7 @@
                         <th>Reference Code</th>
                         <th>Name</th>
                         <th>Time</th>
-                        <th>Actions</th>
+                        {% if not read_only %}<th>Actions</th>{% endif %}
 
                     </tr>
 
@@ -359,6 +454,7 @@
                             {{ reg.submitted_at.strftime('%H:%M:%S') }}
                         </td>
 
+                        {% if not read_only %}
                         <td>
 
                             <div class="manifest-action-group">
@@ -372,6 +468,7 @@
                                     <button
                                         type="submit"
                                         class="manifest-approve-btn"
+                                        
                                     >
                                         Approve
                                     </button>
@@ -388,6 +485,7 @@
                                     <button
                                         type="submit"
                                         class="manifest-reject-btn"
+                                        
                                     >
                                         Reject
                                     </button>
@@ -397,6 +495,7 @@
                             </div>
 
                         </td>
+                        {% endif %}
 
                     </tr>
 
@@ -404,7 +503,7 @@
 
                     <tr>
 
-                        <td colspan="4">
+                        <td colspan="{{ 3 if read_only else 4 }}">
 
                             <div class="manifest-empty-state">
 
@@ -499,20 +598,43 @@
 
 
                 <!-- Add passenger -->
-                <button
-                    type="button"
-                    class="manifest-add-btn"
-                    data-bs-toggle="modal"
-                    data-bs-target="#walkinModal"
-                >
-                    <i class="bi bi-plus-lg"></i>
-                    Add
-                </button>
+                {% if not read_only %}
+                <span class="manifest-add-wrap"
+                      {% if capacity_full %}title="Capacity is full. Increase the capacity to add passengers."{% endif %}>
+                    <button
+                        type="button"
+                        class="manifest-add-btn"
+                        id="addPassengerBtn"
+                        {% if capacity_full %}
+                        disabled
+                        aria-disabled="true"
+                        {% else %}
+                        data-bs-toggle="modal"
+                        data-bs-target="#walkinModal"
+                        {% endif %}
+                    >
+                        <i class="bi bi-plus-lg"></i>
+                        Add
+                    </button>
+                </span>
+                {% endif %}
 
             </div>
 
         </div>
 
+
+        {% if capacity_full and not read_only %}
+        <div class="manifest-capacity-banner" id="capacityFullBanner" role="status">
+            <div class="manifest-capacity-banner-text">
+                <strong>Capacity is full.</strong>
+                <span>All available passenger slots have been filled. Edit the capacity above to add more.</span>
+            </div>
+            <a href="#manifest_boat_capacity"
+               class="manifest-capacity-banner-btn"
+               id="editCapacityBtn">Edit Capacity</a>
+        </div>
+        {% endif %}
 
         <div class="manifest-table-wrapper">
 
@@ -530,7 +652,7 @@
                         <th>Age</th>
                         <th>Type</th>
                         <th>Check-In</th>
-                        <th>Actions</th>
+                        {% if not read_only %}<th>Actions</th>{% endif %}
 
                     </tr>
 
@@ -563,6 +685,7 @@
                             {{ entry.check_in_time.strftime('%H:%M:%S') }}
                         </td>
 
+                        {% if not read_only %}
                         <td>
 
                             <div class="manifest-action-group">
@@ -601,6 +724,7 @@
                             </div>
 
                         </td>
+                        {% endif %}
 
                     </tr>
 
@@ -608,7 +732,7 @@
 
                     <tr>
 
-                        <td colspan="6">
+                        <td colspan="{{ 5 if read_only else 6 }}">
 
                             <div class="manifest-empty-state">
 
@@ -627,10 +751,12 @@
 
                                 </div>
 
+                                {% if not read_only %}
                                 <p class="manifest-empty-text">
                                     Add walk-in passengers using the
                                     button above.
                                 </p>
+                                {% endif %}
 
                             </div>
 
@@ -655,6 +781,23 @@
      CONFIRM DEPARTURE
      ===================================================== -->
 
+{% if read_only %}
+<div class="manifest-detail-card manifest-confirm-card">
+    <div class="manifest-confirm-body">
+        <div class="manifest-confirm-actions">
+            <a href="{{ url_for('manifests.list_slots', date=trip.departure_time.date().isoformat()) }}"
+               class="manifest-change-slot-btn">
+                Back
+            </a>
+            {% if summary_details_url %}
+            <a href="{{ summary_details_url }}" class="manifest-summary-btn">
+                View Summary Details
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% else %}
 <div class="manifest-detail-card manifest-confirm-card">
 
     <form
@@ -672,7 +815,6 @@
                     name="audit_confirmed"
                     value="yes"
                     id="auditCheck"
-                    {% if is_expired %}disabled{% endif %}
                 >
 
                 <label
@@ -686,25 +828,21 @@
 
             </div>
 
-            {% if is_expired %}
-                <p class="text-muted small mb-3">
-                    This trip's departure date has passed, so it can no longer be departed.
-                </p>
-            {% endif %}
             <div class="manifest-confirm-actions">
 
                 <a
-                    href="{{ url_for('manifests.list_slots') }}"
+                    href="{{ url_for('manifests.list_slots', date=trip.departure_time.date().isoformat()) }}"
                     class="manifest-change-slot-btn"
+                    data-back-link
                 >
-                    Change Slot
+                    Back
                 </a>
 
 
                                 <span
                     class="manifest-confirm-wrap"
                     id="confirmDepartureWrap"
-                    {% if not is_expired %}title="Tick the audit confirmation to continue."{% endif %}
+                    title="Tick the audit confirmation to continue."
                 >
                     <button
                         type="submit"
@@ -724,30 +862,67 @@
     </form>
 
 </div>
+{% endif %}
+
+{% else %}
+
+<!-- =====================================================
+     DETAILS NOT ASSIGNED YET: registrations stay closed
+     ===================================================== -->
+
+<div class="manifest-unassigned-state">
+
+    <p class="manifest-unassigned-title">Assign trip details first.</p>
+
+    <p class="manifest-unassigned-text">
+        Registrations open after trip details are saved and have been assigned.
+    </p>
+
+    <a
+        href="{{ url_for('manifests.list_slots', date=trip.departure_time.date().isoformat()) }}"
+        class="manifest-change-slot-btn"
+        {% if not read_only %}data-back-link{% endif %}
+    >
+        Back
+    </a>
 
 </div>
 
+{% endif %}
+
+</div>
+
+{% if not read_only %}
 <!-- =========================================================
      DELAY MODAL
      ========================================================= -->
 
-<div class="modal fade"
+<div class="modal fade manifest-trip-modal"
      id="delayModal"
-     tabindex="-1">
+     tabindex="-1"
+     aria-labelledby="delayModalTitle"
+     aria-hidden="true">
 
-<div class="modal-dialog">
+<div class="modal-dialog modal-dialog-centered">
 
     <div class="modal-content">
 
         <form
             method="POST"
             action="{{ url_for('manifests.delay_trip', trip_id=trip.id) }}"
+            id="delayForm"
+            novalidate
+            data-current-time="{{ trip.departure_time.strftime('%H:%M') }}"
+            data-current-label="{{ trip.departure_time.strftime('%I:%M %p').lstrip('0') }}"
+            data-open="{{ terminal_open }}"
+            data-close="{{ terminal_close }}"
+            data-taken='{{ taken_times|tojson }}'
         >
 
             <div class="modal-header text-white"
                  style="background-color: var(--navy);">
 
-                <h5 class="modal-title">
+                <h5 class="modal-title" id="delayModalTitle">
                     Confirm Trip Delay
                 </h5>
 
@@ -755,76 +930,99 @@
                     type="button"
                     class="btn-close btn-close-white"
                     data-bs-dismiss="modal"
+                    aria-label="Close"
                 ></button>
 
             </div>
 
-
             <div class="modal-body">
 
-                <label class="form-label small text-muted">
-                    Reason for Delay
+                <label class="form-label small text-muted" for="delayCurrent">
+                    Current Departure
                 </label>
-
-                <select
-                    name="delay_reason"
-                    class="form-select mb-3"
-                    required
+                <input
+                    type="text"
+                    id="delayCurrent"
+                    class="form-control mb-3 fw-semibold"
+                    value="{{ trip.departure_time.strftime('%I:%M %p').lstrip('0') }}"
+                    readonly
+                    tabindex="-1"
                 >
 
-                    <option value="">
-                        Select Reason
-                    </option>
-
-                    <option value="Weather conditions">
-                        Weather conditions
-                    </option>
-
-                    <option value="Waiting for passengers">
-                        Waiting for passengers
-                    </option>
-
-                    <option value="Boat maintenance">
-                        Boat maintenance
-                    </option>
-
-                    <option value="Coast Guard hold">
-                        Coast Guard hold
-                    </option>
-
-                </select>
-
-
-                <label class="form-label small text-muted">
+                <label class="form-label small text-muted" for="delayNewTime">
                     New Departure Time
                 </label>
-
+                <div class="mb-3">
                 <input
                     type="time"
+                    id="delayNewTime"
                     name="new_departure_time"
                     class="form-control"
-                    required
+                    min="{{ terminal_open }}"
+                    max="{{ terminal_close }}"
+                    aria-describedby="delayTimeError"
                 >
+                <div class="manifest-field-error"
+                     id="delayTimeError" role="alert" hidden></div>
+                </div>
+
+                <label class="form-label small text-muted" for="delayReason">
+                    Reason
+                </label>
+                <select
+                    id="delayReason"
+                    name="delay_reason"
+                    class="form-select"
+                    aria-describedby="delayReasonError"
+                >
+                    <option value="">Select Reason</option>
+                    <option value="Weather conditions">Weather conditions</option>
+                    <option value="Waiting for passengers">Waiting for passengers</option>
+                    <option value="Boat maintenance">Boat maintenance</option>
+                    <option value="Coast Guard hold">Coast Guard hold</option>
+                </select>
+                <div class="manifest-field-error"
+                     id="delayReasonError" role="alert" hidden></div>
+
+                {% if notice_count %}
+                <div class="form-check mt-4">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="notify"
+                        value="yes"
+                        id="delayNotify"
+                        checked
+                    >
+                    <label class="form-check-label small" for="delayNotify">
+                        Publish an announcement / send SMS to
+                        {{ notice_count }} passenger{{ '' if notice_count == 1 else 's' }}
+                    </label>
+                </div>
+                {% endif %}
+
+                <div class="manifest-field-error mt-3"
+                     id="delayFormError" role="alert" hidden></div>
 
             </div>
 
-
-            <div class="modal-footer">
+            <div class="modal-footer manifest-trip-modal-footer">
 
                 <button
                     type="button"
-                    class="btn btn-outline-secondary"
+                    class="btn btn-outline-secondary btn-sm"
                     data-bs-dismiss="modal"
                 >
-                    Dismiss
+                    Cancel
                 </button>
 
                 <button
                     type="submit"
-                    class="btn text-white"
+                    id="delaySubmitBtn"
+                    class="btn btn-sm text-white"
                     style="background-color: var(--navy);"
                 >
-                    Confirm
+                    Delay Trip
                 </button>
 
             </div>
@@ -841,23 +1039,27 @@
      CANCEL MODAL
      ========================================================= -->
 
-<div class="modal fade"
+<div class="modal fade manifest-trip-modal"
      id="cancelModal"
-     tabindex="-1">
+     tabindex="-1"
+     aria-labelledby="cancelModalTitle"
+     aria-hidden="true">
 
-<div class="modal-dialog">
+<div class="modal-dialog modal-dialog-centered">
 
     <div class="modal-content">
 
         <form
             method="POST"
             action="{{ url_for('manifests.cancel_trip', trip_id=trip.id) }}"
+            id="cancelForm"
+            novalidate
         >
 
             <div class="modal-header text-white"
                  style="background-color: var(--navy);">
 
-                <h5 class="modal-title">
+                <h5 class="modal-title" id="cancelModalTitle">
                     Confirm Trip Cancellation
                 </h5>
 
@@ -865,64 +1067,78 @@
                     type="button"
                     class="btn-close btn-close-white"
                     data-bs-dismiss="modal"
+                    aria-label="Close"
                 ></button>
 
             </div>
 
-
             <div class="modal-body">
 
-                <label class="form-label small text-muted">
-                    Reason for cancellation
-                </label>
+                <p class="text-center small fw-semibold mb-4">
+                    {{ trip.departure_time.strftime('%I:%M %p').lstrip('0') }}{% if trip.boat %}, {{ trip.boat.name }} will not run.{% else %} trip will not run.{% endif %}<br>
+                    This cannot be undone.
+                </p>
 
+                <label class="form-label small text-muted" for="cancelReason">
+                    Reason
+                </label>
                 <select
+                    id="cancelReason"
                     name="cancel_reason"
                     class="form-select"
-                    required
+                    aria-describedby="cancelReasonError"
                 >
-
-                    <option value="">
-                        Select Reason
-                    </option>
-
-                    <option value="Unsafe water conditions">
-                        Unsafe water conditions
-                    </option>
-
-                    <option value="Boat unavailable">
-                        Boat unavailable
-                    </option>
-
-                    <option value="Insufficient passengers">
-                        Insufficient passengers
-                    </option>
-
-                    <option value="Emergency">
-                        Emergency
-                    </option>
-
+                    <option value="">Select Reason</option>
+                    {% for option in cancel_reasons %}
+                    <option value="{{ option }}">{{ option }}</option>
+                    {% endfor %}
                 </select>
+                <div class="manifest-field-error"
+                     id="cancelReasonError" role="alert" hidden></div>
+
+                {% if notice_count %}
+                <p class="small fw-semibold mt-4 mb-3">
+                    {{ notice_count }} passenger{{ '' if notice_count == 1 else 's' }}
+                    will be marked &ldquo;Cancelled (trip)&rdquo; and will need to rebook.
+                </p>
+
+                <div class="form-check">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="notify"
+                        value="yes"
+                        id="cancelNotify"
+                        checked
+                    >
+                    <label class="form-check-label small" for="cancelNotify">
+                        Publish an announcement / send SMS to passengers
+                    </label>
+                </div>
+                {% endif %}
+
+                <div class="manifest-field-error mt-3"
+                     id="cancelFormError" role="alert" hidden></div>
 
             </div>
 
-
-            <div class="modal-footer">
+            <div class="modal-footer manifest-trip-modal-footer">
 
                 <button
                     type="button"
-                    class="btn btn-outline-secondary"
+                    class="btn btn-outline-secondary btn-sm"
                     data-bs-dismiss="modal"
                 >
-                    Dismiss
+                    Back
                 </button>
 
                 <button
                     type="submit"
-                    class="btn text-white"
+                    id="cancelSubmitBtn"
+                    class="btn btn-sm text-white"
                     style="background-color: var(--navy);"
                 >
-                    Confirm
+                    Cancel Trip
                 </button>
 
             </div>
@@ -950,6 +1166,8 @@
         <form
             method="POST"
             action="{{ url_for('manifests.add_walkin', trip_id=trip.id) }}"
+            id="walkinForm"
+            novalidate
         >
 
             <div class="modal-header text-white"
@@ -981,7 +1199,10 @@
                         <input
                             type="text"
                             name="full_name"
-                            class="form-control"
+                            id="walkinFullName"
+                            class="form-control{% if walkin_error %} is-invalid{% endif %}"
+                            value="{{ walkin_form.get('full_name', '') }}"
+                            maxlength="100"
                             required
                         >
 
@@ -997,7 +1218,9 @@
                         <input
                             type="number"
                             name="age"
+                            id="walkinAge"
                             class="form-control"
+                            value="{{ walkin_form.get('age', '') }}"
                             min="0"
                             required
                         >
@@ -1015,6 +1238,7 @@
                             type="text"
                             name="address"
                             class="form-control"
+                            value="{{ walkin_form.get('address', '') }}"
                         >
 
                     </div>
@@ -1029,7 +1253,9 @@
                         <input
                             type="text"
                             name="contact_number"
+                            id="walkinContact"
                             class="form-control"
+                            value="{{ walkin_form.get('contact_number', '') }}"
                         >
 
                     </div>
@@ -1047,28 +1273,22 @@
                             required
                         >
 
-                            <option value="Regular">
-                                Regular
+                            {% set picked_type = walkin_form.get('passenger_type', 'Regular') %}
+                            {% for value, label in [('Regular', 'Regular'), ('Student', 'Student'), ('Senior', 'Senior'), ('PWD', 'PWD'), ('Child', 'Child')] %}
+                            <option value="{{ value }}"{% if picked_type == value %} selected{% endif %}>
+                                {{ label }}
                             </option>
-
-                            <option value="Student">
-                                Student
-                            </option>
-
-                            <option value="Senior">
-                                Senior
-                            </option>
-
-                            <option value="PWD">
-                                PWD
-                            </option>
-
-                            <option value="Child">
-                                Child
-                            </option>
+                            {% endfor %}
 
                         </select>
 
+                    </div>
+
+                    <div class="col-12">
+                        <div class="manifest-field-error"
+                             id="walkinError"
+                             role="alert"
+                             {% if not walkin_error %}hidden{% endif %}>{{ walkin_error or '' }}</div>
                     </div>
 
                 </div>
@@ -1103,6 +1323,114 @@
 </div>
 
 </div>
+
+<script type="application/json" id="manifestIdentities">{{ manifest_identities|tojson }}</script>
+<script type="application/json" id="walkinServerError">{{ (walkin_error or '')|tojson }}</script>
+
+<script>
+/* Walk-in: instant duplicate check (the server re-checks on submit),
+   re-open with the server's message, and the capacity-banner shortcut. */
+(function () {
+    "use strict";
+
+    var form = document.getElementById("walkinForm");
+    var modalEl = document.getElementById("walkinModal");
+    var nameInput = document.getElementById("walkinFullName");
+    var ageInput = document.getElementById("walkinAge");
+    var contactInput = document.getElementById("walkinContact");
+    var errorEl = document.getElementById("walkinError");
+
+    var MSG_PASSENGER = "This passenger is already registered in this trip manifest.";
+    var MSG_NAME = "A passenger with this name already exists in this manifest.";
+
+    var identities = [];
+    try {
+        identities = JSON.parse(
+            document.getElementById("manifestIdentities").textContent
+        ) || [];
+    } catch (e) { identities = []; }
+
+    /* Same normalisation as the server: trim, collapse spaces, ignore case */
+    function normalize(text) {
+        return (text || "").replace(/\s+/g, " ").trim().toLowerCase();
+    }
+    function digits(text) { return (text || "").replace(/\D/g, ""); }
+
+    function duplicateMessage() {
+        var name = normalize(nameInput.value);
+        if (!name) { return ""; }
+        var age = parseInt(ageInput.value, 10);
+        var contact = digits(contactInput.value);
+        var sameName = identities.filter(function (p) { return p.name === name; });
+        if (!sameName.length) { return ""; }
+        var exact = sameName.some(function (p) {
+            return contact && p.age === age && p.contact === contact;
+        });
+        return exact ? MSG_PASSENGER : MSG_NAME;
+    }
+
+    function showError(message) {
+        if (!errorEl) { return; }
+        errorEl.textContent = message || "";
+        errorEl.hidden = !message;
+        if (nameInput) { nameInput.classList.toggle("is-invalid", !!message); }
+    }
+
+    if (form && nameInput && errorEl) {
+        [nameInput, ageInput, contactInput].forEach(function (el) {
+            if (el) { el.addEventListener("input", function () { showError(duplicateMessage()); }); }
+        });
+        form.addEventListener("submit", function (event) {
+            var message = duplicateMessage();
+            if (message) {
+                event.preventDefault();
+                showError(message);
+                nameInput.focus();
+            }
+        });
+        if (modalEl) {
+            modalEl.addEventListener("show.bs.modal", function () {
+                if (!errorEl.hasAttribute("data-server")) { showError(""); }
+            });
+            modalEl.addEventListener("hidden.bs.modal", function () {
+                errorEl.removeAttribute("data-server");
+            });
+        }
+    }
+
+    /* The server refused the submission: reopen with its message */
+    var serverError = "";
+    try {
+        serverError = JSON.parse(
+            document.getElementById("walkinServerError").textContent
+        ) || "";
+    } catch (e) { serverError = ""; }
+
+    if (serverError && errorEl && modalEl) {
+        errorEl.setAttribute("data-server", "1");
+
+        // Bootstrap's JS loads after this script, so wait until the page is ready
+        window.addEventListener("load", function () {
+            if (window.bootstrap) {
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+        });
+    }
+
+    /* Edit Capacity: scroll to the existing capacity field and highlight it */
+    var editBtn = document.getElementById("editCapacityBtn");
+    var capacityInput = document.getElementById("manifest_boat_capacity");
+    if (editBtn && capacityInput) {
+        editBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            capacityInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            window.setTimeout(function () { capacityInput.focus({ preventScroll: true }); capacityInput.select(); }, 350);
+            capacityInput.classList.add("is-highlighted");
+            window.setTimeout(function () { capacityInput.classList.remove("is-highlighted"); }, 2600);
+        });
+    }
+})();
+</script>
 
 <!-- =========================================================
      EDIT PASSENGER MODAL
@@ -1356,11 +1684,38 @@
 
 </div>
 
+<!-- =========================================================
+     DISCARD CHANGES MODAL (Back with unsaved trip information)
+     ========================================================= -->
+
+<div class="modal fade manifest-discard-modal"
+     id="discardChangesModal"
+     tabindex="-1"
+     aria-labelledby="discardChangesTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <h5 class="manifest-discard-title" id="discardChangesTitle">Discard Changes</h5>
+                <p class="manifest-discard-text">You have unsaved changes to this trip.</p>
+            </div>
+            <div class="modal-footer manifest-discard-footer">
+                <button type="button" class="btn manifest-discard-stay" id="discardStayBtn" data-bs-dismiss="modal">Stay</button>
+                <button type="button" class="btn manifest-discard-confirm" id="discardConfirmBtn">Discard</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    /* COAST GUARD AUDIT CHECKBOX */
+    /* COAST GUARD AUDIT CHECKBOX (absent until trip details are assigned) */
+    const auditCheck = document.getElementById("auditCheck");
+    const confirmDepartureBtn = document.getElementById("confirmDepartureBtn");
+    if (auditCheck && confirmDepartureBtn) {
             auditCheck.addEventListener("change", function () {
             confirmDepartureBtn.disabled = !this.checked;
 
@@ -1373,6 +1728,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
         });
+    }
 
 });
 
@@ -1490,8 +1846,12 @@ document.addEventListener("DOMContentLoaded", function () {
         /* No suggestions available: typing still works. */
     }
 
+    const readOnly = form.dataset.readOnly === "true";
     const capacityInput = document.getElementById("manifest_boat_capacity");
     const boatInput = document.getElementById("manifest_boat_name");
+    const operatorInput = document.getElementById("manifest_operator_name");
+    const crewInput = document.getElementById("manifest_crew_name");
+    const hasPassengers = form.dataset.hasPassengers === "true";
     const currentCount = parseInt(form.dataset.currentCount, 10) || 0;
     const maxCapacity = parseInt(form.dataset.maxCapacity, 10) || 500;
 
@@ -1565,25 +1925,52 @@ document.addEventListener("DOMContentLoaded", function () {
         setFieldError(boatInput, "");
     });
 
+    [operatorInput, crewInput].forEach(function (input) {
+        if (input) {
+            input.addEventListener("input", function () {
+                setFieldError(input, "");
+            });
+        }
+    });
+
     form.addEventListener("submit", function (event) {
+
+        if (readOnly) {
+            event.preventDefault();
+            return;
+        }
 
         let firstInvalid = null;
 
         const capacityMessage = capacityProblem();
-        const hasBoat = boatInput.value.trim() !== "";
-        const hasCapacity = capacityInput.value.trim() !== "";
+        const lockedNote = hasPassengers
+            ? " This trip already has passengers or registrations, so its trip details cannot be left empty."
+            : "";
 
+        setFieldError(operatorInput, "");
+        setFieldError(crewInput, "");
         setFieldError(boatInput, "");
         setFieldError(capacityInput, capacityMessage);
 
-        if (capacityMessage) {
-            firstInvalid = capacityInput;
-        } else if (hasBoat && !hasCapacity) {
-            setFieldError(capacityInput, "Enter the boat\u2019s capacity.");
-            firstInvalid = capacityInput;
-        } else if (hasCapacity && !hasBoat) {
-            setFieldError(boatInput, "Enter the boat name for this capacity.");
-            firstInvalid = boatInput;
+        /* Every field is required; checked in page order so the first
+           problem field gets focus. */
+        if (operatorInput && operatorInput.value.trim() === "") {
+            setFieldError(operatorInput, "Enter the operator." + lockedNote);
+            firstInvalid = firstInvalid || operatorInput;
+        }
+        if (crewInput && crewInput.value.trim() === "") {
+            setFieldError(crewInput, "Enter the crew." + lockedNote);
+            firstInvalid = firstInvalid || crewInput;
+        }
+        if (boatInput.value.trim() === "") {
+            setFieldError(boatInput, "Enter the boat." + lockedNote);
+            firstInvalid = firstInvalid || boatInput;
+        }
+        if (capacityInput.value.trim() === "") {
+            setFieldError(capacityInput, "Enter the boat\u2019s capacity." + lockedNote);
+            firstInvalid = firstInvalid || capacityInput;
+        } else if (capacityMessage) {
+            firstInvalid = firstInvalid || capacityInput;
         }
 
         if (firstInvalid) {
@@ -1607,6 +1994,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     combos.forEach(function (combo) {
+
+        if (readOnly) {
+            return;   /* closed trip: no suggestion menus */
+        }
 
         const source = combo.dataset.source;
         const input = combo.querySelector(".manifest-combo-input");
@@ -1993,6 +2384,369 @@ document.addEventListener("DOMContentLoaded", function () {
 
 })();
 
+</script>
+
+
+<script>
+/* =========================================================
+   BACK BUTTON / UNSAVED CHANGES (editable trips only)
+   Dirty = any Trip Information field differs from the SAVED
+   value (not from what a failed save echoed back). Restoring
+   the original value makes the form clean again.
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", function () {
+
+    const form = document.getElementById("tripInfoForm");
+    const savedEl = document.getElementById("tripSavedValues");
+    const backLinks = document.querySelectorAll("[data-back-link]");
+
+    if (!form || !savedEl || form.dataset.readOnly === "true") {
+        return;
+    }
+
+    let saved = {};
+    try {
+        saved = JSON.parse(savedEl.textContent) || {};
+    } catch (error) {
+        return;
+    }
+
+    const FIELDS = ["operator_name", "crew_name", "boat_name", "boat_capacity"];
+
+    function norm(value) {
+        return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    }
+
+    function isDirty() {
+        return FIELDS.some(function (name) {
+            const input = form.elements[name];
+            return input && norm(input.value) !== norm(saved[name]);
+        });
+    }
+
+    let leaving = false;   /* save, discard or confirmed Back: no warning */
+
+    form.addEventListener("submit", function () {
+        leaving = true;
+    });
+
+    window.addEventListener("beforeunload", function (event) {
+        if (!leaving && isDirty()) {
+            event.preventDefault();
+            event.returnValue = "";
+        }
+    });
+
+    const modalEl = document.getElementById("discardChangesModal");
+    const confirmBtn = document.getElementById("discardConfirmBtn");
+    let pendingHref = null;
+
+    function restoreSaved() {
+        FIELDS.forEach(function (name) {
+            const input = form.elements[name];
+            if (input) {
+                input.value = saved[name] == null ? "" : saved[name];
+            }
+        });
+    }
+
+    backLinks.forEach(function (link) {
+        link.addEventListener("click", function (event) {
+            if (!isDirty() || !modalEl || !window.bootstrap) {
+                return;   /* clean form: go straight to the timetable */
+            }
+            event.preventDefault();
+            pendingHref = link.href;
+            pendingReload = false;
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+    });
+
+    /* ---- Browser Back button (Chrome's arrow, Alt+Left, swipe) ----
+       A browser Back is a history navigation, not a click on our link, so
+       it cannot be intercepted directly. Instead one extra "guard" history
+       entry sits on top of this page. Pressing Back pops that entry first
+       (a popstate event); if the form is dirty we put the entry back and
+       show the same Discard modal, otherwise we simply carry on going back. */
+    let usedBrowserBack = false;   /* modal was opened by the browser Back */
+    let pendingReload = false;     /* modal was opened by a keyboard refresh */
+
+    try {
+        history.pushState({ tripGuard: true }, "", window.location.href);
+    } catch (error) { /* history unavailable: link + beforeunload still work */ }
+
+    window.addEventListener("popstate", function () {
+        if (leaving) { return; }
+
+        if (!isDirty() || !modalEl || !window.bootstrap) {
+            leaving = true;        /* clean form: really go back */
+            history.back();
+            return;
+        }
+
+        /* Dirty: stay here, put the guard back, ask first. */
+        history.pushState({ tripGuard: true }, "", window.location.href);
+        usedBrowserBack = true;
+        pendingReload = false;
+        pendingHref = null;
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener("click", function () {
+            restoreSaved();
+            leaving = true;
+            if (pendingReload) {
+                window.location.reload();
+                return;
+            }
+            if (usedBrowserBack && !pendingHref) {
+                /* Skip our guard entry and this page, back to where the
+                   passenger came from. If there is nowhere to go back to
+                   (page opened directly), fall back to the Back link. */
+                history.go(-2);
+                setTimeout(function () {
+                    window.location.href = backLinks[0].href;
+                }, 400);
+            } else {
+                window.location.href = pendingHref || backLinks[0].href;
+            }
+        });
+    }
+
+    /* ---- Refresh (F5, Ctrl+R, Cmd+R, Ctrl+Shift+R) ----
+       Keyboard refresh can be intercepted, so it gets the same Discard modal.
+       Chrome's reload BUTTON cannot be intercepted by any page; for that one
+       the browser's own "Leave site?" prompt (beforeunload above) is shown. */
+    document.addEventListener("keydown", function (event) {
+        const key = (event.key || "").toLowerCase();
+        const isRefresh = key === "f5" || ((event.ctrlKey || event.metaKey) && key === "r");
+        if (!isRefresh || leaving) { return; }
+        if (!isDirty() || !modalEl || !window.bootstrap) { return; }   /* clean: normal refresh */
+        event.preventDefault();
+        usedBrowserBack = false;
+        pendingHref = null;
+        pendingReload = true;
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+
+    if (modalEl) {
+        /* Stay / Escape / backdrop: the guard entry is already back in place */
+        modalEl.addEventListener("hidden.bs.modal", function () {
+            usedBrowserBack = false;
+            pendingReload = false;
+        });
+    }
+
+});
+</script>
+
+
+<script>
+/* =========================================================
+   DELAY TRIP MODAL: inline validation (the server re-checks)
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("delayForm");
+    if (!form) { return; }
+
+    const modalEl = document.getElementById("delayModal");
+    const timeInput = document.getElementById("delayNewTime");
+    const reasonSel = document.getElementById("delayReason");
+    const timeErr = document.getElementById("delayTimeError");
+    const reasonErr = document.getElementById("delayReasonError");
+    const formErr = document.getElementById("delayFormError");
+    const submitBtn = document.getElementById("delaySubmitBtn");
+
+    const currentTime = form.dataset.currentTime;
+    const currentLabel = form.dataset.currentLabel;
+    const openAt = form.dataset.open;
+    const closeAt = form.dataset.close;
+    let taken = {};
+    try { taken = JSON.parse(form.dataset.taken) || {}; } catch (e) { taken = {}; }
+
+    let busy = false;
+
+    function show(el, message) {
+        el.textContent = message || "";
+        el.hidden = !message;
+    }
+
+    function label(hhmm) {
+        const parts = hhmm.split(":").map(Number);
+        const h = parts[0], m = parts[1];
+        return ((h % 12) || 12) + ":" + String(m).padStart(2, "0") + " " + (h >= 12 ? "PM" : "AM");
+    }
+
+    function timeError() {
+        const value = (timeInput.value || "").slice(0, 5);
+        if (!value) { return "Enter the new departure time."; }
+        if (value <= currentTime) { return "New time must be later than " + currentLabel + "."; }
+        if (value < openAt || value > closeAt) { return "New time is outside terminal hours."; }
+        if (Object.prototype.hasOwnProperty.call(taken, value)) {
+            return "Another trip is already scheduled at " + label(value) + ". Choose a different time";
+        }
+        return "";
+    }
+
+    function reasonError() {
+        return reasonSel.value ? "" : "Select a reason for the delay.";
+    }
+
+    /* Errors clear / update as soon as the admin corrects the input */
+    timeInput.addEventListener("input", function () {
+        if (!timeErr.hidden) { show(timeErr, timeError()); }
+        show(formErr, "");
+    });
+    reasonSel.addEventListener("change", function () {
+        if (!reasonErr.hidden) { show(reasonErr, reasonError()); }
+        show(formErr, "");
+    });
+
+    function setBusy(state) {
+        busy = state;
+        submitBtn.disabled = state;
+    }
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        if (busy) { return; }
+
+        const tErr = timeError();
+        const rErr = reasonError();
+        show(timeErr, tErr);
+        show(reasonErr, rErr);
+        show(formErr, "");
+        if (tErr || rErr) { return; }
+
+        setBusy(true);
+        fetch(form.action, {
+            method: "POST",
+            body: new FormData(form),
+            credentials: "same-origin",
+            headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" }
+        })
+        .then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok && data.ok, data: data };
+            });
+        })
+        .then(function (result) {
+            const data = result.data || {};
+            if (result.ok) {
+                /* Stay disabled; the flash message shows after the reload */
+                window.location.href = data.redirect || window.location.href;
+                return;
+            }
+            const errors = data.errors || {};
+            show(timeErr, errors.new_departure_time || "");
+            show(reasonErr, errors.delay_reason || "");
+            show(formErr, errors.form || "");
+            if (!Object.keys(errors).length && data.redirect) {
+                window.location.href = data.redirect;   /* e.g. trip closed meanwhile */
+                return;
+            }
+            setBusy(false);
+        })
+        .catch(function () {
+            show(formErr, "Could not delay the trip. Please try again.");
+            setBusy(false);
+        });
+    });
+
+    /* Closing the modal discards the draft and clears messages */
+    if (modalEl) {
+        modalEl.addEventListener("hidden.bs.modal", function () {
+            form.reset();
+            show(timeErr, ""); show(reasonErr, ""); show(formErr, "");
+            setBusy(false);
+        });
+    }
+});
+</script>
+
+
+<script>
+/* =========================================================
+   CANCEL TRIP MODAL: reason required, errors stay inside
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("cancelForm");
+    if (!form) { return; }
+
+    const modalEl = document.getElementById("cancelModal");
+    const reasonSel = document.getElementById("cancelReason");
+    const reasonErr = document.getElementById("cancelReasonError");
+    const formErr = document.getElementById("cancelFormError");
+    const submitBtn = document.getElementById("cancelSubmitBtn");
+    let busy = false;
+
+    function show(el, message) {
+        el.textContent = message || "";
+        el.hidden = !message;
+    }
+    function setBusy(state) {
+        busy = state;
+        submitBtn.disabled = state;
+    }
+
+    reasonSel.addEventListener("change", function () {
+        if (reasonSel.value) { show(reasonErr, ""); }
+        show(formErr, "");
+    });
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        if (busy) { return; }
+
+        if (!reasonSel.value) {
+            show(reasonErr, "Select a reason for the cancellation.");
+            return;
+        }
+        show(reasonErr, "");
+        show(formErr, "");
+
+        setBusy(true);
+        fetch(form.action, {
+            method: "POST",
+            body: new FormData(form),
+            credentials: "same-origin",
+            headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" }
+        })
+        .then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok && data.ok, data: data };
+            });
+        })
+        .then(function (result) {
+            const data = result.data || {};
+            if (result.ok) {
+                window.location.href = data.redirect || window.location.href;
+                return;
+            }
+            const errors = data.errors || {};
+            show(reasonErr, errors.cancel_reason || "");
+            show(formErr, errors.form || "");
+            if (!Object.keys(errors).length && data.redirect) {
+                window.location.href = data.redirect;
+                return;
+            }
+            setBusy(false);
+        })
+        .catch(function () {
+            show(formErr, "Could not cancel the trip. Please try again.");
+            setBusy(false);
+        });
+    });
+
+    if (modalEl) {
+        modalEl.addEventListener("hidden.bs.modal", function () {
+            form.reset();
+            show(reasonErr, ""); show(formErr, "");
+            setBusy(false);
+        });
+    }
+});
 </script>
 
 {% endblock %}

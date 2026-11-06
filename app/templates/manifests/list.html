@@ -40,6 +40,7 @@
               <input
                   type="date"
                   name="date"
+                  id="timetableDateFilter"
                   value="{{ selected_date.isoformat() }}"
                   aria-label="Select manifest date"
                   onchange="this.form.submit()"
@@ -64,16 +65,27 @@
           Today
       </a>
 
-      <!-- Add Time Slot -->
-      <button
-          type="button"
-          class="manifest-add-btn"
-          data-bs-toggle="modal"
-          data-bs-target="#addSlotModal"
-      >
-          <i class="bi bi-plus-lg"></i>
-          Add Time Slot
-      </button>
+      <!-- Add Time Slot: disabled for a date before today (Asia/Manila).
+           The modal trigger is only present while enabled, so a disabled
+           button can never open the modal. -->
+      <span class="manifest-add-wrap" id="addSlotWrap"
+            {% if is_past_date %}title="Time slots can only be added for today or a future date."{% endif %}>
+        <button
+            type="button"
+            class="manifest-add-btn"
+            id="addSlotBtn"
+            {% if is_past_date %}
+            disabled
+            aria-disabled="true"
+            {% else %}
+            data-bs-toggle="modal"
+            data-bs-target="#addSlotModal"
+            {% endif %}
+        >
+            <i class="bi bi-plus-lg"></i>
+            Add Time Slot
+        </button>
+      </span>
 
   </div>
 
@@ -82,12 +94,34 @@
 
 {% include 'partials/overall_condition.html' %}
 
+<!-- Status filter (shows/hides rows in the browser; the date view is unchanged) -->
+<div class="manifest-filter" id="slotFilter" role="group" aria-label="Filter trips by status">
+    <button type="button" class="manifest-filter-btn is-active" data-filter="all" aria-pressed="true">All</button>
+    <button type="button" class="manifest-filter-btn" data-filter="open" aria-pressed="false"
+        title="Trips with seats available">Open</button>
+    <button type="button" class="manifest-filter-btn" data-filter="full" aria-pressed="false">Full</button>
+    <button type="button" class="manifest-filter-btn" data-filter="unassigned" aria-pressed="false">Unassigned</button>
+    <button type="button" class="manifest-filter-btn" data-filter="delayed" aria-pressed="false">Delayed</button>
+    <button type="button" class="manifest-filter-btn" data-filter="cancelled" aria-pressed="false">Cancelled</button>
+    <button type="button" class="manifest-filter-btn" data-filter="expired" aria-pressed="false">Expired</button>
+    <button type="button" class="manifest-filter-btn" data-filter="departed" aria-pressed="false">Departed</button>
+</div>
+
 <!-- Timetable Card -->
 <div class="manifest-timetable-card">
 
     <div class="manifest-slot-list">
 
         {% for slot in slots %}
+
+        {# State used by the filter: Expired wins, like the badge shown on the row #}
+        {% if slot.id in expired_ids %}
+            {% set row_state = 'expired' %}
+        {% else %}
+            {% set row_state = display_status[slot.id]|lower %}
+        {% endif %}
+
+        <div class="manifest-slot-row" data-state="{{ row_state }}">
 
         <a
             href="{{ url_for('manifests.trip_detail', trip_id=slot.id) }}"
@@ -130,8 +164,9 @@
                 {% if slot.id in expired_ids %}
                 <span class="manifest-slot-status status-expired">Expired</span>
                 {% else %}
-                <span class="manifest-slot-status status-{{ slot.status|lower|replace(' ', '-') }}">
-                    {{ slot.status }}
+                {% set shown_status = display_status[slot.id] %}
+                <span class="manifest-slot-status status-{{ shown_status|lower|replace(' ', '-') }}">
+                    {{ shown_status }}
                 </span>
                 {% endif %}
 
@@ -140,6 +175,25 @@
             </div>
 
         </a>
+
+        {% if slot.id in deletable_ids %}
+        <button
+            type="button"
+            class="manifest-slot-delete"
+            data-bs-toggle="modal"
+            data-bs-target="#deleteSlotModal"
+            data-delete-url="{{ url_for('manifests.delete_slot', trip_id=slot.id) }}"
+            data-slot-label="{{ slot.departure_time.strftime('%I:%M %p').lstrip('0') }}, {{ slot.departure_time.strftime('%b') }} {{ slot.departure_time.day }}"
+            aria-label="Delete {{ slot.departure_time.strftime('%I:%M %p').lstrip('0') }} time slot"
+            title="Delete time slot"
+        >
+            <i class="bi bi-trash3"></i>
+        </button>
+        {% else %}
+        <span class="manifest-slot-delete-spacer" aria-hidden="true"></span>
+        {% endif %}
+
+        </div>
 
         {% else %}
 
@@ -156,26 +210,143 @@
 
         {% endfor %}
 
+        <div class="manifest-no-slots" id="slotFilterEmpty" hidden>
+            <i class="bi bi-funnel"></i>
+            <h6>No trips match this filter</h6>
+            <p>Choose another status to see the other trips on this date.</p>
+        </div>
+
     </div>
 
 </div>
 
+<script>
+/* Add Time Slot follows the date filter: disabled for any date before today
+   (Asia/Manila, taken from the server clock, never a hardcoded date). */
+document.addEventListener("DOMContentLoaded", function () {
+    "use strict";
+    var btn = document.getElementById("addSlotBtn");
+    var wrap = document.getElementById("addSlotWrap");
+    var filter = document.getElementById("timetableDateFilter");
+    var modalEl = document.getElementById("addSlotModal");
+    if (!btn || !filter || !modalEl) { return; }
+
+    var MODAL_ATTRS = { "data-bs-toggle": "modal", "data-bs-target": "#addSlotModal" };
+    var PAST_TITLE = "Time slots can only be added for today or a future date.";
+
+    /* The server's PH time, ticking forward from when the page loaded */
+    var offset = new Date(modalEl.getAttribute("data-now")).getTime() - Date.now();
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    function todayStr() {
+        var n = new Date(Date.now() + offset);
+        return n.getFullYear() + "-" + pad(n.getMonth() + 1) + "-" + pad(n.getDate());
+    }
+    function isPast() {
+        return !!filter.value && filter.value < todayStr();   /* ISO dates compare as text */
+    }
+
+    function sync() {
+        var past = isPast();
+        btn.disabled = past;
+        btn.setAttribute("aria-disabled", past ? "true" : "false");
+        Object.keys(MODAL_ATTRS).forEach(function (name) {
+            if (past) { btn.removeAttribute(name); }
+            else { btn.setAttribute(name, MODAL_ATTRS[name]); }
+        });
+        if (wrap) {
+            if (past) { wrap.setAttribute("title", PAST_TITLE); }
+            else { wrap.removeAttribute("title"); }
+        }
+    }
+
+    /* Belt and braces: never open the modal for a past date from a click */
+    modalEl.addEventListener("show.bs.modal", function (event) {
+        if (isPast() && modalEl.getAttribute("data-reopen") !== "true") {
+            event.preventDefault();
+        }
+    });
+
+    filter.addEventListener("input", sync);
+    filter.addEventListener("change", sync);
+    sync();
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const bar = document.getElementById("slotFilter");
+    if (!bar) { return; }
+    const buttons = bar.querySelectorAll(".manifest-filter-btn");
+    const rows = document.querySelectorAll(".manifest-slot-row");
+    const empty = document.getElementById("slotFilterEmpty");
+    const KEY = "manifestSlotFilter";
+
+    function matches(state, filter) {
+        if (filter === "all") { return true; }
+        return state === filter;
+    }
+
+    function apply(filter) {
+        let shown = 0;
+        rows.forEach(function (row) {
+            const visible = matches(row.dataset.state, filter);
+            row.hidden = !visible;
+            if (visible) { shown += 1; }
+        });
+        buttons.forEach(function (btn) {
+            const on = btn.dataset.filter === filter;
+            btn.classList.toggle("is-active", on);
+            btn.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        /* Only show "no match" when the date has trips but none match */
+        if (empty) { empty.hidden = !(rows.length && shown === 0); }
+    }
+
+    buttons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            apply(btn.dataset.filter);
+            try { sessionStorage.setItem(KEY, btn.dataset.filter); } catch (e) {}
+        });
+    });
+
+    let saved = "all";
+    try { saved = sessionStorage.getItem(KEY) || "all"; } catch (e) {}
+    if (saved === "active") { saved = "open"; }
+    apply(saved);
+
+});
+</script>
+
 <!-- Add Time Slot Modal -->
+{% set f = add_form or {} %}
 <div
     class="modal fade"
     id="addSlotModal"
     tabindex="-1"
     aria-labelledby="addSlotModalLabel"
     aria-hidden="true"
+    data-now="{{ now_iso }}"
+    data-open="{{ terminal_open }}"
+    data-close="{{ terminal_close }}"
+    data-view-date="{{ selected_date.isoformat() }}"
+    data-reopen="{{ 'true' if add_error else 'false' }}"
 >
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
 
         <div class="modal-content manifest-modal">
 
             <form
                 method="POST"
                 action="{{ url_for('manifests.add_slot') }}"
+                id="addSlotForm"
+                novalidate
             >
+
+                <input
+                    type="hidden"
+                    name="view_date"
+                    value="{{ selected_date.isoformat() }}"
+                >
 
                 <div class="modal-header manifest-modal-header">
 
@@ -196,27 +367,64 @@
                 </div>
 
 
-                <div class="modal-body">
+                <div class="modal-body manifest-add-body">
 
-                    <label
-                        for="departure-time"
-                        class="form-label small text-muted"
-                    >
-                        Departure Time
-                    </label>
+                    <div class="manifest-field-group">
+                        <label for="slot-date" class="manifest-field-label">
+                            Date
+                        </label>
+                        <input
+                            type="date"
+                            id="slot-date"
+                            name="slot_date"
+                            class="form-control manifest-time-input"
+                            min="{{ today.isoformat() }}"
+                            value="{{ f.slot_date or (selected_date.isoformat() if selected_date >= today else today.isoformat()) }}"
+                            required
+                        >
+                    </div>
 
-                    <input
-                        type="time"
-                        id="departure-time"
-                        name="departure_time"
-                        class="form-control manifest-time-input"
-                        required
-                    >
+                    <div class="manifest-field-group">
+                        <label for="departure-time" class="manifest-field-label">
+                            Departure Time
+                        </label>
+                        <input
+                            type="time"
+                            id="departure-time"
+                            name="departure_time"
+                            class="form-control manifest-time-input"
+                            min="{{ terminal_open }}"
+                            max="{{ terminal_close }}"
+                            value="{{ f.departure_time or '' }}"
+                            required
+                        >
+                    </div>
+
+                    <div class="manifest-field-group">
+                        <label for="slot-route" class="manifest-field-label">
+                            Route
+                        </label>
+                        <input
+                            type="text"
+                            id="slot-route"
+                            class="form-control manifest-time-input manifest-route-input"
+                            value="Cabuyao Terminal → Talim Island"
+                            readonly
+                            tabindex="-1"
+                        >
+                    </div>
+
+                    <div
+                        class="manifest-modal-error"
+                        id="addSlotError"
+                        role="alert"
+                        {% if not add_error %}hidden{% endif %}
+                    >{{ add_error or '' }}</div>
 
                 </div>
 
 
-                <div class="modal-footer">
+                <div class="modal-footer manifest-add-footer">
 
                     <button
                         type="button"
@@ -229,8 +437,9 @@
                     <button
                         type="submit"
                         class="manifest-modal-submit"
+                        id="addSlotSubmit"
                     >
-                        Add Slot
+                        Add
                     </button>
 
                 </div>
@@ -242,4 +451,207 @@
     </div>
 </div>
 
+<!-- Delete Time Slot Modal (one shared modal, filled in per slot) -->
+<div
+    class="modal fade"
+    id="deleteSlotModal"
+    tabindex="-1"
+    aria-labelledby="deleteSlotModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content manifest-modal">
+
+            <form method="POST" action="" id="deleteSlotForm">
+
+                <div class="modal-header manifest-modal-header">
+
+                    <h5
+                        class="modal-title"
+                        id="deleteSlotModalLabel"
+                    >
+                        Delete Time Slot
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+
+                </div>
+
+                <div class="modal-body manifest-delete-body">
+
+                    <div class="manifest-delete-icon" aria-hidden="true">
+                        <i class="bi bi-trash3"></i>
+                    </div>
+
+                    <p class="manifest-delete-message">
+                        <strong id="deleteSlotLabel"></strong>
+                        will be removed from the timetable.
+                        No passengers are registered.
+                    </p>
+
+                    <p class="manifest-delete-warning">
+                        This action cannot be undone.
+                    </p>
+
+                </div>
+
+                <div class="modal-footer manifest-delete-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="manifest-modal-delete"
+                        id="deleteSlotConfirm"
+                    >
+                        Delete
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var modalEl = document.getElementById("addSlotModal");
+  var form = document.getElementById("addSlotForm");
+  if (!modalEl || !form) return;
+
+  var dateInput = document.getElementById("slot-date");
+  var timeInput = document.getElementById("departure-time");
+  var errorEl = document.getElementById("addSlotError");
+  var submitBtn = document.getElementById("addSlotSubmit");
+
+  var OPEN = modalEl.getAttribute("data-open");
+  var CLOSE = modalEl.getAttribute("data-close");
+  var viewDate = modalEl.getAttribute("data-view-date");
+
+  // "Now" comes from the server (Asia/Manila) and is advanced by the
+  // browser's elapsed time, so a wrong device clock/timezone is ignored.
+  var offset = new Date(modalEl.getAttribute("data-now")).getTime() - Date.now();
+  function phNow() { return new Date(Date.now() + offset); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function todayStr() {
+    var n = phNow();
+    return n.getFullYear() + "-" + pad(n.getMonth() + 1) + "-" + pad(n.getDate());
+  }
+  function nowHM() {
+    var n = phNow();
+    return pad(n.getHours()) + ":" + pad(n.getMinutes());
+  }
+
+  // Past dates are not selectable; for today, past times are not either.
+  function applyLimits() {
+    dateInput.min = todayStr();
+    var min = OPEN;
+    if (dateInput.value === todayStr() && nowHM() > min) min = nowHM();
+    timeInput.min = min;
+    timeInput.max = CLOSE;
+  }
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+  }
+  function clearError() {
+    errorEl.textContent = "";
+    errorEl.hidden = true;
+  }
+
+  // Same rules as the server (which stays the authority).
+  function validate() {
+    var d = dateInput.value;
+    var t = (timeInput.value || "").slice(0, 5);
+    if (!d) return "Please choose a date.";
+    if (d < todayStr()) return "That date has already passed.";
+    if (!t) return "Please choose a departure time.";
+    if (t < OPEN || t > CLOSE) {
+      return "That time is outside terminal hours (8:00 AM to 5:00 PM).";
+    }
+    if (d === todayStr() && t < nowHM()) return "That time has already passed.";
+    return "";
+  }
+
+  dateInput.addEventListener("input", function () { applyLimits(); clearError(); });
+  timeInput.addEventListener("input", function () { clearError(); });
+
+  form.addEventListener("submit", function (e) {
+    var msg = validate();
+    if (msg) {
+      e.preventDefault();
+      showError(msg);
+      return;
+    }
+    submitBtn.disabled = true; // no double submit
+  });
+
+  // Fresh open: default to the date being viewed (never in the past).
+  // A reopen after a server error keeps exactly what the admin typed.
+  modalEl.addEventListener("show.bs.modal", function () {
+    submitBtn.disabled = false;
+    if (modalEl.getAttribute("data-reopen") === "true") {
+      modalEl.setAttribute("data-reopen", "false");
+    } else {
+      clearError();
+      dateInput.value = viewDate < todayStr() ? todayStr() : viewDate;
+      timeInput.value = "";
+    }
+    applyLimits();
+  });
+
+  window.addEventListener("pageshow", function () { submitBtn.disabled = false; });
+
+  applyLimits();
+
+  // The server rejected the submission: reopen the modal with the error.
+  if (modalEl.getAttribute("data-reopen") === "true" && window.bootstrap) {
+    window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  }
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var modalEl = document.getElementById("deleteSlotModal");
+  var form = document.getElementById("deleteSlotForm");
+  var confirmBtn = document.getElementById("deleteSlotConfirm");
+  var label = document.getElementById("deleteSlotLabel");
+  if (!modalEl || !form) return;
+
+  // Fill the shared modal from the trash button that opened it.
+  modalEl.addEventListener("show.bs.modal", function (event) {
+    var trigger = event.relatedTarget;
+    if (!trigger) return;
+    form.setAttribute("action", trigger.getAttribute("data-delete-url"));
+    label.textContent = trigger.getAttribute("data-slot-label");
+    confirmBtn.disabled = false;
+  });
+
+  // Cancel / close never submits, so nothing is deleted or logged.
+  // Lock the button after the first click so a double click cannot send
+  // two requests.
+  form.addEventListener("submit", function () {
+    confirmBtn.disabled = true;
+  });
+});
+</script>
 {% endblock %}

@@ -41,11 +41,13 @@ from app.services import announcement_service
 from app.services import semaphore_service, unisms_service
 from app.services.activity_log_service import log_action, ACTION_REGISTRATION_SMS_SENT, ACTION_PASSENGER_CANCELLED
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import monitoring_service, scheduling_service
+from app.services import manifest_service, monitoring_service, scheduling_service, trip_state_service
 from sqlalchemy import func
 from app.utils.ph_clock import ph_now
 from app.services import registration_service as reg_svc
+from app.models.manifest_entry import ManifestEntry
 import re
+
 
 REGISTRABLE_STATUSES = {"Open", "Delayed"}
 CANCELLABLE_STATUSES = {"pending"}
@@ -77,26 +79,23 @@ TERMINAL_HOURS = "8 AM – 5 PM daily"
 # Capacity helpers
 # ---------------------------------------------------------------------------
 
-def _reserved_seats_count(trip_id):
-    """
-    Reserved/occupied seats = passengers already on the manifest
-    (ManifestEntry, regardless of source) + online registrations still
-    awaiting admin decision (PendingRegistration.status == "pending").
+def _confirmed_passenger_count(trip_id):
+    """Passengers on the manifest (approved online registrations + walk-ins).
+    These are the seats that are definitely taken."""
+    return ManifestEntry.query.filter_by(trip_id=trip_id).count()
 
-    Rejected registrations never count. Approved registrations are NOT
-    double-counted here: once approved, the existing admin flow
-    (approve_registration in app/blueprints/manifests/routes.py) creates
-    a ManifestEntry AND flips the PendingRegistration.status to
-    "approved" — it does not delete the pending row. Excluding
-    status != "pending" here avoids counting that seat twice.
-    """
-    from app.models.manifest_entry import ManifestEntry
 
-    manifest_count = ManifestEntry.query.filter_by(trip_id=trip_id).count()
-    pending_count = PendingRegistration.query.filter_by(
+def _pending_registration_count(trip_id):
+    """Online registrations still awaiting admin decision."""
+    return PendingRegistration.query.filter_by(
         trip_id=trip_id, status="pending"
     ).count()
-    return manifest_count + pending_count
+
+
+def _reserved_seats_count(trip_id):
+    """Seats taken = confirmed passengers on the manifest only.
+    Pending registrations do not hold a seat until they are approved."""
+    return _confirmed_passenger_count(trip_id)
 
 
 def _trip_capacity_info(trip):
@@ -183,6 +182,9 @@ def _accepts_registration(trip):
         return False, "TRIP_NOT_AVAILABLE", "This trip's departure time has already passed."
     if not trip.boat:
         return False, "TRIP_NOT_AVAILABLE", "This trip does not have a boat assigned yet."
+    if manifest_service.effective_status(trip) == manifest_service.STATUS_UNASSIGNED:
+        # Stored "Open" but boat, operator or crew is still missing.
+        return False, "TRIP_NOT_AVAILABLE", "This trip is not open for registration yet."
     capacity, reserved, remaining = _trip_capacity_info(trip)
     if remaining is not None and remaining <= 0:
         return False, "TRIP_FULL", "This trip is already full."
@@ -192,6 +194,16 @@ def _accepts_registration(trip):
 # ---------------------------------------------------------------------------
 # Serialization
 # ---------------------------------------------------------------------------
+
+def _display_status(trip, reserved=None):
+    """Status shown to passengers. Same rule as the Manifests list and the
+    Dashboard: Expired once the trip is closed by time, otherwise
+    manifest_service.effective_status (Unassigned / Full derived from the
+    manifest). The stored trip.status is left untouched."""
+    if trip_state_service.is_expired(trip, now=ph_now()):
+        return "Expired"
+    return manifest_service.effective_status(trip, reserved)
+
 
 def _serialize_trip_summary(trip):
     capacity, reserved, remaining = _trip_capacity_info(trip)
@@ -219,7 +231,7 @@ def _serialize_trip_summary(trip):
         ),
         "route_origin": trip.route_origin,
         "route_destination": trip.route_destination,
-        "status": trip.status,
+        "status": _display_status(trip, reserved),
         "boat": (
             {
                 "id": trip.boat.id,
@@ -253,6 +265,8 @@ def _serialize_trip_detail(trip):
             else None
         ),
         "departed_at": trip.departed_at.isoformat() if trip.departed_at else None,
+        "confirmed_count": _confirmed_passenger_count(trip.id),
+        "pending_count": _pending_registration_count(trip.id),
     })
     return data
 
@@ -418,12 +432,47 @@ def _send_registration_confirmation_sms(registration, trip):
             exc_info=True,
         )
 
+def _names_already_on_manifest(trip_id, names):
+    """Return the submitted names that already belong to a passenger on this
+    trip's manifest (approved passengers). Same normalisation as the admin
+    side: trimmed, spaces collapsed, case ignored."""
+    wanted = {
+        manifest_service.normalize_name(n): n
+        for n in names
+        if manifest_service.normalize_name(n)
+    }
+    if not wanted:
+        return []
+
+    on_manifest = {
+        manifest_service.normalize_name(full_name)
+        for (full_name,) in (
+            db.session.query(ManifestEntry.full_name)
+            .filter(ManifestEntry.trip_id == trip_id)
+            .all()
+        )
+    }
+    return [original for norm, original in wanted.items() if norm in on_manifest]
+
+
+def _duplicate_manifest_message(duplicates):
+    if len(duplicates) == 1:
+        return (
+            f"{duplicates[0]} is already registered on this trip's manifest. "
+            "Please check your details or choose a different trip."
+        )
+    return (
+        f"{', '.join(duplicates)} are already registered on this trip's manifest. "
+        "Please remove them from the list or choose a different trip."
+    )
+
+
 def _execute_registration(trip_id, cleaned):
     """Runs the actual registration transaction: lock trip -> check
-    status/capacity -> create PendingRegistration -> commit. Used by
-    both /api/passenger/registrations (JSON) and the plain-HTML
-    registration form route, so the business logic is defined exactly
-    once."""
+    status/capacity -> check manifest duplicates -> create PendingRegistration
+    -> commit. Used by both /api/passenger/registrations (JSON) and the
+    plain-HTML registration form route, so the business logic is defined
+    exactly once."""
     try:
         # Lock the trip row for the duration of this transaction so that
         # two concurrent registration requests for the same trip cannot
@@ -445,6 +494,14 @@ def _execute_registration(trip_id, cleaned):
         if not can_register:
             db.session.rollback()
             return RegistrationResult(False, error_code, block_reason)
+
+        # Same name already on this trip's manifest -> refuse
+        duplicates = _names_already_on_manifest(trip.id, [cleaned["full_name"]])
+        if duplicates:
+            db.session.rollback()
+            return RegistrationResult(
+                False, "DUPLICATE_PASSENGER", _duplicate_manifest_message(duplicates)
+            )
 
         # One parent registration per transaction (owns the reference code).
         parent = reg_svc.create_parent_registration(trip, "solo")
@@ -489,7 +546,8 @@ def _execute_registration(trip_id, cleaned):
             "REGISTRATION_FAILED",
             "Registration could not be completed due to a server error.",
         )
-     # Registration is already committed at this point — SMS/logging below
+
+    # Registration is already committed at this point — SMS/logging below
     # is best-effort and must not affect the result returned to the caller.
     _send_registration_confirmation_sms(registration, trip)
 
@@ -599,6 +657,23 @@ def _send_party_sms(registrations, trip):
         passenger_count = len(registrations)
         route = f"{trip.route_origin} to {trip.route_destination}"
 
+        # Solo -> just the passenger.
+        # Group -> the contact person on their own line, then everyone listed.
+        names = [(r.full_name or "").strip() for r in registrations]
+        contact_name = names[0]
+
+        if passenger_count == 1:
+            name_block = f"Passenger: {contact_name}\n"
+        else:
+            passenger_list = "\n".join(
+                f"{i}. {name}" for i, name in enumerate(names, start=1)
+            )
+            name_block = (
+                f"Contact Person: {contact_name}\n\n"
+                f"Passengers ({passenger_count}):\n"
+                f"{passenger_list}\n"
+            )
+
         # (number, message, label for the activity log)
         outgoing = []
         seen_numbers = set()
@@ -607,10 +682,12 @@ def _send_party_sms(registrations, trip):
         outgoing.append((
             contact_number,
             (
-                f"Talim Island Ferry: Registration submitted successfully. "
-                f"Reference Code: {reference_code}. "
-                f"Passengers: {passenger_count}. "
-                f"Trip: {route}, departing {when}. "
+                f"WAVETECH | Talim Island Ferry\n\n"
+                f"Registration submitted successfully!\n\n"
+                f"Reference Code: {reference_code}\n"
+                f"{name_block}\n"
+                f"Trip: {route}\n"
+                f"Departure: {when}\n\n"
                 f"Please bring a valid ID for verification."
             ),
             f"{passenger_count} passengers",
@@ -789,6 +866,19 @@ def _execute_party_registration(trip_id, people):
                 already_registered=True
             )
 
+        # Refuse anyone whose name is already on this trip's manifest.
+        duplicates = _names_already_on_manifest(
+            trip.id, [person["full_name"] for person in people]
+        )
+        if duplicates:
+            db.session.rollback()
+
+            return RegistrationResult(
+                False,
+                "DUPLICATE_PASSENGER",
+                _duplicate_manifest_message(duplicates)
+            )
+
         # Check trip availability.
         ok, error_code, message = _accepts_registration(trip)
 
@@ -922,7 +1012,8 @@ def submit_party_registration():
             else 409
             if result.error_code in (
                 "TRIP_FULL",
-                "TRIP_NOT_AVAILABLE"
+                "TRIP_NOT_AVAILABLE",
+                "DUPLICATE_PASSENGER"
             )
             else 500
         )
@@ -983,7 +1074,9 @@ def create_registration():
 
     if not result.success:
         status = 404 if result.error_code == "TRIP_NOT_FOUND" else (
-            409 if result.error_code in ("TRIP_FULL", "TRIP_NOT_AVAILABLE") else 500
+            409 if result.error_code in (
+                "TRIP_FULL", "TRIP_NOT_AVAILABLE", "DUPLICATE_PASSENGER"
+            ) else 500
         )
         return error_response(result.error_code, result.message, status=status)
 
@@ -1043,6 +1136,12 @@ def home():
 
     current_trip_date = None
     current_trip_time = None
+    # Same status the Manifests list and Dashboard show (Unassigned / Full /
+    # Expired), not the raw stored value.
+    current_trip_status = (
+        _display_status(current_trip, _reserved_seats_count(current_trip.id))
+        if current_trip else None
+    )
 
     if current_trip and current_trip.departure_time:
         shown_departure = current_trip.new_departure_time or current_trip.departure_time
@@ -1086,6 +1185,7 @@ def home():
         windy_message=windy_conditions["message"],
 
         current_trip=current_trip,
+        current_trip_status=current_trip_status,
         current_trip_date=current_trip_date,
         current_trip_time=current_trip_time,
 
@@ -1161,6 +1261,7 @@ def submit_registration_inline():
             if result.error_code in (
                 "TRIP_FULL",
                 "TRIP_NOT_AVAILABLE",
+                "DUPLICATE_PASSENGER",
             )
             else 500
         )
@@ -1180,60 +1281,6 @@ def submit_registration_inline():
             "status": result.registration.status,
         },
     }), 201
-
-@passenger_bp.route("/passenger/trips/<int:trip_id>/register", methods=["GET"])
-def registration_form_page(trip_id):
-    trip = db.session.get(Trip, trip_id)
-    if not trip:
-        abort(404)
-    return render_template(
-        "passenger/register_form.html",
-        trip=_serialize_trip_summary(trip),
-        passenger_types=sorted(VALID_PASSENGER_TYPES),
-        field_errors={},
-        form_values={},
-    )
-
-
-@passenger_bp.route("/passenger/trips/<int:trip_id>/register", methods=["POST"])
-def submit_registration_page(trip_id):
-    trip = db.session.get(Trip, trip_id)
-    if not trip:
-        abort(404)
-
-    # request.form is an ImmutableMultiDict; .get() behaves the same way
-    # a plain dict's .get() does, so the existing _validate_payload()
-    # works unmodified against either JSON or form-encoded input.
-    payload = dict(request.form)
-    payload.setdefault("trip_id", trip_id)
-
-    field_errors, cleaned = _validate_payload(payload)
-    if field_errors:
-        return render_template(
-            "passenger/register_form.html",
-            trip=_serialize_trip_summary(trip),
-            passenger_types=sorted(VALID_PASSENGER_TYPES),
-            field_errors=field_errors,
-            form_values=request.form,
-        ), 400
-
-    result = _execute_registration(trip_id, cleaned)
-
-    if not result.success:
-        field_errors = {"_general": result.message}
-        return render_template(
-            "passenger/register_form.html",
-            trip=_serialize_trip_summary(trip),
-            passenger_types=sorted(VALID_PASSENGER_TYPES),
-            field_errors=field_errors,
-            form_values=request.form,
-        ), 409 if result.error_code in ("TRIP_FULL", "TRIP_NOT_AVAILABLE") else 500
-
-    return redirect(url_for(
-        "passenger.registration_status_page",
-        reference_code=result.registration.reference_code,
-    ))
-
 
 # ---------------------------------------------------------------------------
 # GET /api/passenger/registrations/<reference_code>

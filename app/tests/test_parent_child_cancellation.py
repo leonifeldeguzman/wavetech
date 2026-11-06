@@ -9,6 +9,7 @@ from app.models.cancellation_security import VerificationThrottle
 from app.models.trip import Trip
 from app.services import registration_service as svc
 from app.blueprints.passenger import routes as R
+from app.models.manifest_entry import ManifestEntry
 
 PHONE = "09171234567"
 LAST4 = "4567"
@@ -44,7 +45,13 @@ def ids(ref):
 
 
 def reserved(trip_id):
-    return R._reserved_seats_count(trip_id)
+    """Active bookings on the trip: manifest entries + registrations still
+    pending. (R._reserved_seats_count is manifest-only: a pending registration
+    does not hold a seat until an admin approves it.)"""
+    return (
+        ManifestEntry.query.filter_by(trip_id=trip_id).count()
+        + PendingRegistration.query.filter_by(trip_id=trip_id, status="pending").count()
+    )
 
 
 @pytest.fixture()
@@ -197,9 +204,11 @@ def test_status_payload_never_contains_contact_or_real_names(client, make_open_t
 
 
 # 17-18 capacity / manifest -------------------------------------------
-def test_capacity_no_double_count_after_approval_and_reopens_when_full(client, make_open_trip):
+def test_no_double_count_after_approval_and_pending_never_fills_trip(client, make_open_trip):
     t = make_open_trip(capacity=3); ref = register(client, t, ["A One", "B Two", "C Three"])
-    assert db.session.get(Trip, t).status == "Full"
+    # Pending registrations do not hold seats, so they cannot fill the trip.
+    assert db.session.get(Trip, t).status == "Open"
+    assert R._reserved_seats_count(t) == 0
     # simulate admin approval of the first passenger: approved + manifest row
     first = PendingRegistration.query.filter_by(reference_code=ref).order_by(PendingRegistration.id).first()
     first_id, first_name = first.id, first.full_name
@@ -207,6 +216,7 @@ def test_capacity_no_double_count_after_approval_and_reopens_when_full(client, m
     db.session.add(ManifestEntry(trip_id=t, full_name=first_name, age=30, source="online"))
     db.session.commit()
     assert reserved(t) == 3                       # 1 manifest + 2 pending, not 4
+    assert R._reserved_seats_count(t) == 1        # only the manifest row is a seat
 
     verify(client, ref)
     # approved passenger cannot be cancelled online (token stays unused)

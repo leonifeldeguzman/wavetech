@@ -563,9 +563,9 @@
 }
 
 .dashboard-status-pill.departed {
-    background: #eff6ff;
-    border-color: #93c5fd;
-    color: #2563eb;
+    background: #e1ebf8;
+    border-color: #c5d7ed;
+    color: #285b91;
 }
 
 .dashboard-status-pill.open {
@@ -574,6 +574,7 @@
     color: #16a34a;
 }
 
+.dashboard-status-pill.boarding,
 .dashboard-status-pill.delayed,
 .dashboard-status-pill.caution {
     background: #fffbeb;

@@ -130,7 +130,9 @@ def test_successful_registration(client, make_boat, make_trip):
 # TEST 4 / Step 5 — capacity reflected after registration
 # ---------------------------------------------------------------------------
 
-def test_capacity_reflects_new_pending_registration(client, make_boat, make_trip):
+def test_pending_registration_does_not_hold_a_seat(client, make_boat, make_trip):
+    """Seats are taken by manifest entries only. A registration waiting for
+    admin approval is not counted until it is approved."""
     boat_id = make_boat(capacity=3)
     trip_id = make_trip(boat_id=boat_id, status="Open")
 
@@ -139,8 +141,8 @@ def test_capacity_reflects_new_pending_registration(client, make_boat, make_trip
     resp = client.get(f"/api/trips/{trip_id}")
     data = resp.get_json()["data"]
 
-    assert data["current_passenger_count"] == 1
-    assert data["remaining_capacity"] == 2
+    assert data["current_passenger_count"] == 0
+    assert data["remaining_capacity"] == 3
 
 
 def test_approved_pending_registration_not_double_counted(client, make_boat, make_trip, app):
@@ -258,22 +260,23 @@ def test_registration_rejected_for_departed_trip(client, make_boat, make_trip):
 # TEST 7 — full trip
 # ---------------------------------------------------------------------------
 
-def test_registration_rejected_when_full(client, make_boat, make_trip):
+def test_registration_rejected_when_full(client, make_boat, make_trip, app):
+    """A trip is full when its manifest reaches capacity (approved or walk-in
+    passengers); pending registrations alone do not fill it."""
     boat_id = make_boat(capacity=1)
     trip_id = make_trip(boat_id=boat_id, status="Open")
+    with app.app_context():
+        db.session.add(ManifestEntry(
+            trip_id=trip_id, full_name="Onboard Passenger", age=30, source="walkin"
+        ))
+        db.session.commit()
 
-    first = _post_registration(client, trip_id=trip_id, full_name="First Passenger")
-    assert first.status_code == 201
+    resp = _post_registration(client, trip_id=trip_id, full_name="Second Passenger")
+    body = resp.get_json()
 
-    second = _post_registration(client, trip_id=trip_id, full_name="Second Passenger")
-    body = second.get_json()
-
-    assert second.status_code == 409
+    assert resp.status_code == 409
     assert body["error"]["code"] == "TRIP_FULL"
-    assert PendingRegistration.query.filter_by(trip_id=trip_id).count() == 1
-
-    trip = Trip.query.get(trip_id)
-    assert trip.status == "Full"
+    assert PendingRegistration.query.filter_by(trip_id=trip_id).count() == 0
 
 
 def test_registration_rejected_no_boat_assigned(client, make_trip):

@@ -390,9 +390,9 @@ body {
 }
 
 .status-pill.departed {
-    color: #64748b;
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    color: #285b91;
+    background: #e1ebf8;
+    border-color: #c5d7ed;
 }
 
 
@@ -640,15 +640,16 @@ body {
     align-items: center;
     justify-content: center;
 
-    margin: -5px auto 65px;
+    margin: -5px auto 78px;
 
     position: relative;
     z-index: 2;
 }
 
 .register-step {
-    width: 42px;
-    height: 42px;
+    position: relative;
+    width: 40px;
+    height: 40px;
 
     display: flex;
     align-items: center;
@@ -659,7 +660,7 @@ body {
     background: #dcecff;
     color: #547292;
 
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 500;
 
     transition:
@@ -679,7 +680,7 @@ body {
 }
 
 .register-step-line {
-    width: 45px;
+    width: 80px;
     height: 1px;
 
     background: #b9cee4;
@@ -698,6 +699,27 @@ body {
 
 .register-step.active {
     transform: scale(1.02);
+}
+
+.register-step-label {
+    position: absolute;
+    top: calc(100% + 9px);
+    left: 50%;
+    transform: translateX(-50%);
+
+    white-space: nowrap;
+    font-style: normal;
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: #6b7685;
+
+    transition: color 0.2s ease;
+}
+
+.register-step.active .register-step-label,
+.register-step.completed .register-step-label {
+    color: #111827;
+    font-weight: 500;
 }
 
 
@@ -897,118 +919,214 @@ body {
     gap: 15px;
 }
 
-.trip-selection-card {
+/* Step 1: Choose Your Trip */
+
+.choose-trip-card .registration-card-header h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.choose-trip-card .registration-card-header p {
+    margin: 2px 0 0;
+    font-size: 0.92rem;
+    color: #6b7280;
+}
+
+.choose-trip-card hr {
+    margin: 24px 0 26px;
+    border: 0;
+    border-top: 1px solid #dfe4ea;
+    opacity: 1;   /* Bootstrap fades hr to 25%, which hid this line */
+}
+
+.ct-list {
+    gap: 18px;
+}
+
+.ct-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.ct-meta:not(:first-child) {
+    margin-top: 14px;
+}
+
+.ct-meta strong {
+    margin-left: 4px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.ct-meta .bi {
+    margin: 0 3px;
+    font-size: 0.8rem;
+}
+
+.ct-list .ct-meta + .ct-card {
+    margin-top: 10px;
+}
+
+.ct-card {
     display: block;
-
     position: relative;
-
     cursor: pointer;
 }
 
-.trip-selection-card input {
+.ct-card input {
     position: absolute;
-
     opacity: 0;
     pointer-events: none;
 }
 
-.trip-selection-content {
-    padding: 20px 22px;
+.ct-content {
+    padding: 20px 22px 22px;
 
-    border: 1px solid #d9e3ed;
-    border-radius: 10px;
-
+    border: 1px solid #d5dce4;
+    border-radius: 8px;
     background: #ffffff;
 
-    box-shadow: 0 4px 14px rgba(15, 32, 55, 0.06);
-
-    transition: 0.2s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease,
+                box-shadow 0.2s ease;
 }
 
-.trip-selection-card:hover
-.trip-selection-content {
+.ct-card:hover .ct-content {
     border-color: #9ebbd8;
 }
 
-.trip-selection-card input:checked ~ .trip-selection-content {
-    border-color: var(--navy);
-
-    box-shadow: 0 6px 18px rgba(15, 32, 55, 0.12);
-
+.ct-card input:checked ~ .ct-content {
+    border-color: #4b5563;
     background: #f8fbff;
+    box-shadow: 0 6px 18px rgba(15, 32, 55, 0.10);
 }
 
-.trip-selection-top {
+.ct-card input:focus-visible ~ .ct-content {
+    outline: 2px solid var(--navy);
+    outline-offset: 2px;
+}
+
+.ct-top {
     display: flex;
-
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
-.trip-selection-top h5 {
-    margin: 0 0 5px;
+.ct-time {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+}
 
-    font-size: 1rem;
+.ct-top-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ct-badge {
+    padding: 3px 14px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 0.68rem;
     font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
-.trip-route {
-    color: #777777;
-
-    font-size: 0.9rem;
+.ct-badge-open {
+    color: #2f8f5b;
+    background: #effaf3;
+    border-color: #bfe8cf;
 }
 
-.trip-route i {
-    margin: 0 5px;
+.ct-badge-delayed {
+    color: #a16207;
+    background: #fef9e7;
+    border-color: #f3dfa2;
 }
 
-.trip-select-indicator {
-    width: 28px;
-    height: 28px;
+.ct-badge-full {
+    color: #6b7280;
+    background: #f3f4f6;
+    border-color: #e1e4e8;
+}
+
+.ct-check {
+    flex: none;
+    width: 22px;
+    height: 22px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    border: 1px solid #cbd7e3;
+    border: 1px solid #d5dce4;
     border-radius: 50%;
 
-    color: transparent;
-}
-
-.trip-selection-card input:checked
-~ .trip-selection-content
-.trip-select-indicator {
-    background: var(--navy);
-
-    border-color: var(--navy);
-
-    color: white;
-}
-
-.trip-selection-details {
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 25px;
-
-    margin-top: 18px;
-
-    color: #666666;
-
     font-size: 0.9rem;
+    color: transparent;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.trip-selection-details i {
-    margin-right: 5px;
+.ct-card input:checked ~ .ct-content .ct-check {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: #ffffff;
 }
 
-.trip-disabled {
+.ct-info {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 22px;
+}
+
+.ct-info > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 0 22px;
+    border-left: 1px solid #dfe4ea;
+    min-width: 0;
+}
+
+.ct-info > div:first-child {
+    padding-left: 0;
+    border-left: 0;
+}
+
+.ct-label {
+    font-size: 0.7rem;
+    color: #9a8f86;
+}
+
+.ct-info strong {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #111827;
+    overflow-wrap: anywhere;
+}
+
+.ct-card .trip-delay-note {
+    margin-top: 16px;
+}
+
+.ct-card.ct-unavailable {
     cursor: not-allowed;
-    opacity: 0.55;
 }
 
+.ct-card.ct-unavailable .ct-content {
+    opacity: 0.6;
+}
+
+.ct-card.ct-unavailable:hover .ct-content {
+    border-color: #d5dce4;
+}
 
 /* =========================================
    ERROR
@@ -2110,7 +2228,15 @@ body {
     }
 
     .register-steps {
-        margin-bottom: 35px;
+        margin-bottom: 60px;
+    }
+
+    .register-step-line {
+        width: 36px;
+    }
+
+    .register-step-label {
+        font-size: 0.66rem;
     }
 
     .registration-card {
@@ -2131,10 +2257,20 @@ body {
         margin-top: 35px;
     }
 
-    .trip-selection-details {
-        flex-direction: column;
+    .ct-content {
+        padding: 16px 14px 18px;
+    }
 
-        gap: 8px;
+    .ct-info > div {
+        padding: 0 10px;
+    }
+
+    .ct-info strong {
+        font-size: 0.82rem;
+    }
+
+    .ct-badge {
+        padding: 3px 10px;
     }
 
 
@@ -2355,39 +2491,10 @@ font-size: 0.84rem;
 font-weight: 600;
 }
 
-/* Journey */
-
-.trip-route-box {
-display: grid;
-grid-template-columns: 1fr auto 1fr;
-align-items: center;
-gap: 25px;
-padding: 19px 20px;
-border-radius: 8px;
-background: #f7f9fb;
-}
-
-.trip-location {
-display: flex;
-flex-direction: column;
-gap: 5px;
-}
-
-.trip-location-name {
-color: #252a30;
-font-size: 0.92rem;
-font-weight: 500;
-}
-
 .trip-detail-label {
 color: #8a94a3;
 font-size: 0.75rem;
 font-weight: 400;
-}
-
-.trip-route-arrow {
-color: #a1a9b3;
-font-size: 0.85rem;
 }
 
 /* Information Grid */
@@ -2448,6 +2555,72 @@ font-weight: 600;
 .trip-capacity-total {
 color: #8a94a3;
 font-size: 0.78rem;
+}
+
+.availability-card {
+display: grid;
+grid-template-columns: 1fr 1fr;
+}
+
+.availability-main {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 6px;
+padding: 20px;
+text-align: center;
+}
+
+.availability-main-value {
+font-size: 2.6rem;
+font-weight: 600;
+line-height: 1;
+}
+
+.availability-main-label {
+font-size: 0.85rem;
+font-weight: 400;
+}
+
+.availability-stats {
+display: flex;
+flex-direction: column;
+border-left: 1px solid #e3e7ec;
+}
+
+.availability-stat {
+display: flex;
+flex: 1;
+flex-direction: column;
+justify-content: center;
+gap: 4px;
+padding: 16px 24px;
+}
+
+.availability-stat + .availability-stat {
+border-top: 1px solid #e3e7ec;
+}
+
+.availability-stat-value {
+font-size: 1.15rem;
+font-weight: 600;
+line-height: 1.2;
+}
+
+.availability-stat-label {
+font-size: 0.8rem;
+font-weight: 400;
+}
+
+.availability-note {
+margin: 18px 0 0;
+padding: 12px 14px;
+border: 1px solid #dfe5ec;
+border-radius: 8px;
+background: #f7f9fb;
+font-size: 0.78rem;
+line-height: 1.5;
 }
 
 /* Notices */
@@ -2565,16 +2738,6 @@ text-align: center;
     padding: 23px 0;
 }
 
-.trip-route-box {
-    grid-template-columns: 1fr;
-    gap: 12px;
-}
-
-.trip-route-arrow {
-    transform: rotate(90deg);
-    width: fit-content;
-}
-
 .trip-info-grid {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -2584,6 +2747,27 @@ text-align: center;
     align-items: flex-start;
     gap: 5px;
     flex-direction: column;
+}
+
+.availability-card {
+    grid-template-columns: 1fr;
+}
+
+.availability-main {
+    padding: 8px 0 20px;
+}
+
+.availability-main-value {
+    font-size: 2.3rem;
+}
+
+.availability-stats {
+    border-left: none;
+    border-top: 1px solid #e3e7ec;
+}
+
+.availability-stat {
+    padding: 16px 0;
 }
 
 }
@@ -3053,8 +3237,16 @@ text-align: center;
    (registration_success.html) — all classes prefixed rs-
 ========================================= */
 
-.rs-card { max-width: 760px; margin-left: auto; margin-right: auto; }
-.rs-card[hidden] { display: none; }
+.rs-card { 
+    max-width: 760px; 
+    margin-left: auto; 
+    margin-right: auto; 
+    margin-top: 50px;
+}
+
+.rs-card[hidden] {
+    display: none; 
+}
 
 .rs-title {
     margin: 0 0 24px;
@@ -3529,23 +3721,41 @@ body.rs-modal-open { overflow: hidden; }
 .rs-modal-card .rs-reason { margin-top: 16px; }
 .rs-modal-card .rs-btn { min-width: 120px; }
 
-/* Confirmation shown on the page after a cancellation */
-.rs-flash {
-    max-width: 600px;
-    margin: 0 auto 18px;
-    padding: 12px 16px;
-    border: 1px solid #b7e4c7;
-    border-radius: 10px;
-    background: #f0fdf4;
-    color: #15803d;
-    font-size: 0.9rem;
+/* Result card after a cancellation: "Registration Cancelled" or "N Passenger(s) Removed" */
+.rs-done-card {
+    max-width: 480px;
+    padding: 36px 40px 30px;
     text-align: center;
-    outline: none;
 }
+.rs-done-card .success-icon { margin-bottom: 16px; }
+.rs-done-card .rs-title { margin-bottom: 26px; padding: 0; font-size: 1.05rem; }
+.rs-done-card .rs-refbig { margin-bottom: 24px; }
+.rs-done-card .rs-refbig strong { color: #111111; font-size: 1.6rem; }
+
+.rs-done-body {
+    text-align: left;
+    border-top: 1px solid #e8ecf0;
+}
+.rs-result-sec { padding: 14px 0; border-top: 1px solid #e8ecf0; }
+.rs-result-sec:first-child { border-top: 0; }
+.rs-result-h {
+    margin: 0 0 6px;
+    color: #475467;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.rs-done-card .rs-row > strong,
+.rs-done-card .rs-row > strong.rs-removed { font-weight: 400; }
+.rs-done-card .rs-row > strong.rs-removed { color: #b42318; }
+.rs-done-card .rs-sms { margin-top: 6px; }
+.rs-done-card .rs-actions { max-width: none; margin-top: 28px; }
 
 @media (max-width: 640px) {
     .rs-modal { align-items: flex-end; padding: 12px; }
     .rs-modal-card { padding: 28px 18px 20px; }
+    .rs-done-card { padding: 28px 18px 22px; }
 }
 
 /* Passenger Type dropdown in Step 2: chosen value uses the reference "selected" colour */

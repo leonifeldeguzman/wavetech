@@ -130,9 +130,9 @@ def test_registration_still_succeeds_when_sms_raises_unexpectedly(client, app, m
         assert logs == []
 
 
-def test_registration_via_html_form_also_sends_sms(client, app, make_boat, make_trip, monkeypatch):
-    """The HTML form route shares _execute_registration() with the JSON
-    API route, so it should get the same SMS behavior for free."""
+def test_registration_via_inline_form_also_sends_sms(client, app, make_boat, make_trip, monkeypatch):
+    """The registration page's inline form route shares _execute_registration()
+    with the JSON API route, so it gets the same SMS behavior."""
     boat_id = make_boat(capacity=5)
     trip_id = make_trip(boat_id=boat_id)
 
@@ -145,9 +145,8 @@ def test_registration_via_html_form_also_sends_sms(client, app, make_boat, make_
     monkeypatch.setattr("app.services.unisms_service.send_sms", fake_send_sms)
 
     response = client.post(
-        f"/passenger/trips/{trip_id}/register",
+        "/passenger/register/submit-inline",
         data=_valid_payload(trip_id),
-        follow_redirects=False,
     )
-    assert response.status_code == 302  # redirect to registration_status_page
+    assert response.status_code == 201
     assert len(calls) == 1

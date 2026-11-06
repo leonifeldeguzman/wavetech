@@ -35,7 +35,8 @@ from requests.auth import HTTPBasicAuth
 @dataclass
 class SmsResult:
     success: bool
-    status: str  # "sent", "skipped_no_config", "skipped_no_number", "failed"
+    status: str  # "sent", "skipped_no_number", "skipped_disabled",
+             # "skipped_no_config", "failed"
     error: str | None = None
     raw_response: dict | None = None
 
@@ -54,6 +55,15 @@ def send_sms(number: str | None, message: str) -> SmsResult:
     """
     if not number:
         return SmsResult(False, "skipped_no_number")
+
+    sms_enabled = current_app.config.get("SMS_ENABLED", False)
+
+    if not sms_enabled:
+        current_app.logger.info(
+            "UniSMS SMS skipped: SMS_ENABLED is False. Recipient: %s",
+            number
+        )
+        return SmsResult(False, "skipped_disabled")
 
     api_key = current_app.config.get("UNISMS_API_KEY", "")
     if not api_key:

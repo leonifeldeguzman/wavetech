@@ -31,6 +31,24 @@ class _FakeResponse:
         return self._json_data
 
 
+def test_send_sms_skips_when_sms_disabled(app, monkeypatch):
+    """SMS_ENABLED is the master switch: when off, nothing is sent at all."""
+    from app.services import unisms_service
+
+    def must_not_post(*args, **kwargs):
+        raise AssertionError("requests.post must not be called while SMS is disabled")
+
+    monkeypatch.setattr("app.services.unisms_service.requests.post", must_not_post)
+
+    with app.app_context():
+        app.config["SMS_ENABLED"] = False
+        app.config["UNISMS_API_KEY"] = "test-key"
+        result = unisms_service.send_sms("09171234567", "hello")
+
+    assert result.success is False
+    assert result.status == "skipped_disabled"
+
+
 def test_send_sms_skips_when_no_number(app):
     from app.services.unisms_service import send_sms
     with app.app_context():
@@ -42,6 +60,7 @@ def test_send_sms_skips_when_no_number(app):
 def test_send_sms_skips_when_no_api_key(app, monkeypatch):
     from app.services.unisms_service import send_sms
     with app.app_context():
+        app.config["SMS_ENABLED"] = True
         app.config["UNISMS_API_KEY"] = ""
         result = send_sms("09171234567", "hello")
         assert result.success is False
@@ -68,6 +87,7 @@ def test_send_sms_success(app, monkeypatch):
     monkeypatch.setattr("app.services.unisms_service.requests.post", fake_post)
 
     with app.app_context():
+        app.config["SMS_ENABLED"] = True
         app.config["UNISMS_API_KEY"] = "test-key"
         app.config["UNISMS_SENDER_ID"] = "Unisoft"
         app.config["UNISMS_API_URL"] = "https://unismsapi.com/api/sms"
@@ -87,6 +107,7 @@ def test_send_sms_failure_response(app, monkeypatch):
     monkeypatch.setattr("app.services.unisms_service.requests.post", fake_post)
 
     with app.app_context():
+        app.config["SMS_ENABLED"] = True
         app.config["UNISMS_API_KEY"] = "test-key"
         app.config["UNISMS_API_URL"] = "https://unismsapi.com/api/sms"
         result = unisms_service.send_sms("09171234567", "hello")
@@ -106,6 +127,7 @@ def test_send_sms_network_error(app, monkeypatch):
     monkeypatch.setattr("app.services.unisms_service.requests.post", fake_post)
 
     with app.app_context():
+        app.config["SMS_ENABLED"] = False
         app.config["UNISMS_API_KEY"] = "test-key"
         app.config["UNISMS_API_URL"] = "https://unismsapi.com/api/sms"
         result = unisms_service.send_sms("09171234567", "hello")

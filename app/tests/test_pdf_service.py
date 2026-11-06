@@ -1,4 +1,13 @@
+import pytest
+
 from app.services.pdf_service import build_manifest_pdf, manifest_filename
+
+
+@pytest.fixture(autouse=True)
+def _app_context(app):
+    """build_manifest_pdf reads app resources, so run every test in a context."""
+    with app.app_context():
+        yield
 
 
 def _detail(passengers=None, boat_name="MB Coral", capacity=15):

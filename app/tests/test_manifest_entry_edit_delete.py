@@ -353,7 +353,7 @@ def test_delete_activity_log_recorded(app, make_boat, make_trip):
     admin.post(f"/manifests/{trip_id}/manifest/{entry_id}/delete")
 
     with app.app_context():
-        logs = ActivityLog.query.filter_by(action="Deleted Passenger Manifest").all()
+        logs = ActivityLog.query.filter_by(action="Manifest Deleted").all()
         assert len(logs) == 1
         assert "Juan Dela Cruz" in logs[0].details
         assert logs[0].admin_name == "Test Admin"

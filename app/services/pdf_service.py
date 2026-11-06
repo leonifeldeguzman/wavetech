@@ -1,5 +1,7 @@
 """Builds the Manifest Details PDF in memory. Nothing is written to disk."""
-import re
+import re, os
+from flask import current_app
+from reportlab.platypus import Image as RLImage
 from io import BytesIO
 from xml.sax.saxutils import escape
 
@@ -23,7 +25,18 @@ MUTED = colors.HexColor("#6b7280")
 _base = getSampleStyleSheet()
 TITLE = ParagraphStyle("WTTitle", parent=_base["Title"], textColor=NAVY,
                        fontSize=20, alignment=0, spaceAfter=2)
-SUBTITLE = ParagraphStyle("WTSub", parent=_base["Normal"], textColor=MUTED, fontSize=10)
+
+SUBTITLE = ParagraphStyle(
+    "WTSub",
+    parent=_base["Normal"],
+    textColor=colors.HexColor("#4b5563"),
+    fontName="Helvetica",
+    fontSize=10,
+    alignment=0,  # Left aligned
+    topmargin=5,
+    spaceAfter=2,
+)
+
 HEADING = ParagraphStyle("WTHeading", parent=_base["Heading2"], textColor=NAVY,
                          fontSize=12, spaceBefore=4, spaceAfter=6)
 LABEL = ParagraphStyle("WTLabel", parent=_base["Normal"], textColor=MUTED, fontSize=9.5)
@@ -55,7 +68,8 @@ def _info_table(detail):
         ("Date:", detail["date_label"], "Capacity:", detail["capacity"]),
         ("Schedule:", detail["time_label"], "Passengers:", detail["passengers"]),
         ("Boat Name:", detail["boat_name"], "Status:", detail["status"]),
-        ("Driver's Name:", detail["driver_name"], "", ""),
+        ("Operator Name:", detail["driver_name"], "", ""),
+        ("Crew Name:", detail.get("crew_name"), "", ""),
     ]
     data = [
         [Paragraph(a, LABEL), Paragraph(_text(b), VALUE),
@@ -136,27 +150,72 @@ def _signature_block(detail):
 
 def build_manifest_pdf(detail):
     """detail = analytics_service.get_manifest_detail(...). Returns PDF bytes."""
+    import os
+    from flask import current_app
+    from reportlab.platypus import Image as RLImage
+
     buffer = BytesIO()
+
     doc = SimpleDocTemplate(
-        buffer, pagesize=A4,
-        leftMargin=20 * mm, rightMargin=20 * mm, topMargin=18 * mm, bottomMargin=22 * mm,
+        buffer,
+        pagesize=A4,
+        leftMargin=20 * mm,
+        rightMargin=20 * mm,
+        topMargin=10 * mm,
+        bottomMargin=22 * mm,
         title=f"Passenger Manifest - {detail['date_label']} {detail['time_label']}",
         author="WaveTech",
     )
-    story = [
-        Paragraph("WaveTech", TITLE),
+
+    # WaveTech horizontal logo path
+    logo_path = os.path.join(
+        current_app.static_folder,
+        "images",
+        "wavetech_horizontal_logo.png"
+    )
+
+    story = []
+
+    # Add centered WaveTech logo
+    if os.path.exists(logo_path):
+        logo = RLImage(
+            logo_path,
+            width=55 * mm,
+            height=22 * mm,
+            kind="proportional"
+        )
+        logo.hAlign = "LEFT"
+
+        story.extend([
+            logo,
+            Spacer(1, 2 * mm),
+        ])
+
+    # Centered Passenger Manifest subtitle
+    story.extend([
         Paragraph("Passenger Manifest", SUBTITLE),
         Spacer(1, 8 * mm),
+
+        # Trip information
         _info_table(detail),
         Spacer(1, 6 * mm),
+
+        # Passenger list
         Paragraph("Passenger List", HEADING),
         _passenger_table(detail["passenger_list"]),
         Spacer(1, 14 * mm),
-        KeepTogether(_signature_block(detail)),
-    ]
-    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
-    return buffer.getvalue()
 
+        # Signature section
+        KeepTogether(_signature_block(detail)),
+    ])
+
+    doc.build(
+        story,
+        onFirstPage=_footer,
+        onLaterPages=_footer
+    )
+
+    return buffer.getvalue()
 
 def manifest_filename(detail):
     """e.g. WaveTech-Manifest-June-18-2026-10-00-AM.pdf"""

@@ -264,8 +264,8 @@
                     </div>
 
                     {% if current_trip %}
-                        <span class="home-trip-status {{ current_trip.status|lower|replace(' ', '-') }}">
-                            {{ current_trip.status }}
+                        <span class="home-trip-status {{ current_trip_status|lower|replace(' ', '-') }}">
+                            {{ current_trip_status }}
                         </span>
                     {% endif %}
 

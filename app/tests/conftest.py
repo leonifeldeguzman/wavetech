@@ -125,6 +125,11 @@ def make_boat(app):
 def make_trip(app):
     def _make(boat_id=None, status="Open", **kwargs):
         from datetime import datetime, timezone, timedelta
+        # A trip with a boat is a fully assigned (Open) trip unless a test
+        # says otherwise: Open now also needs an operator and a crew.
+        if boat_id is not None:
+            kwargs.setdefault("operator_name", "Test Operator")
+            kwargs.setdefault("crew_name", "Test Crew")
         with app.app_context():
             trip = Trip(
                 boat_id=boat_id,

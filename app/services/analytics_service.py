@@ -361,9 +361,10 @@ def get_manifest_detail(trip_id):
         "date_label": _date_label(trip.departure_time.date()),
         "time_label": _time_label(trip.departure_time),
         "boat_name": trip.boat.name if trip.boat else None,
-        # The operator drives the boat. Trips saved before the Operator field
-        # existed only have a crew name, so fall back to it for those records.
+        # Keep the operator and crew fields separate for Manifest Details.
+        # Preserve the existing fallback for the displayed driver's name.
         "driver_name": trip.operator_name or trip.crew_name,
+        "crew_name": trip.crew_name,
         "capacity": trip.boat.capacity if trip.boat else None,
         "passengers": len(entries),
         "status": trip.status,

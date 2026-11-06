@@ -156,6 +156,11 @@
     color: #6c757d;
 }
 
+.manifest-checkin-status.manifest-checkin-unassigned {
+    background-color: #eef0f3;
+    color: #4b5563;
+}
+
 .manifest-checkin-status.manifest-checkin-full {
     background-color: #fff3cd;
     color: #8a6d00;
@@ -172,8 +177,9 @@
 }
 
 .manifest-checkin-status.manifest-checkin-departed {
-    background-color: #e9ecef;
-    color: #495057;
+    background-color: #e1ebf8;
+    color: #285b91;
+    box-shadow: inset 0 0 0 1px #c5d7ed;
 }
 
 .manifest-trip-info-grid {
@@ -1232,16 +1238,48 @@
 }
 
 
-/* Five fields: three across, then Capacity + Route */
+/* Five fields in ONE row: Operator, Crew, Boat, Capacity, Route.
+   Underlined inputs, label above, route as plain text. */
 
 .manifest-trip-info-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 26px 44px;
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr)
+        minmax(0, 1fr)
+        minmax(104px, 0.8fr)
+        minmax(0, 1.9fr);
+    gap: 26px 36px;
     align-items: start;
 }
 
 .manifest-trip-info-grid .manifest-route-field {
-    grid-column: span 2;
+    grid-column: auto;
+}
+
+.manifest-trip-info-grid .manifest-field-label {
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+.manifest-trip-info-grid .manifest-route {
+    gap: 12px;
+    font-size: 0.95rem;
+}
+
+/* Medium screens: three across, Capacity + Route on the second row */
+
+@media (max-width: 1199.98px) {
+
+    .manifest-trip-info-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 26px 44px;
+    }
+
+    .manifest-trip-info-grid .manifest-route-field {
+        grid-column: span 2;
+    }
 }
 
 
@@ -1250,6 +1288,7 @@
 .manifest-field input.manifest-combo-input,
 .manifest-field input.manifest-capacity-input {
     box-sizing: border-box;
+    text-overflow: ellipsis;
     border: none;
     border-bottom: 1px solid #555;
     border-radius: 0;
@@ -1260,7 +1299,6 @@
 
 .manifest-field input.manifest-combo-input {
     padding-right: 26px;
-    text-overflow: ellipsis;
 }
 
 .manifest-field input.manifest-combo-input:focus,
@@ -1384,5 +1422,200 @@
     .manifest-route {
         flex-wrap: wrap;
         white-space: normal;
+    }
+}
+
+   /* Assess Condition when the trip is not scheduled for today */
+    .manifest-assess-btn.manifest-assess-unavailable,
+    .manifest-assess-btn.manifest-assess-unavailable:hover {
+        background-color: #eef0f3;
+        border-color: #d5d9e0;
+        color: #8a919c;
+        cursor: not-allowed;
+        box-shadow: none;
+        opacity: 1;
+    }
+
+    .manifest-assess-note {
+        color: #8a919c;
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
+
+/* =========================================================
+   READ-ONLY (departed / expired) BANNER + BACK / SUMMARY ACTIONS
+   ========================================================= */
+
+.manifest-readonly-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 11px 16px;
+    border: 1px solid #c5d7ed;
+    border-radius: 8px;
+    background-color: #f3f7fc;
+    color: #285b91;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.manifest-summary-btn {
+    height: 35px;
+    min-width: 160px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border: 1px solid var(--navy);
+    border-radius: 7px;
+    background-color: var(--navy);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.manifest-summary-btn:hover {
+    background-color: var(--navy-dark);
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.manifest-combo-input[readonly],
+.manifest-capacity-input[readonly] {
+    background-color: #f7f8fa;
+    color: #444b57;
+    cursor: default;
+}
+
+/* =========================================================
+   DISCARD CHANGES MODAL
+   ========================================================= */
+
+.manifest-discard-modal .modal-dialog {
+    max-width: 380px;
+}
+
+.manifest-discard-modal .modal-content {
+    border: 0;
+    border-radius: 14px;
+    background-color: #ffffff;
+    box-shadow: 0 10px 30px rgba(16, 24, 40, 0.18);
+}
+
+.manifest-discard-modal .modal-body {
+    padding: 28px 28px 8px;
+}
+
+.manifest-discard-title {
+    margin: 0 0 8px;
+    color: #111111;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.manifest-discard-text {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.manifest-discard-footer {
+    display: flex;
+    gap: 10px;
+    padding: 18px 28px 24px;
+    border-top: 0;
+}
+
+.manifest-discard-footer .btn {
+    flex: 1;
+    height: 38px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.manifest-discard-stay {
+    border: 1px solid var(--navy);
+    background-color: #ffffff;
+    color: var(--navy);
+}
+
+.manifest-discard-confirm {
+    border: 1px solid var(--navy);
+    background-color: var(--navy);
+    color: #ffffff;
+}
+
+.manifest-discard-confirm:hover {
+    background-color: var(--navy-dark);
+    color: #ffffff;
+}
+
+/* =========================================================
+   DISABLED ADD BUTTON / CAPACITY BANNER / FULL PILL
+   ========================================================= */
+
+.manifest-add-wrap {
+    display: inline-block;
+}
+
+.manifest-add-btn:disabled,
+.manifest-add-btn:disabled:hover {
+    border-color: #d5d9e0;
+    background-color: #eef0f3;
+    color: #8a919c;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.manifest-capacity-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border: 1px solid #f1dc9b;
+    border-radius: 8px;
+    background-color: #fff8e1;
+    color: #6b5300;
+    font-size: 0.82rem;
+}
+
+.manifest-capacity-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.manifest-capacity-banner-btn {
+    flex-shrink: 0;
+    padding: 5px 14px;
+    border: 1px solid #8a6d00;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #6b5300;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.manifest-capacity-banner-btn:hover {
+    background-color: #8a6d00;
+    color: #ffffff;
+}
+
+.manifest-capacity-input.is-highlighted {
+    box-shadow: 0 0 0 3px rgba(138, 109, 0, 0.35);
+}
+
+@media (max-width: 575.98px) {
+    .manifest-capacity-banner {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

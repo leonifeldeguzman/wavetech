@@ -337,6 +337,36 @@
     border-color: #e5a3a3;
 }
 
+.home-trip-status.full {
+    color: #b42318;
+    background: #fff5f5;
+    border-color: #e5a3a3;
+}
+
+.home-trip-status.boarding {
+    color: #a16207;
+    background: #fffbeb;
+    border-color: #e9c46a;
+}
+
+.home-trip-status.departed {
+    color: #285b91;
+    background: #e1ebf8;
+    border-color: #c5d7ed;
+}
+
+.home-trip-status.unassigned {
+    color: #5b6470;
+    background: #eef0f3;
+    border-color: #d9dde3;
+}
+
+.home-trip-status.expired {
+    color: #6b7280;
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
 
 .home-trip-update-note {
     display: flex;

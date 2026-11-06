@@ -3,6 +3,17 @@
 {% block title %}Register{% endblock %}
 
 {% block content %}
+<style>
+  .review-passengers-wrap { overflow-x: auto; width: 100%; }
+  .review-passengers-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  .review-passengers-table th,
+  .review-passengers-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid rgba(0,0,0,0.08); }
+  .review-passengers-table th { font-weight: 600; font-size: 0.8rem; opacity: 0.7; }
+  .review-passengers-table th:first-child,
+  .review-passengers-table td:first-child { width: 44px; }
+  .review-passengers-table tbody tr:last-child td { border-bottom: 0; }
+</style>
+
 <div class="passenger-register-page">
 
   <section class="register-hero">
@@ -25,54 +36,79 @@
 
   {% if trips %}
   <div class="register-steps" id="registrationSteps" style="display:none;">
-    <div class="register-step active" data-step="1"><span>1</span></div>
+    <div class="register-step active" data-step="1"><span>1</span><em class="register-step-label">Choose Trip</em></div>
     <div class="register-step-line"></div>
-    <div class="register-step" data-step="2"><span>2</span></div>
+    <div class="register-step" data-step="2"><span>2</span><em class="register-step-label">Your Details</em></div>
     <div class="register-step-line"></div>
-    <div class="register-step" data-step="3"><span>3</span></div>
+    <div class="register-step" data-step="3"><span>3</span><em class="register-step-label">Review &amp; Confirm</em></div>
   </div>
 
   <section class="registration-panel" id="registrationPanel" data-max-party="{{ max_party }}">
 
     <!-- STEP 1: CHOOSE TRIP -->
     <div class="registration-step-content" id="step1">
-      <div class="registration-card">
+      <div class="registration-card choose-trip-card">
         <div class="registration-card-header">
           <h3>Choose Your Trip</h3>
-          <p>Choose an available boat and schedule.</p>
+          <p>Select one trip to continue</p>
         </div>
         <hr>
-        <div class="available-trips">
+        <div class="available-trips ct-list">
+          {# Date and route are shown once above each run of trips that share them. #}
+          {% set ns = namespace(key=none) %}
           {% for trip in trips %}
-          <label class="trip-selection-card">
+          {% set group_key = [trip.departure_date, trip.route_origin, trip.route_destination]|join('|') %}
+          {% if group_key != ns.key %}
+          {% set ns.key = group_key %}
+          <div class="ct-meta">
+            <div><span>Date:</span> <strong>{{ trip.departure_date }}</strong></div>
+            <div><span>Route:</span> <strong>{{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }}</strong></div>
+          </div>
+          {% endif %}
+          {% set boat_name = trip.boat.name if trip.boat else 'Boat pending' %}
+          {% set has_seats = trip.accepts_registration and trip.remaining_capacity %}
+          {% if not has_seats %}
+            {% set badge, badge_cls = ('Full', 'full') if not trip.remaining_capacity else ('Closed', 'full') %}
+          {% elif trip.status == 'Delayed' %}
+            {% set badge, badge_cls = 'Delayed', 'delayed' %}
+          {% else %}
+            {% set badge, badge_cls = 'Open', 'open' %}
+          {% endif %}
+          <label class="ct-card{% if not has_seats %} ct-unavailable{% endif %}">
             <input type="radio" name="selected_trip" value="{{ trip.trip_id }}"
                    data-seats="{{ trip.remaining_capacity }}"
-                   data-boat="{{ trip.boat.name }}"
+                   data-boat="{{ boat_name }}"
                    data-route="{{ trip.route_origin }} to {{ trip.route_destination }}"
                    data-date="{{ trip.display_date }}"
-                   data-time="{{ trip.display_time }}">
-            <div class="trip-selection-content">
-              <div class="trip-selection-top">
-                <div>
-                  <h5>
-                    <i class="fa-solid fa-ship"></i> {{ trip.boat.name }}
-                    {% if trip.operator_name %}
-                      <span class="trip-crew" title="Operator"><i class="fa-solid fa-user"></i> {{ trip.operator_name }}</span>
-                    {% endif %}
-                  </h5>
-                  <div class="trip-route">
-                    {{ trip.route_origin }} <i class="bi bi-arrow-right"></i> {{ trip.route_destination }}
-                  </div>
-                </div>
-                <div class="trip-top-right">
-                  <span class="status-pill {{ trip.status|lower }}">{{ trip.status|upper }}</span>
-                  <span class="trip-select-indicator"><i class="bi bi-check"></i></span>
-                </div>
+                   data-time="{{ trip.display_time }}"
+                   {% if not has_seats %}disabled{% endif %}>
+            <div class="ct-content">
+              <div class="ct-top">
+                <span class="ct-time">{{ trip.departure_time }}</span>
+                <span class="ct-top-right">
+                  <span class="ct-badge ct-badge-{{ badge_cls }}">{{ badge }}</span>
+                  <span class="ct-check"><i class="bi bi-check"></i></span>
+                </span>
               </div>
-              <div class="trip-selection-details">
-                <div><i class="bi bi-clock"></i> {{ trip.departure_time }}</div>
-                <div><i class="bi bi-calendar3"></i> {{ trip.departure_date }}</div>
-                <div><i class="bi bi-people"></i> {{ trip.remaining_capacity }} seat{{ '' if trip.remaining_capacity == 1 else 's' }} left</div>
+              <div class="ct-info">
+                <div>
+                  <span class="ct-label">Boat</span>
+                  <strong>{{ boat_name }}</strong>
+                </div>
+                <div>
+                  <span class="ct-label">Operator</span>
+                  <strong>{{ trip.operator_name or trip.operator or 'To be announced' }}</strong>
+                </div>
+                <div>
+                  <span class="ct-label">Availability</span>
+                  <strong>
+                    {% if has_seats %}
+                      {{ trip.remaining_capacity }} seat{{ '' if trip.remaining_capacity == 1 else 's' }} left
+                    {% else %}
+                      Not available
+                    {% endif %}
+                  </strong>
+                </div>
               </div>
               {% if trip.status == 'Delayed' %}
               <div class="trip-delay-note">
@@ -616,9 +652,20 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
 
     if (mode === "group") {
       var g = section(box, "Passengers (" + list.length + ")");
-      list.forEach(function (p, i) {
-        row(g, "#" + (i + 1), p.full_name + " · " + p.age + " · " + p.passenger_type);
+      var wrap = document.createElement("div"); wrap.className = "review-passengers-wrap";
+      var tbl = document.createElement("table"); tbl.className = "review-passengers-table";
+      var head = tbl.createTHead().insertRow();
+      ["#", "Name", "Age", "Type"].forEach(function (h) {
+        var th = document.createElement("th"); th.textContent = h; head.appendChild(th);
       });
+      var tb = tbl.createTBody();
+      list.forEach(function (p, i) {
+        var tr = tb.insertRow();
+        [String(i + 1), p.full_name, String(p.age), p.passenger_type].forEach(function (v) {
+          tr.insertCell().textContent = v;
+        });
+      });
+      wrap.appendChild(tbl); g.appendChild(wrap);
     }
     el("privacySolo").hidden = mode !== "solo"; el("privacyGroup").hidden = mode !== "group";
     el("truthSolo").hidden = mode !== "solo";   el("truthGroup").hidden = mode !== "group";
@@ -700,12 +747,6 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
     });
     box.parentNode.hidden = whole;
     el("cancelLink").hidden = whole;
-
-    var old = el("cancelFlash"); if (old) old.remove();
-    var f = WTCancelFlow.flash(d); f.id = "cancelFlash";
-    var panelEl = document.querySelector("#step4 .rs3-panel");
-    panelEl.parentNode.insertBefore(f, panelEl);
-    f.focus({ preventScroll: true });
   }
 
   function initCancelFlow(code) {
@@ -717,6 +758,8 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
       date: trip && trip.date ? trip.date : "\u2014",
       time: trip && trip.time ? trip.time : "\u2014",
       route: trip && trip.route ? trip.route.replace(" to ", " \u2192 ") : "\u2014",
+      homeUrl: "{{ url_for('passenger.home') }}",
+      registerUrl: "{{ url_for('passenger.register_page') }}",
       onCancelled: onCancelled
     });
     // Opens over this page. The href stays as a fallback if scripts fail.
@@ -845,6 +888,18 @@ var mode = "solo", maxParty = MAX_PARTY, trip = null;
         holdAsUncertain();        // network drop / timeout: outcome unknown
       });
   });
+
+  /* ---------- preselect trip from ?trip=<id> (e.g. from Trip Details) ---------- */
+  (function () {
+    var wanted = new URLSearchParams(window.location.search).get("trip");
+    if (!wanted) return;
+    var radio = document.querySelector('input[name="selected_trip"][value="' + wanted + '"]');
+    if (!radio || radio.disabled) return;   // unavailable: fall back to normal trip selection
+    radio.checked = true;
+    radio.dispatchEvent(new Event("change"));
+    el("startRegistrationBtn").click();
+    el("toStep2Btn").click();
+  })();
 });
 
 

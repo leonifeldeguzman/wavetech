@@ -442,6 +442,8 @@ def create_announcement(
     expires_at_raw=None,
     save_draft: bool = False,
     created_by_user_id=None,
+    trip_id=None,
+    send_sms: bool = True,
 ) -> Announcement:
     """Validate and create a new notice.
 
@@ -450,6 +452,11 @@ def create_announcement(
 
     Raises AnnouncementValidationError on any invalid input; nothing is
     written to the database in that case.
+
+    ``trip_id`` tags the notice with the trip it is about. ``send_sms=False``
+    skips the all-passengers SMS broadcast (used by Delay/Cancel Trip, which
+    text only the affected trip's passengers); the notice is marked as
+    already dispatched so a later re-publish cannot broadcast it either.
     """
     clean_title = _clean_title(title)
     clean_content = _clean_content(content)
@@ -460,7 +467,10 @@ def create_announcement(
         content=clean_content,
         type=clean_type,
         created_by_user_id=created_by_user_id,
+        trip_id=trip_id,
     )
+    if not send_sms:
+        announcement.sms_dispatched_at = utc_now_naive()
 
     if publish_now:
         announcement.expires_at = _parse_expiry_datetime(expires_at_raw)
@@ -484,7 +494,7 @@ def create_announcement(
     db.session.add(announcement)
     db.session.commit()
 
-    if publish_now:
+    if publish_now and send_sms:
         dispatch_announcement_sms(announcement.id)
 
     return announcement

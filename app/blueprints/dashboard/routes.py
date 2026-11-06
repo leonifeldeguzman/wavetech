@@ -7,7 +7,7 @@ from app.extensions import db
 from app.models.trip import Trip
 from app.models.manifest_entry import ManifestEntry
 from app.models.environmental_reading import EnvironmentalReading
-from app.services import historical_baseline_service, monitoring_service, scheduling_service, settings_service
+from app.services import historical_baseline_service, manifest_service, monitoring_service, scheduling_service, settings_service, trip_state_service
 
 
 @dashboard_bp.route("/dashboard")
@@ -22,21 +22,46 @@ def index():
         Trip.departure_time < day_end,
     ).order_by(Trip.departure_time).all()
 
+    # Weather cannot be forecast, so only today's remaining trips can be
+    # assessed (never a trip on a future date).
     scheduled_trips = Trip.query.filter(
         Trip.departure_time >= ph_now(),
+        Trip.departure_time < day_end,
         Trip.status.notin_(["Cancelled", "Departed"]),
     ).order_by(Trip.departure_time).all()
 
     live_statuses = ("Open", "Boarding", "Full", "Delayed")
     now = ph_now()
+    # Same rule as the Manifests list (trip_state_service.is_expired), so the
+    # Expired badge can never differ between the two pages.
     expired_ids = {
         t.id for t in all_trips_today
-        if t.status in live_statuses and t.departure_time < now
+        if trip_state_service.is_expired(t, now=now)
     }
     active_trips_count = sum(
         1 for t in all_trips_today
         if t.status in live_statuses and t.id not in expired_ids
     )
+
+    # Real status per trip (same rule as the Manifests list): "Unassigned"
+    # until boat, operator and crew are all assigned.
+    # "Full" is derived from the live seat count, same as the timetable.
+    # Confirmed passengers only (manifest entries), exactly as the Manifests
+    # list and the passenger portal count them. Pending registrations do not
+    # hold a seat, so they must not push a trip to "Full" here.
+    seat_counts = {t.id: 0 for t in all_trips_today}
+    if seat_counts:
+        rows = (
+            db.session.query(ManifestEntry.trip_id, db.func.count(ManifestEntry.id))
+            .filter(ManifestEntry.trip_id.in_(list(seat_counts)))
+            .group_by(ManifestEntry.trip_id)
+            .all()
+        )
+        seat_counts.update(dict(rows))
+    display_status = {
+        t.id: manifest_service.effective_status(t, seat_counts[t.id])
+        for t in all_trips_today
+    }
 
     trip_ids_today = [t.id for t in all_trips_today]
     passengers_today = 0
@@ -68,6 +93,13 @@ def index():
     trip_id = request.args.get("trip_id", type=int)
     if trip_id is not None:
         selected_trip = db.session.get(Trip, trip_id)
+        # A hand-edited URL for another day gets no assessment.
+        if selected_trip is not None and selected_trip.departure_time.date() != today:
+            selected_trip = None
+        # A departed or expired trip is a closed record and can no longer be
+        # assessed (hand-edited URL).
+        if selected_trip is not None and trip_state_service.is_read_only(selected_trip, now=ph_now()):
+            selected_trip = None
         if selected_trip is not None:
             scheduling_assessment = assessment
             # Only offered for CAUTION/DELAY and UNSAFE results — see
@@ -86,6 +118,7 @@ def index():
         "dashboard/index.html",
         trips=all_trips_today,
         expired_ids=expired_ids,
+        display_status=display_status,
         scheduled_trips=scheduled_trips,
         active_trips_count=active_trips_count,
         passengers_today=passengers_today,
@@ -138,6 +171,29 @@ def dss_details(trip_id):
     if trip is None:
         response = jsonify({"error": "Trip not found."})
         response.status_code = 404
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    # A departed trip is a closed record: no further condition assessment.
+    if trip_state_service.is_departed(trip):
+        response = jsonify({"error": "This trip has departed."})
+        response.status_code = 409
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    # An expired trip is closed as well.
+    if trip_state_service.is_expired(trip, now=ph_now()):
+        response = jsonify({"error": "This trip has expired."})
+        response.status_code = 409
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    # Weather cannot be forecast: assess only trips scheduled for today (PH).
+    if trip.departure_time.date() != ph_today():
+        response = jsonify({
+            "error": "Conditions can only be assessed on the day of the trip."
+        })
+        response.status_code = 409
         response.headers["Cache-Control"] = "no-store"
         return response
 

@@ -132,17 +132,10 @@
   if (!root || !window.WTCancelFlow) return;
   var D = root.dataset;
 
-  // After a successful cancellation the card closes and the status block is
-  // refreshed from the server, so it shows what is actually in the database.
-  function refreshStatus(d) {
-    function notice() {
-      var cur = document.getElementById("rsStatus");
-      var title = cur && cur.querySelector(".rs-title");
-      if (!title) return;
-      var f = WTCancelFlow.flash(d);
-      title.insertAdjacentElement("afterend", f);
-      f.focus({ preventScroll: true });
-    }
+  // The result card ("Registration Cancelled" / "N Passenger Removed") is shown
+  // by WTCancelFlow. If it is dismissed instead of using its buttons, the status
+  // block is refreshed from the server so it shows what is in the database.
+  function refreshStatus() {
     fetch(location.pathname, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
       .then(function (r) { if (!r.ok) throw new Error(); return r.text(); })
       .then(function (html) {
@@ -150,7 +143,6 @@
         var cur = document.getElementById("rsStatus");
         if (!fresh || !cur) { location.reload(); return; }
         cur.innerHTML = fresh.innerHTML;
-        notice();
       })
       .catch(function () { location.reload(); });
   }
@@ -162,6 +154,8 @@
     date: D.date,
     time: D.time,
     route: D.origin + " \u2192 " + D.dest,
+    homeUrl: D.homeUrl,
+    registerUrl: D.registerUrl,
     onCancelled: refreshStatus
   });
 
