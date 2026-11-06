@@ -4097,3 +4097,11 @@ body.rs-modal-open { overflow: hidden; }
         margin-top: 32px;
     }
 }
+
+.schedule-info-card .schedule-table-wrapper .schedule-header,
+.schedule-info-card .schedule-table-wrapper .schedule-header > div {
+  background: #F1F8FF !important;
+  background-image: none !important;
+  color: #111111 !important;
+  font-weight: 700 !important;
+}

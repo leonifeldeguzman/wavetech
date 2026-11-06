@@ -89,15 +89,9 @@
                             {% endif %}
                         </div>
 
-                        <div class="home-environment-subvalue environmental-condition {{ environmental_condition.css_class }}">
-                            {{ environmental_condition.label }}
-                        </div>
+                        
 
-                            {% if windy_status == "manual" %}
-                            <div class="home-environment-subvalue">
-                                Manual observation{% if windy_reading.retrieved_at %}, {{ windy_reading.retrieved_at|ph_time }}{% endif %}
-                            </div>
-                        {% endif %}
+                    
 
                     {% else %}
 
@@ -146,11 +140,7 @@
                             {% endif %}
                         </div>
 
-                            {% if windy_status == "manual" %}
-                            <div class="home-environment-subvalue">
-                                Manual observation{% if windy_reading.retrieved_at %}, {{ windy_reading.retrieved_at|ph_time }}{% endif %}
-                            </div>
-                        {% endif %}
+                            
 
                     {% else %}
 

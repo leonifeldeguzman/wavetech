@@ -205,6 +205,15 @@ def _display_status(trip, reserved=None):
     return manifest_service.effective_status(trip, reserved)
 
 
+HIDDEN_DISPLAY_STATUSES = {"Unassigned", "Expired"}
+
+
+def _is_visible_to_passengers(trip):
+    """Hide unassigned / expired trips from the passenger overview and timetable."""
+    status = _display_status(trip, _reserved_seats_count(trip.id))
+    return status not in HIDDEN_DISPLAY_STATUSES
+
+
 def _serialize_trip_summary(trip):
     capacity, reserved, remaining = _trip_capacity_info(trip)
     can_register, _error_code, block_reason = _accepts_registration(trip)
@@ -1125,14 +1134,15 @@ def home():
     )
 
     # Recently updated upcoming trip
-    effective_departure = func.coalesce(Trip.new_departure_time, Trip.departure_time)
-    current_trip = (
-        Trip.query
-        .filter(Trip.boat_id.isnot(None))
-        .filter(effective_departure >= ph_now())
-        .order_by(Trip.updated_at.desc())
-        .first()
-    )
+    candidates = (
+    _assigned_upcoming_query()
+    .order_by(Trip.updated_at.desc())
+    .all()
+)
+    current_trip = next(
+    (t for t in candidates if _is_visible_to_passengers(t)),
+    None,
+)
 
     current_trip_date = None
     current_trip_time = None
@@ -1204,8 +1214,7 @@ def announcements():
 
 @passenger_bp.route("/passenger/schedule", methods=["GET"])
 def schedule():
-    trips = _upcoming_trips_query().all()
-
+    trips = [t for t in _upcoming_trips_query().all() if _is_visible_to_passengers(t)]
     trip_rows = [_serialize_trip_summary(t) for t in trips]
 
     return render_template(
