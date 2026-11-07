@@ -4,6 +4,10 @@ page_title %}Settings{% endblock %} {% block extra_css %}
   rel="stylesheet"
   href="{{ url_for('static', filename='css/settings.css') }}"
 />
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/otp-boxes.css') }}"
+/>
 
 {% endblock %} {% block content %}
 {% set full_name = user.full_name if user else session.get('full_name', '') %}
@@ -285,7 +289,29 @@ page_title %}Settings{% endblock %} {% block extra_css %}
                 />
               </div>
 
+                            <!-- Email -->
+              <div class="personal-field">
+                <span class="personal-label">Email</span>
+
+                <span class="personal-value personal-display-value">
+                  {{ user.email if user and user.email else '—' }}
+                </span>
+
+                <input
+                  type="email"
+                  id="personal-email-input"
+                  class="personal-edit-input"
+                  value="{{ user.email if user and user.email else '' }}"
+                  data-original="{{ user.email if user and user.email else '' }}"
+                  maxlength="120"
+                  style="display: none"
+                  aria-label="Email"
+                  autocomplete="email"
+                />
+              </div>
+
               <!-- Account Created - Read Only -->
+                            <!-- Account Created - Read Only -->
               <div class="personal-field">
                 <span class="personal-label">Account Created</span>
 
@@ -1001,6 +1027,53 @@ page_title %}Settings{% endblock %} {% block extra_css %}
   </div>
 </div>
 
+  <div class="epc-backdrop" id="emailChangeModal" hidden>
+  <div class="epc-dialog" role="dialog" aria-modal="true" aria-labelledby="ecm-title">
+    <div class="epc-header">
+      <h3 class="epc-title" id="ecm-title">Confirm Email Change</h3>
+      <button type="button" class="epc-close" id="ecm-close" aria-label="Cancel">&times;</button>
+    </div>
+
+    <div class="epc-body">
+      <p class="epc-text" id="ecm-text"></p>
+
+      <div id="ecm-code-block">
+        <input type="text" id="ecm-code" maxlength="6" data-otp-boxes="6" />
+        <div class="ecm-timer">Code expires in <strong id="ecm-timer">5:00</strong></div>
+      </div>
+
+      <div id="ecm-password-block" hidden>
+        <div class="password-input-wrapper">
+          <input
+            type="password"
+            id="ecm-password"
+            class="epc-input"
+            placeholder="Current password"
+            autocomplete="current-password"
+          />
+          <button
+            type="button"
+            class="password-toggle"
+            onclick="togglePassword('ecm-password', this)"
+            aria-label="Show password"
+          >
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="epc-error" id="ecm-error" role="alert" hidden></div>
+    </div>
+
+    <div class="epc-footer">
+      <button type="button" class="ecm-resend" id="ecm-resend">Resend code</button>
+      <span class="ecm-spacer"></span>
+      <button type="button" class="epc-btn epc-btn-secondary" id="ecm-cancel">Dismiss</button>
+      <button type="button" class="epc-btn epc-btn-primary" id="ecm-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/otp-boxes.js') }}"></script>
 <script>
     /*
   * WaveTech — Profile picture cropping (Settings > Account > My Profile)
@@ -1931,6 +2004,8 @@ if (refreshToggle) {
     saveButton.style.display = "inline-flex";
     cancelButton.style.display = "inline-flex";
 
+   
+
     const firstInput = inputs[0];
 
     if (firstInput) {
@@ -1971,6 +2046,8 @@ if (refreshToggle) {
     displayValues.forEach(function (value) {
       value.style.display = "block";
     });
+    
+
 
     editButton.style.display = "inline-flex";
     saveButton.style.display = "none";
@@ -2008,6 +2085,24 @@ if (refreshToggle) {
       alert("Last name cannot be empty.");
       lastName.focus();
       return;
+    }
+
+            const emailInput = document.getElementById("personal-email-input");
+
+    if (emailInput) {
+      if (!emailInput.checkValidity()) {
+        emailInput.reportValidity();
+        return;
+      }
+
+            const changed =
+        emailInput.value.trim().toLowerCase() !==
+        (emailInput.dataset.original || "").toLowerCase();
+
+      if (changed) {
+        startEmailChange(form, emailInput);
+        return;
+      }
     }
 
     form.submit();
@@ -3204,6 +3299,234 @@ if (refreshToggle) {
     if (item) { item.click(); }
     history.replaceState(null, "", window.location.pathname);
   });
+
+  /* =====================================================
+     EMAIL CHANGE: code sent to the OLD email, 5-minute limit
+  ===================================================== */
+  (function emailChangeFlow() {
+    const modal = document.getElementById("emailChangeModal");
+    if (!modal) return;
+
+    const text = document.getElementById("ecm-text");
+    const codeBlock = document.getElementById("ecm-code-block");
+    const passwordBlock = document.getElementById("ecm-password-block");
+    const codeInput = document.getElementById("ecm-code");
+    const passwordInput = document.getElementById("ecm-password");
+    const timerEl = document.getElementById("ecm-timer");
+    const errorEl = document.getElementById("ecm-error");
+    const resendBtn = document.getElementById("ecm-resend");
+    const confirmBtn = document.getElementById("ecm-confirm");
+
+    let form = null;
+    let emailInput = null;
+    let mode = null;
+    let newEmail = "";
+    let deadline = 0;
+    let ticker = null;
+    let busy = false;
+
+    async function post(url, body) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body || {})
+        });
+        const data = await res.json();
+        return data;
+      } catch (err) {
+        return { ok: false, message: "Network error. Please try again." };
+      }
+    }
+
+    function showError(message) {
+      errorEl.textContent = message || "";
+      errorEl.hidden = !message;
+    }
+
+    function stopTimer() {
+      if (ticker) {
+        clearInterval(ticker);
+        ticker = null;
+      }
+    }
+
+    function startTimer(seconds) {
+      stopTimer();
+      deadline = Date.now() + seconds * 1000;
+
+      function tick() {
+        const left = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+        const m = Math.floor(left / 60);
+        const s = String(left % 60).padStart(2, "0");
+        timerEl.textContent = m + ":" + s;
+
+        if (left <= 0) {
+          discard("The code expired. The email change was discarded.");
+        }
+      }
+
+      tick();
+      ticker = setInterval(tick, 1000);
+    }
+
+    function openModal(selectedMode, sentTo, seconds) {
+      mode = selectedMode;
+      showError("");
+      codeInput.value = "";
+      passwordInput.value = "";
+
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+
+      if (mode === "code") {
+        text.textContent =
+          "We sent a 6-digit code to your current email (" + sentTo +
+          "). Enter it within 5 minutes to confirm the change.";
+        codeBlock.hidden = false;
+        passwordBlock.hidden = true;
+        resendBtn.hidden = false;
+        startTimer(seconds);
+        modal.hidden = false;
+        codeInput.focus();
+      } else {
+        text.textContent =
+          "You have no email saved yet. Enter your current password to add this one.";
+        codeBlock.hidden = true;
+        passwordBlock.hidden = false;
+        resendBtn.hidden = true;
+        modal.hidden = false;
+        passwordInput.focus();
+      }
+    }
+
+    function closeModal() {
+      stopTimer();
+      modal.hidden = true;
+      busy = false;
+    }
+
+    function discard(message) {
+      const wasOpen = !modal.hidden;
+      closeModal();
+      if (emailInput) {
+        emailInput.value = emailInput.dataset.original || "";
+      }
+      post("/settings/email-change/cancel");
+      form = null;
+      if (message && wasOpen) {
+        alert(message);
+      }
+    }
+
+    window.startEmailChange = async function (theForm, theEmailInput) {
+      if (busy) return;
+      busy = true;
+      form = theForm;
+      emailInput = theEmailInput;
+      newEmail = emailInput.value.trim().toLowerCase();
+
+      const data = await post("/settings/email-change/request", { email: newEmail });
+      busy = false;
+
+      if (!data.ok) {
+        alert(data.message || "Could not start the email change.");
+        emailInput.focus();
+        return;
+      }
+
+      openModal(data.mode, data.sent_to, data.expires_in);
+    };
+
+    async function confirm() {
+      if (busy) return;
+      showError("");
+
+      const body = { email: newEmail };
+      if (mode === "code") {
+        const code = codeInput.value.trim();
+        if (!/^\d{6}$/.test(code)) {
+          showError("Enter the 6-digit code.");
+          codeInput.focus();
+          return;
+        }
+        body.code = code;
+      } else {
+        if (!passwordInput.value) {
+          showError("Enter your current password.");
+          passwordInput.focus();
+          return;
+        }
+        body.password = passwordInput.value;
+      }
+
+      busy = true;
+      confirmBtn.disabled = true;
+      const data = await post("/settings/email-change/confirm", body);
+      busy = false;
+      confirmBtn.disabled = false;
+
+      if (data.ok) {
+        const f = form;
+        closeModal();
+        form = null;
+        // The email is saved. Save the name and phone the usual way.
+        if (f) f.submit();
+        return;
+      }
+
+      if (data.discarded) {
+        discard(data.message);
+        return;
+      }
+
+      showError(data.message || "Something went wrong.");
+    }
+
+    async function resend() {
+      if (busy) return;
+      busy = true;
+      resendBtn.disabled = true;
+      const data = await post("/settings/email-change/request", { email: newEmail });
+      busy = false;
+      resendBtn.disabled = false;
+
+      if (!data.ok) {
+        showError(data.message || "Could not resend the code.");
+        return;
+      }
+      showError("");
+      codeInput.value = "";
+      startTimer(data.expires_in);
+      codeInput.focus();
+    }
+
+    confirmBtn.addEventListener("click", confirm);
+    resendBtn.addEventListener("click", resend);
+    document.getElementById("ecm-cancel").addEventListener("click", function () {
+      discard();
+    });
+
+      document.getElementById("ecm-close").addEventListener("click", function () {
+      discard();
+    });
+
+    [codeInput, passwordInput].forEach(function (el) {
+      el.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          confirm();
+        }
+      });
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !modal.hidden) {
+        discard();
+      }
+    });
+  })();
 </script>
 
 <script>

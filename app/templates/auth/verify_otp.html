@@ -1,0 +1,40 @@
+{% extends "auth/_auth_base.html" %}
+{% block title %}Enter Code{% endblock %}
+{% block heading %}Enter Code{% endblock %}
+{% block subtitle %}
+  {% if masked_email %}We sent a 6-digit code to {{ masked_email }}. It expires in 5 minutes.
+  {% else %}Enter the 6-digit code from your email.{% endif %}
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/otp-boxes.css') }}" />
+<script src="{{ url_for('static', filename='js/otp-boxes.js') }}"></script>
+
+<form method="POST" class="text-start">
+  <div class="mb-3">
+    <input type="text" name="otp" maxlength="6" data-otp-boxes="6" />
+  </div>
+  <button type="submit" class="btn w-100 main-btn">Verify</button>
+</form>
+
+<div class="d-flex justify-content-between mt-3">
+  <form method="POST" action="{{ url_for('auth.resend_otp') }}">
+    <button type="submit" class="auth-link">Resend code</button>
+  </form>
+  <a href="{{ url_for('auth.login') }}" class="auth-link">Back to login</a>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var otp = document.querySelector('input[name="otp"]');
+  var form = otp.form;
+  form.addEventListener("submit", function (e) {
+    if (!/^\d{6}$/.test(otp.value)) {
+      e.preventDefault();
+      otp.focus();
+    }
+  });
+  otp.focus();
+});
+</script>
+{% endblock %}

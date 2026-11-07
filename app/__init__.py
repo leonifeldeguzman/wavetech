@@ -1,10 +1,13 @@
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+load_dotenv()
 
 from flask import Flask, session, url_for, redirect
 from app.config import Config
 from app.extensions import db, migrate
 from app.utils.zero_strip import register_zero_strip
+from app.models.email_change import EmailChangeRequest
 
 def _should_start_announcement_scheduler(app) -> bool:
     """Decide whether this process should run the Announcement background

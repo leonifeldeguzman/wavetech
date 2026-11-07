@@ -2602,3 +2602,235 @@ html.stc-open {
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+.ecm-code-input {
+  padding: 0 14px;
+  text-align: center;
+  letter-spacing: 0.6em;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.ecm-timer {
+  margin-top: 8px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.ecm-timer strong {
+  color: #0f1b3c;
+}
+
+.ecm-spacer {
+  flex: 1;
+}
+
+.ecm-resend {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.ecm-resend:hover:not(:disabled) {
+  color: #0f1b3c;
+  text-decoration: underline;
+}
+
+.ecm-resend[hidden] {
+  display: none;
+}
+
+/* ===== Email change popup ===== */
+.epc-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 27, 60, 0.45);
+}
+
+.epc-backdrop[hidden] {
+  display: none;
+}
+
+.epc-dialog {
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.epc-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 24px 4px;
+  background: #ffffff;
+}
+
+.epc-title {
+  margin: 0;
+  color: #111111;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.epc-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  color: #6b7280;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.epc-close:hover {
+  color: #0f1b3c;
+}
+
+.epc-body {
+  padding: 12px 24px 24px;
+}
+
+.epc-text {
+  text-align: center;
+}
+
+.epc-body {
+  padding: 24px;
+}
+
+.epc-text {
+  margin: 0 0 16px;
+  color: #4b5563;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.epc-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid #cbdff2;
+  border-radius: 9px;
+  background: #f5f7fb;
+  font-size: 0.95rem;
+}
+
+.epc-input:focus {
+  outline: none;
+  border-color: #0f1b3c;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(15, 27, 60, 0.08);
+}
+
+.password-input-wrapper .epc-input {
+  padding-right: 44px;
+}
+
+.ecm-code-input {
+  text-align: center;
+  letter-spacing: 0.6em;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.ecm-timer {
+  margin-top: 10px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.ecm-timer strong {
+  color: #0f1b3c;
+}
+
+.epc-error {
+  margin-top: 10px;
+  color: #b42318;
+  font-size: 0.82rem;
+}
+
+.epc-error[hidden] {
+  display: none;
+}
+
+.epc-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px 24px;
+}
+
+.ecm-spacer {
+  flex: 1;
+}
+
+.ecm-resend {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.ecm-resend:hover:not(:disabled) {
+  color: #0f1b3c;
+  text-decoration: underline;
+}
+
+.ecm-resend[hidden] {
+  display: none;
+}
+
+.epc-btn {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.epc-btn-secondary {
+  border: 1px solid #0f1b3c;
+  background: #ffffff;
+  color: #0f1b3c;
+}
+
+.epc-btn-secondary:hover {
+  background: #f5f7fb;
+}
+
+.epc-btn-primary {
+  border: 1px solid #0f1b3c;
+  background: #0f1b3c;
+  color: #ffffff;
+}
+
+.epc-btn-primary:hover {
+  background: #1a2c5e;
+}
+
+.epc-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

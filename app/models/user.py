@@ -10,6 +10,7 @@ class User(db.Model):
     phone = db.Column(db.String(30), nullable=True)
     role = db.Column(db.String(20), nullable=False, default="Operator")
     created_at = db.Column(db.DateTime, server_default=db.func.now())
+    email = db.Column(db.String(120), unique=True, nullable=True)
 
     def __repr__(self):
         return f"<User {self.admin_id}>"

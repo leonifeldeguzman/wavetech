@@ -17,6 +17,10 @@ from app.services.settings_service import SettingsValidationError
 from app.utils.decorators import login_required
 from app.utils.security import hash_password, verify_password
 
+from flask import Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from app.services import email_change_service
+from app.services.password_reset_service import mask_email
+
 def _back(section: str):
     """Return to Settings on the same tab the form was on. Without this the
     page reloads on My Profile, so a save (or its error message) in another
@@ -208,13 +212,47 @@ def update_personal_info():
         flash("Last name must be 50 characters or less.", "danger")
         return _back("account-section")
 
+        # --- Email (controls password reset, so changing it needs the password) ---
+    new_email = request.form.get("email", "").strip().lower() or None
+    old_email = (user.email or "").lower() or None
+    email_changed = new_email != old_email
+
+    if email_changed:
+        current_password = request.form.get("current_password", "")
+        if not verify_password(current_password, user.password_hash):
+            flash("Enter your current password to change your email.", "danger")
+            return _back("account-section")
+
+        if new_email:
+            if len(new_email) > 120 or not _EMAIL_RE.match(new_email):
+                flash("Please enter a valid email address.", "danger")
+                return _back("account-section")
+
+            taken = User.query.filter(
+                User.email == new_email, User.id != user.id
+            ).first()
+            if taken:
+                flash("That email is already used by another admin.", "danger")
+                return _back("account-section")
+
     full_name = f"{first_name} {last_name}"
 
     user.full_name = full_name
     session["full_name"] = full_name
     user.phone = phone
 
+    if email_changed:
+        user.email = new_email
+
     db.session.commit()
+
+    if email_changed:
+        activity_log_service.log_action(
+            user_id=user.id,
+            admin_name=user.full_name,
+            action=getattr(activity_log_service, "ACTION_UPDATED_EMAIL", "Updated email"),
+            details="Recovery email changed." if new_email else "Recovery email removed.",
+        )
 
     flash("Personal information updated successfully.", "success")
     return _back("account-section")
@@ -357,3 +395,86 @@ def update_session_timeout():
 def activity_log():
     logs = activity_log_service.get_recent_logs(limit=200)
     return render_template("settings/activity_log.html", activity_logs=logs, active_page="settings")
+
+
+@settings_bp.route("/settings/email-change/request", methods=["POST"])
+@login_required
+def email_change_request():
+    user = db.session.get(User, session["user_id"])
+    data = request.get_json(silent=True) or {}
+
+    email, error = email_change_service.clean_email(data.get("email"), user.id)
+    if error:
+        return jsonify(ok=False, message=error), 400
+
+    if email == (user.email or "").lower():
+        return jsonify(ok=False, message="That is already your email."), 400
+
+    # First email ever: there is no old inbox to verify, so ask for the password.
+    if not user.email:
+        return jsonify(ok=True, mode="password")
+
+    try:
+        status = email_change_service.start(user, email)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Could not send email change code")
+        return jsonify(ok=False, message="Could not send the code. Please try again."), 500
+
+    if status == "cooldown":
+        return jsonify(ok=False, message="Please wait a minute before requesting another code."), 429
+    if status == "limited":
+        return jsonify(ok=False, message="Too many requests. Please try again later."), 429
+
+    return jsonify(
+        ok=True,
+        mode="code",
+        sent_to=mask_email(user.email),
+        expires_in=int(email_change_service.OTP_TTL.total_seconds()),
+    )
+
+
+@settings_bp.route("/settings/email-change/confirm", methods=["POST"])
+@login_required
+def email_change_confirm():
+    user = db.session.get(User, session["user_id"])
+    data = request.get_json(silent=True) or {}
+
+    # First email ever: confirm with the current password.
+    if not user.email:
+        email, error = email_change_service.clean_email(data.get("email"), user.id)
+        if error:
+            return jsonify(ok=False, message=error), 400
+        if not verify_password(str(data.get("password") or ""), user.password_hash):
+            return jsonify(ok=False, message="Current password is incorrect."), 400
+        user.email = email
+        db.session.commit()
+        status = "ok"
+    else:
+        status, _ = email_change_service.verify(user, str(data.get("code") or "").strip())
+
+    if status == "ok":
+        activity_log_service.log_action(
+            user_id=user.id,
+            admin_name=user.full_name,
+            action=getattr(activity_log_service, "ACTION_UPDATED_EMAIL", "Updated email"),
+            details="Recovery email changed.",
+        )
+        flash("Email updated successfully.", "success")
+        return jsonify(ok=True)
+
+    if status == "invalid":
+        return jsonify(ok=False, message="Incorrect code. Please try again.")
+    if status == "taken":
+        return jsonify(ok=False, discarded=True, message="That email is already used by another admin.")
+    if status == "locked":
+        return jsonify(ok=False, discarded=True, message="Too many wrong attempts. The email change was discarded.")
+    return jsonify(ok=False, discarded=True, message="The code expired. The email change was discarded.")
+
+
+@settings_bp.route("/settings/email-change/cancel", methods=["POST"])
+@login_required
+def email_change_cancel():
+    user = db.session.get(User, session["user_id"])
+    email_change_service.cancel(user)
+    return jsonify(ok=True)
