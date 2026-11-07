@@ -438,7 +438,7 @@ def get_assessment() -> SchedulingAssessment:
 def format_timestamp(dt: datetime | None) -> str:
     if dt is None:
         return "—"
-    return to_ph_time(dt).strftime("%B %d, %Y %I:%M %p PHT").replace(" 0", " ")
+    return to_ph_time(dt).strftime("%B %d, %Y %I:%M %p PHT")
 
 
 # ---------------------------------------------------------------------------
@@ -558,7 +558,7 @@ def build_safety_alert(assessment: SchedulingAssessment | None, trip: Any) -> di
         return None
 
     reason_phrase = _safety_alert_reason_phrase(assessment)
-    departure_label = trip.departure_time.strftime("%B %d, %Y %I:%M %p").replace(" 0", " ")
+    departure_label = trip.departure_time.strftime("%B %d, %Y %I:%M %p")
 
     weather_value = assessment.weather.value if assessment.weather.value else "—"
 

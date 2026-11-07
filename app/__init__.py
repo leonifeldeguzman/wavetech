@@ -1,10 +1,10 @@
 import os
 from datetime import timedelta
 
-from flask import Flask, app, session, url_for, redirect
+from flask import Flask, session, url_for, redirect
 from app.config import Config
 from app.extensions import db, migrate
-
+from app.utils.zero_strip import register_zero_strip
 
 def _should_start_announcement_scheduler(app) -> bool:
     """Decide whether this process should run the Announcement background
@@ -35,6 +35,9 @@ def create_app():
     from app.utils.timezone import format_ph_input, format_ph_time
     app.jinja_env.filters["ph_time"] = format_ph_time
     app.jinja_env.filters["ph_input"] = format_ph_input
+
+    # Drops leading zeros from displayed dates and times on every HTML page.
+    register_zero_strip(app)
 
     from app import models
 

@@ -77,10 +77,9 @@ def describe_trip(trip) -> str:
     if trip is None:
         return ""
     when = trip.departure_time
-    parts = [
-        f"Scheduled: {when.strftime('%b')} {when.day}, {when.year} "
-        f"{when.strftime('%I:%M %p').lstrip('0')}"
-    ]
+    # Leading zeros ("Nov 07", "08:30 AM") are removed when the page is shown
+    # (app/utils/zero_strip.py), so the plain format is used here.
+    parts = [f"Scheduled: {when.strftime('%b %d, %Y %I:%M %p')}"]
     boat = getattr(trip, "boat", None)
     if boat is not None and boat.name:
         parts.append(f"Boat: {boat.name}")

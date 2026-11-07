@@ -479,7 +479,7 @@
                                 {% if announcement.published_at %}
                                     <span class="home-announcement-date">
                                         <i class="bi" aria-hidden="true"></i>
-                                        {{ announcement.published_at | ph_time('%B %d, %Y, %I:%M %p') | replace('PHT', '') | replace(' 0', ' ') | trim }}
+                                        {{ announcement.published_at | ph_time('%B %d, %Y, %I:%M %p') | replace('PHT', '') | trim }}
                                     </span>
                                 {% endif %}
 

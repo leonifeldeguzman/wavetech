@@ -149,7 +149,6 @@
     color: #ffffff;
 }
 
-
 /* =========================================================
    ENVIRONMENT SUMMARY
    ========================================================= */
@@ -223,25 +222,6 @@
     font-size: 0.75rem;
 }
 
-.environmental-condition {
-    font-size: 0.82rem;
-}
-
-.environmental-condition.safe {
-    color: #2e7d32;
-}
-
-.environmental-condition.caution {
-    color: #b77900;
-}
-
-.environmental-condition.unsafe {
-    color: #c62828;
-}
-
-.environmental-condition.unavailable {
-    color: #777777;
-}
 .home-safety-value.safe {
     color: #0c9f47;
 }
@@ -257,7 +237,6 @@
 .home-safety-value.unavailable {
     color: #777777;
 }
-
 
 /* =========================================================
    MAIN CONTENT
@@ -284,7 +263,6 @@
     align-items: stretch;
 }
 
-
 /* =========================================================
    CARDS
    ========================================================= */
@@ -303,7 +281,6 @@
         0 8px 25px rgba(15, 32, 55, 0.12);
 }
 
-
 /* =========================================================
    CURRENT TRIP
    ========================================================= */
@@ -312,13 +289,6 @@
     padding: 24px 30px;
 
     border: 1px solid #8da2c0;
-}
-
-.environmental-status-card {
-    display: flex;
-    flex-direction: column;
-    
-    padding: 39px 30px;
 }
 
 /* =========================================================
@@ -389,7 +359,6 @@
     border-color: #d1d5db;
 }
 
-
 .home-trip-update-note {
     display: flex;
     align-items: center;
@@ -430,14 +399,12 @@
     padding-bottom: 20px;
 }
 
-
 .home-trip-main > div {
     display: flex;
     flex-direction: column;
 
     gap: 6px;
 }
-
 
 .home-trip-main span,
 .home-trip-grid span {
@@ -446,14 +413,12 @@
     font-size: 0.76rem;
 }
 
-
 .home-trip-main strong {
     color: #171717;
 
     font-size: 0.92rem;
     font-weight: 600;
 }
-
 
 .home-trip-route strong {
     display: flex;
@@ -462,12 +427,10 @@
     gap: 8px;
 }
 
-
 .home-trip-route strong i {
     color: #9aa3ad;
     font-size: 0.78rem;
 }
-
 
 .home-trip-grid {
     display: grid;
@@ -476,14 +439,12 @@
     gap: 25px;
 }
 
-
 .home-trip-grid > div {
     display: flex;
     flex-direction: column;
 
     gap: 6px;
 }
-
 
 .home-trip-grid > div:first-child {
     flex-direction: row;
@@ -492,13 +453,11 @@
     gap: 15px;
 }
 
-
 .home-trip-grid > div:first-child > div {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
-
 
 .home-trip-grid strong {
     color: #171717;
@@ -506,20 +465,6 @@
     font-size: 0.88rem;
     font-weight: 500;
 }
-
-
-.home-trip-status-text.open {
-    color: #16803c;
-}
-
-.home-trip-status-text.delayed {
-    color: #a16207;
-}
-
-.home-trip-status-text.cancelled {
-    color: #b42318;
-}
-
 
 .home-trip-details-btn {
     display: inline-flex;
@@ -541,7 +486,6 @@
     color: #0f1b3c;
 }
 
-
 .home-trip-empty {
     display: flex;
     flex-direction: column;
@@ -554,7 +498,6 @@
     text-align: center;
 }
 
-
 .home-trip-empty i {
     margin-bottom: 10px;
 
@@ -563,7 +506,6 @@
     font-size: 1.5rem;
 }
 
-
 .home-trip-empty strong {
     margin-bottom: 4px;
 
@@ -571,7 +513,6 @@
 
     font-size: 0.88rem;
 }
-
 
 .home-trip-empty span {
     color: #888888;
@@ -598,7 +539,7 @@
     align-items: center;
 
     gap: 13px;
-    
+
 }
 
 .home-card-title i {
@@ -615,18 +556,6 @@
     font-size: 0.98rem;
     font-weight: 700;
 }
-
-.home-status-badge {
-    padding: 5px 15px;
-
-    border-radius: 999px;
-
-    background: #e0f3df;
-    color: #0d9a48;
-
-    font-size: 0.76rem;
-}
-
 
 /* =========================================================
    TRIP DETAILS
@@ -659,7 +588,6 @@
     font-size: 0.91rem;
     font-weight: 500;
 }
-
 
 /* =========================================================
    REGISTRATION STATUS CHECKER (Home)
@@ -773,7 +701,6 @@
     width: 100%;
 }
 
-
 /* =========================================================
    NOTICES
    ========================================================= */
@@ -881,18 +808,14 @@
 .home-announcement.safety { border-color: #e1e7ed; }
 .home-announcement.safety .home-announcement-icon { background: var(--notice-safety-bg); color: var(--notice-safety-text); }
 
-
 .home-announcement.delay { border-color: #e1e7ed; }
 .home-announcement.delay .home-announcement-icon { background: var(--notice-delay-bg); color: var(--notice-delay-text); }
-
 
 .home-announcement.cancellation { border-color: #e1e7ed; }
 .home-announcement.cancellation .home-announcement-icon { background: var(--notice-cancellation-bg); color: var(--notice-cancellation-text); }
 
-
 .home-announcement.general { border-color: #e1e7ed; }
 .home-announcement.general .home-announcement-icon { background: var(--notice-general-bg); color: var(--notice-general-text); }
-
 
 .home-announcement-content {
     flex: 1;
@@ -969,13 +892,6 @@
     border-color: var(--notice-general-text);
     background: var(--notice-general-bg);
     color: var(--notice-general-text) !important;
-}
-
-.home-announcement-expiry {
-    margin-top: 3px;
-    color: #5f6b78;
-    font-size: 0.71rem;
-    line-height: 1.4;
 }
 
 .home-announcement-content p {
@@ -1058,16 +974,6 @@
    FOOTER
    ========================================================= */
 
-.home-footer {
-    padding: 48px 20px 30px;
-
-    color: #888888;
-
-    font-size: 0.78rem;
-
-    text-align: center;
-}
-
 /* =========================================================
    RESPONSIVE
    ========================================================= */
@@ -1089,7 +995,6 @@
     }
 
 }
-
 
 @media (max-width: 767.98px) {
 
@@ -1201,7 +1106,6 @@
     text-decoration: none;
 }
 
-
 /* Registration Status Checker: tablet (grid is one full-width column) */
 @media (min-width: 768px) and (max-width: 991.98px) {
 
@@ -1235,7 +1139,6 @@
 .home-announcement.delay        { border: 1px solid #e1e7ed; background: #ffffff; }
 .home-announcement.cancellation { border: 1px solid #e1e7ed; background: #ffffff; }
 .home-announcement.general      { border: 1px solid #e1e7ed; background: #ffffff; }
-
 
 /* =========================================================
    PASSENGER ANNOUNCEMENTS
@@ -1442,12 +1345,6 @@
 }
 
 /* Expiry */
-.home-announcement-expiry {
-    margin-top: 7px;
-    color: #6b7280;
-    font-size: .69rem;
-    line-height: 1.4;
-}
 
 /* No hover effects */
 .home-announcement:hover {
