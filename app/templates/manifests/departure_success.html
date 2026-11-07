@@ -64,7 +64,7 @@
             </div>
 
             <div class="departure-info-row">
-                <span class="departure-info-label">Time</span>
+                <span class="departure-info-label">Departed at</span>
                 <span class="departure-info-value">
                     {{ trip.departed_at.strftime('%I:%M %p') }}
                 </span>
@@ -131,14 +131,13 @@
         <div class="departure-actions">
 
             <a
-                href="{{ url_for('dashboard.index') }}"
-                class="departure-back-btn"
+                href="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}"
+                class="departure-log-btn"
             >
-                Back to Dashboard
+                View Manifest
             </a>
 
-            <div class="departure-actions-right">
-
+            <div class="departure-actions-secondary">
                 <a
                     href="{{ url_for('manifests.export_pdf', trip_id=trip.id) }}"
                     class="departure-pdf-btn"
@@ -147,12 +146,11 @@
                 </a>
 
                 <a
-                    href="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}"
-                    class="departure-log-btn"
+                    href="{{ url_for('dashboard.index') }}"
+                    class="departure-back-btn"
                 >
-                    View Trip Log
+                    Back to Dashboard
                 </a>
-
             </div>
 
         </div>
