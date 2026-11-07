@@ -342,18 +342,41 @@ def get_latest_reading():
     )
 
 
+# How long a manually entered water level stays the current reading even
+# though a newer LLDA row has been fetched since (the Monitoring page fetches
+# LLDA on every load once its cache has expired, which would otherwise
+# override the operator's entry within moments). After this, the newest
+# LLDA/manual row wins again.
+MANUAL_WATER_MAX_AGE = timedelta(hours=3)
+
+
 def get_latest_water_reading():
-    """Newest water level from a real current source (LLDA or manual).
-    No freshness cut-off here: age is shown on the card instead."""
-    return (
-        EnvironmentalReading.query
-        .filter(
-            EnvironmentalReading.water_level_m.isnot(None),
-            EnvironmentalReading.source.in_(("llda", "manual")),
-        )
+    """Current water level from a real source (LLDA or manual).
+
+    Normally the newest LLDA/manual row. A manual entry that is still
+    recent (MANUAL_WATER_MAX_AGE) takes priority over a newer LLDA row, so
+    an operator's correction is not replaced by the next automatic fetch.
+    No other freshness cut-off here: age is shown on the card instead.
+    This is the single selector used by the Monitoring card, Passenger home,
+    baseline comparison and the Decision-Support assessment."""
+    base = EnvironmentalReading.query.filter(
+        EnvironmentalReading.water_level_m.isnot(None),
+        EnvironmentalReading.source.in_(("llda", "manual")),
+    )
+    newest = base.order_by(EnvironmentalReading.retrieved_at.desc()).first()
+    if newest is None or newest.source == SOURCE_MANUAL:
+        return newest
+
+    manual = (
+        base.filter(EnvironmentalReading.source == SOURCE_MANUAL)
         .order_by(EnvironmentalReading.retrieved_at.desc())
         .first()
     )
+    if manual is not None and manual.retrieved_at is not None:
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        if timedelta(0) <= now_utc - manual.retrieved_at <= MANUAL_WATER_MAX_AGE:
+            return manual
+    return newest
 
 def get_todays_observation():
     """Newest manual row carrying an operator observation, accepted only if

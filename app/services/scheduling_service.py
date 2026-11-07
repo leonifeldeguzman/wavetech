@@ -320,15 +320,9 @@ def get_current_water_reading():
     """Newest LLDA/manual water level, accepted only if recorded today
     (PH calendar day). Older or missing means None, so the assessment
     becomes UNAVAILABLE. Never falls back to a config value."""
-    reading = (
-        EnvironmentalReading.query
-        .filter(
-            EnvironmentalReading.water_level_m.isnot(None),
-            EnvironmentalReading.source.in_(("llda", "manual")),
-        )
-        .order_by(EnvironmentalReading.retrieved_at.desc())
-        .first()
-    )
+    # Same selector as the Monitoring card, so a recent manual entry is used
+    # here too instead of being replaced by a newer automatic LLDA row.
+    reading = monitoring_service.get_latest_water_reading()
     if reading is None or reading.retrieved_at is None:
         return None
     # retrieved_at is naive UTC; convert to the PH calendar day.
