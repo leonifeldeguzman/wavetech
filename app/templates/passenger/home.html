@@ -189,6 +189,17 @@
                         {% endif %}
                     </div>
 
+                    {# Operator's water-surface observation (e.g. Calm), only
+                       when one was entered and the reading is from today, so
+                       an old observation is never shown as current. #}
+                    {% if water_level_card.is_today
+                          and water_level_card.reading.observed_condition %}
+                    <div class="home-environment-subvalue">
+                        Water surface:
+                        {{ water_level_card.reading.observed_condition|capitalize }}
+                    </div>
+                    {% endif %}
+
                 {% else %}
 
                     <div class="home-environment-value">

@@ -348,7 +348,41 @@ select.dt-source {
     <button type="button" class="manifest-filter-btn" data-filter="cancelled" aria-pressed="false">Cancelled</button>
     <button type="button" class="manifest-filter-btn" data-filter="expired" aria-pressed="false">Expired</button>
     <button type="button" class="manifest-filter-btn" data-filter="departed" aria-pressed="false">Departed</button>
+
+    {% if deletable_ids %}
+    <!-- Reveals the bulk-delete checkboxes and bar (hidden until clicked) -->
+    <button type="button" class="manifest-select-toggle" id="selectToggle" aria-pressed="false">
+        <i class="bi bi-check2-square" aria-hidden="true"></i>
+        <span>Select</span>
+    </button>
+    {% endif %}
 </div>
+
+{% if deletable_ids %}
+<!-- Bulk delete: hidden until "Select" is pressed. Ticks apply to the rows currently shown (see the status filter) -->
+<div class="manifest-bulk-bar" id="bulkBar" hidden>
+    <label class="manifest-bulk-all">
+        <input type="checkbox" class="manifest-check" id="bulkSelectAll" aria-label="Select all time slots shown">
+        <span>Select all</span>
+    </label>
+
+    <span class="manifest-bulk-count" id="bulkCount" aria-live="polite">No time slots selected</span>
+
+    <button
+        type="button"
+        class="manifest-bulk-delete"
+        id="bulkDeleteBtn"
+        data-bs-toggle="modal"
+        data-bs-target="#deleteSlotModal"
+        data-bulk="true"
+        data-delete-url="{{ url_for('manifests.bulk_delete_slots') }}"
+        disabled
+    >
+        <i class="bi bi-trash3" aria-hidden="true"></i>
+        <span>Delete selected</span>
+    </button>
+</div>
+{% endif %}
 
 <!-- Timetable Card -->
 <div class="manifest-timetable-card">
@@ -365,6 +399,18 @@ select.dt-source {
         {% endif %}
 
         <div class="manifest-slot-row" data-state="{{ row_state }}">
+
+        {% if slot.id in deletable_ids %}
+        <input
+            type="checkbox"
+            class="manifest-check manifest-slot-check"
+            value="{{ slot.id }}"
+            data-slot-label="{{ slot.departure_time.strftime('%I:%M %p').lstrip('0') }}, {{ slot.departure_time.strftime('%b') }} {{ slot.departure_time.day }}"
+            aria-label="Select {{ slot.departure_time.strftime('%I:%M %p').lstrip('0') }} time slot"
+        >
+        {% elif deletable_ids %}
+        <span class="manifest-slot-check-spacer" aria-hidden="true"></span>
+        {% endif %}
 
         <a
             href="{{ url_for('manifests.trip_detail', trip_id=slot.id) }}"
@@ -709,6 +755,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
             <form method="POST" action="" id="deleteSlotForm">
 
+                <input type="hidden" name="view_date" value="{{ selected_date.isoformat() }}">
+                <div id="deleteSlotIds"></div>
+
                 <div class="modal-header manifest-modal-header">
 
                     <h5
@@ -735,8 +784,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     <p class="manifest-delete-message">
                         <strong id="deleteSlotLabel"></strong>
-                        will be removed from the timetable.
-                        No passengers are registered.
+                        <span id="deleteSlotText">will be removed from the timetable.
+                        No passengers are registered.</span>
                     </p>
 
                     <p class="manifest-delete-warning">
@@ -1873,14 +1922,58 @@ document.addEventListener("DOMContentLoaded", function () {
   var form = document.getElementById("deleteSlotForm");
   var confirmBtn = document.getElementById("deleteSlotConfirm");
   var label = document.getElementById("deleteSlotLabel");
+  var title = document.getElementById("deleteSlotModalLabel");
+  var text = document.getElementById("deleteSlotText");
+  var idsBox = document.getElementById("deleteSlotIds");
   if (!modalEl || !form) return;
 
-  // Fill the shared modal from the trash button that opened it.
+  var SINGLE_TEXT = "will be removed from the timetable. No passengers are registered.";
+  var MANY_TEXT = "will be removed from the timetable. None of them have passengers registered.";
+
+  // Ticked slots in the rows that are currently shown (the status filter
+  // hides rows; a hidden row is never deleted).
+  function pickedChecks() {
+    return Array.prototype.filter.call(
+      document.querySelectorAll(".manifest-slot-check:checked"),
+      function (cb) { return !cb.closest(".manifest-slot-row").hidden; }
+    );
+  }
+
+  // Fill the shared modal from the button that opened it: the trash button
+  // of one slot, or "Delete selected" for the ticked slots.
   modalEl.addEventListener("show.bs.modal", function (event) {
     var trigger = event.relatedTarget;
     if (!trigger) return;
+
+    idsBox.innerHTML = "";
     form.setAttribute("action", trigger.getAttribute("data-delete-url"));
-    label.textContent = trigger.getAttribute("data-slot-label");
+
+    if (trigger.getAttribute("data-bulk") === "true") {
+      var picked = pickedChecks();
+      if (!picked.length) { event.preventDefault(); return; }
+
+      picked.forEach(function (cb) {
+        var input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "trip_ids";
+        input.value = cb.value;
+        idsBox.appendChild(input);
+      });
+
+      if (picked.length === 1) {
+        title.textContent = "Delete Time Slot";
+        label.textContent = picked[0].getAttribute("data-slot-label");
+        text.textContent = SINGLE_TEXT;
+      } else {
+        title.textContent = "Delete Time Slots";
+        label.textContent = picked.length + " time slots";
+        text.textContent = MANY_TEXT;
+      }
+    } else {
+      title.textContent = "Delete Time Slot";
+      label.textContent = trigger.getAttribute("data-slot-label");
+      text.textContent = SINGLE_TEXT;
+    }
     confirmBtn.disabled = false;
   });
 
@@ -1890,6 +1983,93 @@ document.addEventListener("DOMContentLoaded", function () {
   form.addEventListener("submit", function () {
     confirmBtn.disabled = true;
   });
+});
+</script>
+<script>
+/* Bulk delete selection: tick slots, "Select all" covers the rows shown. */
+document.addEventListener("DOMContentLoaded", function () {
+  var bar = document.getElementById("bulkBar");
+  if (!bar) return;
+
+  var toggle = document.getElementById("selectToggle");
+  var card = document.querySelector(".manifest-timetable-card");
+  var toggleLabel = toggle ? toggle.querySelector("span") : null;
+  var selecting = false;
+
+  var selectAll = document.getElementById("bulkSelectAll");
+  var countEl = document.getElementById("bulkCount");
+  var deleteBtn = document.getElementById("bulkDeleteBtn");
+  var deleteLabel = deleteBtn.querySelector("span");
+  var checks = Array.prototype.slice.call(document.querySelectorAll(".manifest-slot-check"));
+
+  function shown() {
+    return checks.filter(function (cb) { return !cb.closest(".manifest-slot-row").hidden; });
+  }
+
+  function update() {
+    var visible = shown();
+    var picked = visible.filter(function (cb) { return cb.checked; });
+
+    checks.forEach(function (cb) {
+      cb.closest(".manifest-slot-row").classList.toggle("is-selected", cb.checked);
+    });
+
+    selectAll.disabled = visible.length === 0;
+    selectAll.checked = visible.length > 0 && picked.length === visible.length;
+    selectAll.indeterminate = picked.length > 0 && picked.length < visible.length;
+
+    countEl.textContent = picked.length
+      ? picked.length + " time slot" + (picked.length === 1 ? "" : "s") + " selected"
+      : "No time slots selected";
+    deleteBtn.disabled = picked.length === 0;
+    deleteLabel.textContent = picked.length
+      ? "Delete selected (" + picked.length + ")"
+      : "Delete selected";
+  }
+
+  // "Select" shows the checkboxes and the bar; "Done" hides them again
+  // and clears every tick.
+  function setSelecting(on) {
+    selecting = on;
+    bar.hidden = !on;
+    if (card) { card.classList.toggle("is-selecting", on); }
+    if (toggle) {
+      toggle.setAttribute("aria-pressed", on ? "true" : "false");
+      toggleLabel.textContent = on ? "Done" : "Select";
+    }
+    if (!on) { checks.forEach(function (cb) { cb.checked = false; }); }
+    update();
+  }
+
+  if (toggle) {
+    toggle.addEventListener("click", function () { setSelecting(!selecting); });
+  }
+
+  checks.forEach(function (cb) { cb.addEventListener("change", update); });
+
+  selectAll.addEventListener("change", function () {
+    shown().forEach(function (cb) { cb.checked = selectAll.checked; });
+    update();
+  });
+
+  // Changing the status filter: slots that just got hidden are un-ticked,
+  // so nothing out of sight can be deleted by mistake.
+  var filterBar = document.getElementById("slotFilter");
+  if (filterBar) {
+    filterBar.addEventListener("click", function () {
+      checks.forEach(function (cb) {
+        if (cb.closest(".manifest-slot-row").hidden) { cb.checked = false; }
+      });
+      update();
+    });
+  }
+
+  // Back/forward cache can restore ticked boxes: resync the bar.
+  window.addEventListener("pageshow", function () {
+    if (!selecting) { checks.forEach(function (cb) { cb.checked = false; }); }
+    update();
+  });
+  setSelecting(false);
 });
 </script>
 {% endblock %}

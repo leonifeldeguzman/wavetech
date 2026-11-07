@@ -1434,7 +1434,7 @@
 }
 
 .home-announcement-show-more:hover {
-    text-decoration: underline;
+    text-decoration: none;
 }
 
 .home-announcement-show-more[hidden] {

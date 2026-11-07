@@ -1,6 +1,42 @@
 {# Decision-Support details modal (the Dashboard "View Details" card).
    Shared by the Dashboard and the Manifesting "Assess Condition" button so
    there is one result card. Expects: selected_trip, scheduling_assessment. #}
+<style>
+    /* Keep everything inside the card: long text wraps onto a new line
+       instead of pushing the status badges out and scrolling sideways. */
+    #schedulingDetailsModal .modal-dialog { max-width: min(720px, calc(100vw - 1rem)); }
+    #schedulingDetailsModal .modal-content,
+    #schedulingDetailsModal .modal-body { min-width: 0; }
+    #schedulingDetailsModal .modal-body { overflow-x: hidden; }
+    #schedulingDetailsModal .table-responsive { overflow-x: hidden; }
+    #schedulingDetailsModal .scheduling-environment-table {
+        width: 100%;
+        table-layout: fixed;
+    }
+    #schedulingDetailsModal .scheduling-environment-table td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        vertical-align: top;
+    }
+    #schedulingDetailsModal .scheduling-environment-table td.scheduling-condition-label { width: 34%; }
+    #schedulingDetailsModal .scheduling-environment-table td.scheduling-condition-status {
+        width: 7.5rem;
+        text-align: right;
+    }
+    #schedulingDetailsModal .scheduling-status-badge { white-space: nowrap; }
+    #schedulingDetailsModal .scheduling-result-grid > div { min-width: 0; }
+    #schedulingDetailsModal .scheduling-trip-info,
+    #schedulingDetailsModal .scheduling-trip-detail,
+    #schedulingDetailsModal .scheduling-recommendation,
+    #schedulingDetailsModal .scheduling-reason,
+    #schedulingDetailsModal .scheduling-retrieved,
+    #schedulingDetailsModal .scheduling-retrieved > div {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+</style>
             <!-- =================================================
                 DECISION-SUPPORT MODAL
                 ================================================= -->
@@ -54,7 +90,7 @@
 
                                 <div class="scheduling-trip-detail">
                                     Departure:
-                                    {{ selected_trip.departure_time.strftime('%B %d, %Y  %I:%M %p') }}
+                                    {{ selected_trip.departure_time.strftime('%B %d, %Y  %I:%M %p').replace(' 0', ' ') }}
                                 </div>
 
                                 <div class="scheduling-trip-detail">

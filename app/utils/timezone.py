@@ -66,7 +66,10 @@ def format_ph_time(dt: datetime | None, fmt: str = "%B %d, %Y %I:%M %p") -> str:
     ph_dt = to_ph_time(dt)
     if ph_dt is None:
         return "—"
-    return f"{ph_dt.strftime(fmt)} PHT"
+    # Drop leading zeros from the day and hour (07 -> 7) without %-d, which
+    # is not portable to Windows.
+    text = ph_dt.strftime(fmt).replace(" 0", " ").lstrip("0")
+    return f"{text} PHT"
 
 
 def format_ph_input(dt: datetime | None) -> str:

@@ -409,19 +409,19 @@ select.dt-source {
                     <span class="manifest-assess-label">Assess Condition</span>
                 </button>
                 {% else %}
-                <!-- Weather cannot be forecast, so assessment is for today's trips only -->
+                <!-- Disabled until the trip is assigned, and for any day but today -->
                 <button
                     type="button"
                     class="manifest-assess-btn manifest-assess-unavailable"
                     disabled
                     aria-disabled="true"
-                    title="Conditions can only be assessed on the day of the trip."
+                    title="{{ assess_note }}."
                 >
                     <i class="bi bi-slash-circle" aria-hidden="true"></i>
                     <span class="manifest-assess-label">Assess Condition</span>
                 </button>
                 <span class="manifest-assess-note">
-                    Available on the trip date only
+                    {{ assess_note }}
                 </span>
                 {% endif %}
 
@@ -4310,7 +4310,7 @@ document.addEventListener("DOMContentLoaded", function () {
 (function () {
     var btn = document.getElementById("assessConditionBtn");
     var host = document.getElementById("dss-modal-host");
-    if (!btn || !host || !window.fetch || !window.bootstrap) return;
+    if (!btn || !host) return;
 
     var errorBox = btn.parentNode.querySelector(".manifest-assess-error");
     var label = btn.querySelector(".manifest-assess-label");
@@ -4334,8 +4334,19 @@ document.addEventListener("DOMContentLoaded", function () {
     btn.addEventListener("click", function () {
         if (busy || host.firstElementChild) return;   // no duplicate requests/cards
 
+        if (!window.fetch || !window.bootstrap || !window.bootstrap.Modal) {
+            setError("Assessment is unavailable: page scripts did not load. Please refresh.");
+            return;
+        }
+
         setError("");
         setBusy(true);
+
+        function friendly(message) {
+            var e = new Error(message);
+            e.friendly = true;      // safe to show to the operator
+            return e;
+        }
 
         fetch(btn.dataset.endpoint, {
             headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -4344,15 +4355,24 @@ document.addEventListener("DOMContentLoaded", function () {
         })
             .then(function (r) {
                 var type = r.headers.get("content-type") || "";
-                if (!r.ok || r.redirected || type.indexOf("text/html") === -1) {
-                    throw new Error("bad response");
+                if (r.ok && !r.redirected && type.indexOf("text/html") !== -1) {
+                    return r.text();
                 }
-                return r.text();
+                if (r.redirected) {
+                    throw friendly("Your session may have expired. Please log in again.");
+                }
+                // The route answers refusals as JSON {"error": "..."}: show it.
+                if (type.indexOf("application/json") !== -1) {
+                    return r.json().then(function (d) {
+                        throw friendly((d && d.error) || ("Server error (" + r.status + ")."));
+                    });
+                }
+                throw new Error("Unexpected response: HTTP " + r.status + " " + type);
             })
             .then(function (html) {
                 host.innerHTML = html;
                 var el = host.querySelector(".modal");
-                if (!el) throw new Error("no card");
+                if (!el) throw new Error("Response has no .modal element");
 
                 var modal = new bootstrap.Modal(el);
                 el.addEventListener("hidden.bs.modal", function () {
@@ -4362,9 +4382,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
                 modal.show();
             })
-            .catch(function () {
+            .catch(function (err) {
+                console.error("Assess Condition failed:", err);
                 host.innerHTML = "";
-                setError("Could not retrieve the assessment. Please try again.");
+                setError(err && err.friendly
+                    ? err.message
+                    : "Could not retrieve the assessment. Please try again.");
             })
             .then(function () { setBusy(false); });
     });

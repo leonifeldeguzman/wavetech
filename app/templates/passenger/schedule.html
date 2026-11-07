@@ -35,6 +35,11 @@
 
   </div>
 
+  <p class="schedule-scroll-hint">
+    <i class="bi bi-arrow-left-right"></i>
+    Swipe sideways to see all columns
+  </p>
+
   <div class="schedule-table-wrapper">
 
     <div class="schedule-header">
@@ -45,18 +50,18 @@
       <div>Status</div>
     </div>
 
-    <div class="list-group list-group-flush">
+    <div class="schedule-rows">
 
       {% for trip in trips %}
 
       <a
         href="{{ url_for('passenger.trip_detail_page', trip_id=trip.trip_id) }}"
-        class="list-group-item list-group-item-action py-3"
+        class="schedule-row-link"
       >
         <div class="schedule-table-row">
 
           <!-- Boat Name -->
-          <div>
+          <div class="schedule-cell-boat">
             <div>
               {% if trip.boat %}
                 {{ trip.boat.name }}
@@ -67,17 +72,17 @@
           </div>
 
           <!-- Departure Time -->
-          <div>
+          <div class="schedule-cell-time" data-label="Departure">
             <div>{{ trip.display_time }}</div>
           </div>
 
           <!-- Travel Date -->
-          <div>
+          <div class="schedule-cell-date" data-label="Travel Date">
             <div>{{ trip.display_date }}</div>
           </div>
 
           <!-- Capacity -->
-          <div>
+          <div class="schedule-cell-capacity" data-label="Capacity">
 
             {% if trip.capacity is not none
                   and trip.capacity > 0
@@ -123,7 +128,7 @@
           </div>
 
           <!-- Status -->
-          <div>
+          <div class="schedule-cell-status">
             <span
               class="status-pill {{ trip.status|lower|replace(' ', '-') }}"
             >
@@ -136,7 +141,7 @@
 
       {% else %}
 
-      <div class="text-center text-muted py-4">
+      <div class="schedule-empty">
         No trips are currently available for registration.
       </div>
 

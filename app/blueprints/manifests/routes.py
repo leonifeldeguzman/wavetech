@@ -652,6 +652,83 @@ def delete_slot(trip_id):
     return redirect(back)
 
 
+@manifests_bp.route("/manifests/delete-slots", methods=["POST"])
+@login_required
+def bulk_delete_slots():
+    """Delete several time slots in one go (same rules as delete_slot).
+
+    Every slot goes through the same row lock and the same
+    timeslot_service.deletion_block_reason() check as the single delete, so a
+    slot that gained passengers (or departed) since the page loaded is skipped
+    and reported, never deleted. Slots are handled one at a time: one failing
+    does not undo the ones already deleted.
+    """
+    back_date = _parse_date_arg(request.form.get("view_date"))
+    back = url_for("manifests.list_slots", date=back_date.isoformat())
+
+    trip_ids = []
+    for raw in request.form.getlist("trip_ids"):
+        if raw.isdigit() and int(raw) not in trip_ids:
+            trip_ids.append(int(raw))
+    if not trip_ids:
+        flash("Select at least one time slot to delete.", "warning")
+        return redirect(back)
+
+    deleted = 0
+    failed = 0
+    blocked_reasons = []
+    blocked_count = 0
+
+    for trip_id in trip_ids:
+        trip = Trip.query.filter_by(id=trip_id).with_for_update().first()
+        if trip is None:
+            continue    # already gone
+
+        reason = timeslot_service.deletion_block_reason(trip)
+        if reason:
+            db.session.rollback()   # release the row lock, nothing changed
+            blocked_count += 1
+            if reason not in blocked_reasons:
+                blocked_reasons.append(reason)
+            continue
+
+        try:
+            timeslot_service.delete_time_slot(
+                trip,
+                user_id=session.get("user_id"),
+                admin_name=session.get("full_name", "Unknown"),
+            )
+            deleted += 1
+        except Exception:
+            # delete_time_slot() rolls back and re-raises any error. Keep
+            # going so the slots already deleted are reported, not lost
+            # behind a 500 page.
+            db.session.rollback()
+            current_app.logger.exception(
+                "Bulk delete failed for time slot %s", trip_id
+            )
+            failed += 1
+
+    if deleted:
+        flash(
+            f"{deleted} time slot{'' if deleted == 1 else 's'} deleted.",
+            "success",
+        )
+    if blocked_count:
+        flash(
+            f"{blocked_count} time slot{'' if blocked_count == 1 else 's'} "
+            "not deleted. " + " ".join(blocked_reasons),
+            "danger",
+        )
+    if failed:
+        flash(
+            f"{failed} time slot{'' if failed == 1 else 's'} could not be "
+            "deleted. Please try again.",
+            "danger",
+        )
+    return redirect(back)
+
+
 def _taken_times(trip):
     """{'HH:MM': '9:15 AM'} of the OTHER trips on this trip's date.
 
@@ -766,9 +843,21 @@ def _render_trip_detail(trip, form_values=None, field_errors=None, status=200,
         saved_values=saved_values,
         # Weather assessment only makes sense for today's trips (PH date)
         # and never for a closed (departed/expired) trip.
+        # It also needs the boat, operator and crew saved: the assessment
+        # route refuses an Unassigned trip.
         can_assess=(
             not read_only
             and trip.departure_time.date() == ph_today()
+            and _details_assigned(trip)
+        ),
+        assess_note=(
+            "Assign trip details first"
+            if (
+                not read_only
+                and trip.departure_time.date() == ph_today()
+                and not _details_assigned(trip)
+            )
+            else "Available on the trip date only"
         ),
         details_assigned=_details_assigned(trip),
         # Same source as the timetable's overall-condition indicator

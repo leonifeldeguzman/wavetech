@@ -480,14 +480,19 @@
     margin-bottom: 0;
 }
 
+/* Header band matches the Scheduling table (.schedule-header in passenger.css):
+   light blue, top and bottom lines only, square ends. */
 .active-trip-table thead th {
-    background: #f1f7ff;
-    border-bottom: 1px solid #dce7f2;
-    color: #111111;
-    font-size: 0.88rem;
+    background-color: #f1f8ff;
+    border-top: 1px solid #b9d7f5;
+    border-bottom: 1px solid #b9d7f5;
+    color: #1f2937;
+    font-size: 0.85rem;
     font-weight: 600;
-    padding: 12px 14px;
+    height: 48px;
+    padding: 14px 12px;
     text-align: center;
+    vertical-align: middle;
 }
 
 .active-trip-table tbody td.capacity-cell {

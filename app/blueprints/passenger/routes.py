@@ -227,15 +227,17 @@ def _serialize_trip_summary(trip):
             
         ),
         "departure_date": (
-            trip.departure_time.strftime("%B %d, %Y")
+            f"{trip.departure_time:%B} {trip.departure_time.day}, "
+            f"{trip.departure_time:%Y}"
             if trip.departure_time else None
         ),
         "display_time": (
             shown_departure.strftime("%I:%M %p").lstrip("0")
             if shown_departure else None
         ),
+        # "November 7, 2026": day without a leading zero (portable; %-d is not).
         "display_date": (
-            shown_departure.strftime("%B %d, %Y")
+            f"{shown_departure:%B} {shown_departure.day}, {shown_departure:%Y}"
             if shown_departure else None
         ),
         "route_origin": trip.route_origin,

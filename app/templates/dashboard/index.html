@@ -135,7 +135,7 @@
 
                     {% if latest_reading %}
                         Last check:
-                        {{ latest_reading.retrieved_at.strftime('%I:%M %p') }}
+                        {{ latest_reading.retrieved_at.strftime('%I:%M %p').lstrip('0') }}
                     {% else %}
                         Lake Monitoring not yet connected
                     {% endif %}
@@ -265,7 +265,7 @@
 
                                         <span>
                                             <i class="bi bi-clock"></i>
-                                            {{ trip.departure_time.strftime('%B %d, %Y - %I:%M %p') }}
+                                            {{ trip.departure_time.strftime('%B %d, %Y - %I:%M %p').replace(' 0', ' ') }}
                                         </span>
                                     </div>
 
@@ -339,7 +339,7 @@
                         </div>
 
                         <div class="decision-value">
-                            {{ selected_trip.departure_time.strftime('%I:%M %p') }}
+                            {{ selected_trip.departure_time.strftime('%I:%M %p').lstrip('0') }}
                         </div>
 
                     </div>
@@ -607,7 +607,7 @@
                             <!-- Departure -->
                             <td>
                                 <span class="{% if trip.status|lower == 'boarding' %}fw-bold{% endif %}">
-                                    {{ trip.departure_time.strftime('%I:%M %p') }}
+                                    {{ trip.departure_time.strftime('%I:%M %p').lstrip('0') }}
                                 </span>
                             </td>
 
