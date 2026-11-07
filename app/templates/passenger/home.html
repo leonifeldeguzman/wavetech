@@ -479,7 +479,7 @@
                                 {% if announcement.published_at %}
                                     <span class="home-announcement-date">
                                         <i class="bi" aria-hidden="true"></i>
-                                        {% set d = announcement.published_at %}{{ d.strftime('%B') }} {{ d.day }}, {{ d.year }}, {{ d.hour % 12 or 12 }}:{{ '%02d' % d.minute }} {{ 'AM' if d.hour < 12 else 'PM' }}
+                                        {{ announcement.published_at | ph_time('%B %d, %Y, %I:%M %p') | replace('PHT', '') | replace(' 0', ' ') | trim }}
                                     </span>
                                 {% endif %}
 
