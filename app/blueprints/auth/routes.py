@@ -103,7 +103,7 @@ def forgot_password():
         # Same answer whether or not the account exists.
         session["reset_admin_id"] = admin_id
         session.pop("reset_verified_user_id", None)
-        flash("If the account exists, a code was sent to its registered email.", "info")
+        flash("A code was sent to its registered email.", "info")
         return redirect(url_for("auth.verify_otp"))
 
     return render_template("auth/forgot_password.html")
@@ -164,7 +164,7 @@ def resend_otp():
             flash("Too many requests. Please try again later.", "danger")
             return redirect(url_for("auth.verify_otp"))
 
-    flash("A new code was sent if the account exists.", "info")
+    flash("A new code was sent.", "info")
     return redirect(url_for("auth.verify_otp"))
 
 
