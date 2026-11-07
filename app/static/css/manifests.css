@@ -809,10 +809,6 @@
    GOOD / SAFE
    --------------------------------------------------------- */
 
-.overall-condition-safe {
-    background-color: #fbfefc;
-}
-
 .overall-condition-safe .overall-condition-badge {
     background-color: #e6f4ea;
     color: #237447;
@@ -822,10 +818,6 @@
 /* ---------------------------------------------------------
    CAUTION
    --------------------------------------------------------- */
-
-.overall-condition-caution {
-    background-color: #fffdf7;
-}
 
 .overall-condition-caution .overall-condition-badge {
     background-color: #fff1c7;
@@ -837,10 +829,6 @@
    POOR / UNSAFE
    --------------------------------------------------------- */
 
-.overall-condition-unsafe {
-    background-color: #fffafa;
-}
-
 .overall-condition-unsafe .overall-condition-badge {
     background-color: #fbe3e3;
     color: #a72e2e;
@@ -850,10 +838,6 @@
 /* ---------------------------------------------------------
    UNAVAILABLE
    --------------------------------------------------------- */
-
-.overall-condition-unavailable {
-    background-color: #fafbfc;
-}
 
 .overall-condition-unavailable .overall-condition-badge {
     background-color: #e9edf1;

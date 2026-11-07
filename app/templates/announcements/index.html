@@ -79,6 +79,13 @@
         box-shadow: 0 0 0 3px rgba(155, 189, 224, 0.25);
     }
     .notice-filter-footer { margin: 4px 2px 0; font-size: 0.84rem; color: #666666; }
+    /* Create Notice sits at the right end of the search row */
+    .notice-filter-controls .notice-create-btn {
+        height: 38px;
+        min-height: 38px;
+        margin-left: auto;
+        white-space: nowrap;
+    }
 
     /* ---- Notice cards: action buttons pinned to the top-right corner ---- */
     .announcement-item { position: relative; display: flex; align-items: center; gap: 14px; }
@@ -337,147 +344,160 @@
 <div class="announcement-page">
 
     <!-- =====================================================
-         CREATE NOTICE
+         CREATE NOTICE (dialog opened by the "Create Notice" button in the
+         toolbar below). Field ids are unchanged: the schedule toggle and the
+         date picker scripts at the bottom of this page rely on them.
          ===================================================== -->
 
-    <section class="announcement-panel announcement-create-panel" id="notice-create">
+    <div
+        class="modal fade"
+        id="createNoticeModal"
+        tabindex="-1"
+        aria-labelledby="createNoticeModalLabel"
+        aria-hidden="true"
+        data-auto-open="{{ 'true' if (prefill.title or prefill.content) else 'false' }}"
+    >
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content announcement-modal">
+                <form
+                    id="announcement-form"
+                    method="POST"
+                    action="{{ url_for('announcements.create') }}"
+                >
+                    <div class="modal-header announcement-modal-header">
+                        <h5 class="modal-title" id="createNoticeModalLabel">
+                            <i class="bi bi-megaphone" aria-hidden="true"></i>
+                            Create Notice
+                        </h5>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"
+                        ></button>
+                    </div>
 
-        <div class="announcement-panel-header">
-            <div class="announcement-panel-title">
-                <i class="bi bi-megaphone" aria-hidden="true"></i>
-                <div>
-                    <h2>Create Notice</h2>
-                    <p>Share schedule updates, warnings and important information with passengers.</p>
-                </div>
+                    <div class="modal-body announcement-modal-body">
+
+                        <p>Share schedule updates, warnings and important information with passengers.</p>
+
+                        <!-- Title -->
+                        <div class="announcement-modal-field">
+                            <label for="announcement-title">Notice Title</label>
+                            <input
+                                type="text"
+                                id="announcement-title"
+                                name="title"
+                                maxlength="200"
+                                placeholder="Enter notice title"
+                                value="{{ prefill.title }}"
+                                required
+                            >
+                        </div>
+
+                        <!-- Type -->
+                        <div class="announcement-modal-field">
+                            <label for="announcement-type">Notice Type</label>
+                            <div class="announcement-control-wrap announcement-select-wrap">
+                                <select id="announcement-type" name="type" required>
+                                    {% for notice_type in types %}
+                                    <option
+                                        value="{{ notice_type }}"
+                                        {% if prefill.type == notice_type %}selected{% endif %}
+                                    >{{ notice_type }}</option>
+                                    {% endfor %}
+                                </select>
+                                <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
+                            </div>
+                        </div>
+
+                        <!-- Message -->
+                        <div class="announcement-modal-field">
+                            <label for="announcement-content">Notice Message</label>
+                            <textarea
+                                id="announcement-content"
+                                name="content"
+                                rows="5"
+                                placeholder="Type your notice here..."
+                                required
+                            >{{ prefill.content }}</textarea>
+                        </div>
+
+                        <!-- Publishing, Schedule and Expiry: one row (existing
+                             .announcement-publishing-row grid, 3 columns) -->
+                        <div class="announcement-publishing-row">
+
+                            <!-- Publishing -->
+                            <div class="announcement-field">
+                                <label for="announcement-action">Publishing</label>
+                                <div class="announcement-control-wrap announcement-select-wrap">
+                                    <select id="announcement-action" name="action" required>
+                                        <option value="publish_now" selected>Publish now</option>
+                                        <option value="schedule">Schedule for later</option>
+                                        <option value="save_draft">Save as draft (not visible to passengers)</option>
+                                    </select>
+                                    <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
+                                </div>
+                            </div>
+
+                            <!-- Schedule -->
+                            <div
+                                class="announcement-field"
+                                id="announcement-schedule-field"
+                            >
+                                <label for="announcement-schedule">
+                                    Schedule Date &amp; Time
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    id="announcement-schedule"
+                                    name="scheduled_at"
+                                >
+                                <small class="announcement-field-hint">
+                                    Philippine Time. Published automatically
+                                    at this time.
+                                </small>
+                            </div>
+
+                            <!-- Expiry -->
+                            <div class="announcement-field">
+                                <label for="announcement-expires">
+                                    Expiry Date &amp; Time (optional)
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    id="announcement-expires"
+                                    name="expires_at"
+                                    data-dtp-min-from="announcement-schedule"
+                                >
+                                <small class="announcement-field-hint">
+                                    Philippine Time. Hidden from passengers
+                                    after this time. Leave blank for no expiry.
+                                </small>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer announcement-modal-footer">
+                        <button
+                            type="button"
+                            class="announcement-modal-cancel"
+                            data-bs-dismiss="modal"
+                        >Cancel</button>
+                        <button type="submit" class="announcement-modal-confirm">
+                            <i class="bi bi-send" aria-hidden="true"></i>
+                            Create Notice
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-
-        <div class="announcement-divider"></div>
-
-        <form
-            id="announcement-form"
-            method="POST"
-            action="{{ url_for('announcements.create') }}"
-        >
-
-            <div class="announcement-form-grid">
-
-                <!-- Title -->
-                <div class="announcement-field">
-                    <label for="announcement-title">Notice Title</label>
-                    <input
-                        type="text"
-                        id="announcement-title"
-                        name="title"
-                        maxlength="200"
-                        placeholder="Enter notice title"
-                        value="{{ prefill.title }}"
-                        required
-                    >
-                </div>
-
-                <!-- Type -->
-                <div class="announcement-field">
-                    <label for="announcement-type">Notice Type</label>
-                    <div class="announcement-control-wrap announcement-select-wrap">
-                        <select id="announcement-type" name="type" required>
-                            {% for notice_type in types %}
-                            <option
-                                value="{{ notice_type }}"
-                                {% if prefill.type == notice_type %}selected{% endif %}
-                            >{{ notice_type }}</option>
-                            {% endfor %}
-                        </select>
-                        <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
-                    </div>
-                </div>
-
-                <!-- Message -->
-                <div class="announcement-field announcement-field-full">
-                    <label for="announcement-content">Notice Message</label>
-                    <textarea
-                        id="announcement-content"
-                        name="content"
-                        rows="5"
-                        placeholder="Type your notice here..."
-                        required
-                    >{{ prefill.content }}</textarea>
-                </div>
-
-                <!-- Publishing, Expiry, and Schedule -->
-                <div class="announcement-publishing-row announcement-field-full">
-
-                    <!-- Publishing -->
-                    <div class="announcement-field">
-                        <label for="announcement-action">Publishing</label>
-                        <div class="announcement-control-wrap announcement-select-wrap">
-                            <select id="announcement-action" name="action" required>
-                                <option value="publish_now" selected>Publish now</option>
-                                <option value="schedule">Schedule for later</option>
-                                <option value="save_draft">Save as draft (not visible to passengers)</option>
-                            </select>
-                            <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
-                        </div>
-                    </div>
-
-                    <!-- Expiry -->
-                    <div class="announcement-field">
-                        <label for="announcement-expires">
-                            Expiry Date &amp; Time (optional)
-                        </label>
-                        <input
-                            type="datetime-local"
-                            id="announcement-expires"
-                            name="expires_at"
-                            data-dtp-min-from="announcement-schedule"
-                        >
-                        <small class="announcement-field-hint">
-                            Philippine Time. The notice is automatically hidden
-                            from passengers after this time. Leave blank for no
-                            expiry (stays published until you unpublish it).
-                        </small>
-                    </div>
-
-                    <!-- Schedule -->
-                    <div
-                        class="announcement-field"
-                        id="announcement-schedule-field"
-                    >
-                        <label for="announcement-schedule">
-                            Schedule Date &amp; Time
-                        </label>
-                        <input
-                            type="datetime-local"
-                            id="announcement-schedule"
-                            name="scheduled_at"
-                        >
-                        <small class="announcement-field-hint">
-                            Philippine Time. The notice is published
-                            automatically at this time.
-                        </small>
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- Buttons -->
-            <div class="announcement-form-actions">
-                <button
-                    type="submit"
-                    class="announcement-btn announcement-btn-primary"
-                >
-                    <i class="bi bi-send" aria-hidden="true"></i>
-                    Create Notice
-                </button>
-            </div>
-
-        </form>
-
-    </section>
+    </div>
 
     <!-- =====================================================
-         FILTER TOOLBAR (below the Create Notice card)
+         FILTER TOOLBAR (search, type filter and the Create Notice button)
          ===================================================== -->
 
     <div class="notice-filter-bar" id="noticeFilterBar">
@@ -509,6 +529,17 @@
                 </select>
                 <i class="bi bi-chevron-down announcement-control-icon" aria-hidden="true"></i>
             </div>
+
+            <!-- Opens the Create Notice dialog above -->
+            <button
+                type="button"
+                class="announcement-btn announcement-btn-primary notice-create-btn"
+                data-bs-toggle="modal"
+                data-bs-target="#createNoticeModal"
+            >
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                Create Notice
+            </button>
         </div>
 
     </div>
@@ -914,6 +945,35 @@
     sync();
     /* the date picker script below builds its button after this runs */
     document.addEventListener("DOMContentLoaded", sync);
+})();
+
+/* Create Notice dialog: focus the title when it opens. It also opens by
+   itself when the page arrives with a prefill (the "Create Safety Alert"
+   link) or with the old #notice-create anchor, so those links still land on
+   a ready form even though the form is now hidden until asked for. */
+(function () {
+    var modalEl = document.getElementById("createNoticeModal");
+    if (!modalEl) { return; }
+
+    modalEl.addEventListener("shown.bs.modal", function () {
+        var title = document.getElementById("announcement-title");
+        if (title) { title.focus(); }
+    });
+
+    var auto = modalEl.getAttribute("data-auto-open") === "true" ||
+               window.location.hash === "#notice-create";
+    if (!auto) { return; }
+
+    function show() {
+        if (window.bootstrap && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            return true;
+        }
+        return false;
+    }
+    function run() { if (!show()) { window.addEventListener("load", show); } }
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", run); }
+    else { run(); }
 })();
 
 /* Delete modal: one shared dialog, filled in from the Delete button that

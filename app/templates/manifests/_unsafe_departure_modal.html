@@ -1,0 +1,95 @@
+{# "Are you sure you want to proceed?" pop-up shown when the Depart button is
+   clicked while conditions are Unsafe.
+
+   Include once near the end of manifests/detail.html:
+       {% include "manifests/_unsafe_departure_modal.html" %}
+
+   Needs conditions_unsafe (passed by the trip detail route) and trip.
+   Uses the page's existing Bootstrap modal and the manifest-discard-* styles
+   from manifest-detail.css, so no new CSS is required. It finds the existing
+   Confirm Departure form by its action URL; the form itself needs no changes. #}
+{% if conditions_unsafe and not read_only %}
+
+<div class="modal fade manifest-discard-modal" id="unsafeDepartModal"
+     tabindex="-1" aria-labelledby="unsafeDepartTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-body">
+                <h2 class="manifest-discard-title" id="unsafeDepartTitle">
+                    Are you sure you want to proceed?
+                </h2>
+                <p class="manifest-discard-text">
+                    Current conditions are rated <strong>Unsafe</strong>.
+                    Departing now is not recommended, and this trip will be
+                    recorded as departed under Unsafe conditions.
+                </p>
+            </div>
+
+            <div class="modal-footer manifest-discard-footer">
+                <button type="button" class="btn manifest-discard-stay"
+                        id="unsafeDepartCancel">
+                    Go back
+                </button>
+                <button type="button" class="btn manifest-discard-confirm"
+                        id="unsafeDepartConfirm">
+                    Depart anyway
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var form = document.querySelector('form[action*="confirm-departure"]');
+    var modalEl = document.getElementById("unsafeDepartModal");
+    if (!form || !modalEl) return;
+
+    var confirmed = false;
+    var instance = null;
+
+    function show() {
+        if (window.bootstrap && window.bootstrap.Modal) {          // Bootstrap 5
+            instance = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+            instance.show();
+        } else if (window.jQuery && window.jQuery.fn.modal) {      // Bootstrap 4
+            window.jQuery(modalEl).modal("show");
+        } else if (window.confirm("Are you sure you want to proceed? Current conditions are Unsafe.")) {
+            send();                                                // last-resort fallback
+        }
+    }
+
+    function hide() {
+        if (instance) instance.hide();
+        else if (window.jQuery && window.jQuery.fn.modal) window.jQuery(modalEl).modal("hide");
+    }
+
+    function send() {
+        confirmed = true;
+        var flag = document.createElement("input");
+        flag.type = "hidden";
+        flag.name = "unsafe_confirmed";
+        flag.value = "1";
+        form.appendChild(flag);
+        form.submit();
+    }
+
+    // Fires only after the form's own validation (e.g. the Coast Guard audit
+    // checkbox) has passed.
+    form.addEventListener("submit", function (event) {
+        if (confirmed) return;
+        event.preventDefault();
+        show();
+    });
+
+    document.getElementById("unsafeDepartCancel").addEventListener("click", hide);
+    document.getElementById("unsafeDepartConfirm").addEventListener("click", function () {
+        this.disabled = true;
+        send();
+    });
+})();
+</script>
+
+{% endif %}

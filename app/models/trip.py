@@ -32,6 +32,10 @@ class Trip(db.Model):
 
     coast_guard_audit_confirmed = db.Column(db.Boolean, nullable=False, default=False)
     departed_at = db.Column(db.DateTime, nullable=True)
+    # Overall advisory frozen at the moment of departure:
+    # {"status": "safe|caution|unsafe|unavailable", "label": ..., "message": ...}
+    # NULL for trips that departed before this column existed.
+    departure_conditions = db.Column(db.JSON, nullable=True)
 
     boat = db.relationship("Boat", backref="trips")
 

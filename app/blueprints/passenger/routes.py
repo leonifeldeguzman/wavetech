@@ -1158,7 +1158,7 @@ def home():
     if current_trip and current_trip.departure_time:
         shown_departure = current_trip.new_departure_time or current_trip.departure_time
         current_trip_date = shown_departure.strftime("%B %d, %Y")
-        current_trip_time = shown_departure.strftime("%I:%M%p").lstrip("0")
+        current_trip_time = shown_departure.strftime("%I:%M %p").lstrip("0")
 
     # Published, non-expired notices only (expiry enforced in the service).
     announcements = announcement_service.get_active_announcements_for_passengers(

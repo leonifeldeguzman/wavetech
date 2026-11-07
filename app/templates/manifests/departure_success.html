@@ -14,34 +14,39 @@
 
 <div class="departure-success-card">
 
-    <!-- Success Banner -->
-    <div class="departure-success-banner">
-
-        <div class="departure-success-icon">
-            <i class="bi bi-check-lg"></i>
-        </div>
-
-        <div class="departure-success-title">
-            SUCCESSFULLY DEPARTED!
-        </div>
-
-    </div>
-
-
-    <!-- Trip Summary -->
     <div class="departure-trip-card">
 
-        <h2 class="departure-boat-name">
-            {{ trip.boat.name if trip.boat else '-' }}
-        </h2>
+        <!-- Success Header -->
+        <div class="departure-success-banner">
 
+            <div class="departure-success-icon">
+                <i class="bi bi-check-lg"></i>
+            </div>
+
+            <h1 class="departure-success-title">Trip Departed</h1>
+
+            <p class="departure-success-subtitle">
+                The passenger manifest was archived and is now read-only
+            </p>
+
+        </div>
+
+
+        <div class="departure-divider departure-divider-top"></div>
+
+
+        <!-- Trip Information -->
         <div class="departure-trip-info">
 
             <div class="departure-info-row">
-                <span class="departure-info-label">
-                    Route:
+                <span class="departure-info-label">Boat</span>
+                <span class="departure-info-value">
+                    {{ trip.boat.name if trip.boat else '-' }}
                 </span>
+            </div>
 
+            <div class="departure-info-row">
+                <span class="departure-info-label">Route</span>
                 <span class="departure-info-value departure-route">
                     <span>{{ trip.route_origin }}</span>
                     <i class="bi bi-arrow-right"></i>
@@ -49,44 +54,76 @@
                 </span>
             </div>
 
+            <div class="departure-info-row">
+                <span class="departure-info-label">Date</span>
+                <span class="departure-info-value">
+                    {{ trip.departed_at.strftime('%B') }}
+                    {{ trip.departed_at.day }},
+                    {{ trip.departed_at.year }}
+                </span>
+            </div>
 
             <div class="departure-info-row">
-                <span class="departure-info-label">
-                    Time:
-                </span>
-
+                <span class="departure-info-label">Time</span>
                 <span class="departure-info-value">
                     {{ trip.departed_at.strftime('%I:%M %p') }}
                 </span>
             </div>
 
+            <div class="departure-info-row">
+                <span class="departure-info-label">Operator</span>
+                <span class="departure-info-value">
+                    {{ trip.operator_name if trip.operator_name else '-' }}
+                </span>
+            </div>
 
             <div class="departure-info-row">
-                <span class="departure-info-label">
-                    Status:
-                </span>
-
+                <span class="departure-info-label">Crew</span>
                 <span class="departure-info-value">
-                    {{ conditions_message }}
+                    {{ trip.crew_name if trip.crew_name else '-' }}
+                </span>
+            </div>
+
+            <div class="departure-info-row">
+                <span class="departure-info-label">Confirmed by</span>
+                <span class="departure-info-value">
+                    {{ confirmed_by if confirmed_by else '-' }}
                 </span>
             </div>
 
         </div>
 
 
-        <!-- Divider -->
         <div class="departure-divider"></div>
 
 
-        <!-- Archived Confirmation -->
-        <div class="departure-archive-box">
+        <!-- Passengers -->
+        <div class="departure-section-title">Passengers</div>
 
-            <i class="bi bi-clipboard-check departure-archive-icon"></i>
+        <div class="departure-trip-info">
 
-            <div class="departure-archive-text">
-                Passenger manifest has been archived successfully.
+            <div class="departure-info-row">
+                <span class="departure-info-label">Passengers boarded</span>
+                <span class="departure-info-value">
+                    {{ passenger_count }}
+                </span>
             </div>
 
+            <div class="departure-info-row">
+                <span class="departure-info-label">Seats used</span>
+                <span class="departure-info-value">
+                    {{ passenger_count }} of {{ trip.boat.capacity if trip.boat else '-' }}
+                </span>
+            </div>
+
+        </div>
+
+
+        <!-- Environmental status -->
+        <div class="departure-conditions departure-conditions--{{ conditions.status }}"
+             role="status">
+            {% if conditions.status != 'none' %}<strong>{{ conditions.label }}.</strong>{% endif %}
+            {{ conditions.message }}
         </div>
 
 
@@ -100,12 +137,23 @@
                 Back to Dashboard
             </a>
 
-            <a
-                href="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}"
-                class="departure-log-btn"
-            >
-                View Trip Log
-            </a>
+            <div class="departure-actions-right">
+
+                <a
+                    href="{{ url_for('manifests.export_pdf', trip_id=trip.id) }}"
+                    class="departure-pdf-btn"
+                >
+                    Export PDF
+                </a>
+
+                <a
+                    href="{{ url_for('manifests.trip_detail', trip_id=trip.id) }}"
+                    class="departure-log-btn"
+                >
+                    View Trip Log
+                </a>
+
+            </div>
 
         </div>
 

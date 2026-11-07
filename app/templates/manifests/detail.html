@@ -596,14 +596,34 @@ select.dt-source {
                     All trip details are required. Update them and save your changes.
                 </div>
 
-                <button type="submit" class="manifest-save-btn">
-                    <i class="bi bi-check2"></i>
-                    Save Changes
-                </button>
+                <div class="manifest-trip-info-buttons">
+                    {% if not has_passengers and (trip.operator_name or trip.crew_name or trip.boat) %}
+                    {# Empty trip: switch back to Unassigned. Opens a confirmation;
+                       the confirmed clear submits the separate clear form below,
+                       so the Save validation does not run. #}
+                    <button type="button" class="manifest-clear-btn" id="clearTripInfoBtn">
+                        <i class="bi bi-x-lg"></i>
+                        Clear
+                    </button>
+                    {% endif %}
+
+                    <button type="submit" class="manifest-save-btn">
+                        <i class="bi bi-check2"></i>
+                        Save Changes
+                    </button>
+                </div>
             </div>
             {% endif %}
 
         </form>
+
+        {% if not read_only and not has_passengers and (trip.operator_name or trip.crew_name or trip.boat) %}
+        <form
+            method="POST"
+            action="{{ url_for('manifests.clear_trip_info', trip_id=trip.id) }}"
+            id="clearTripInfoForm"
+        ></form>
+        {% endif %}
 
     </div>
 
@@ -1568,166 +1588,91 @@ select.dt-source {
 
 <!-- =========================================================
      WALK-IN PASSENGER MODAL
+     One or more passengers, saved together (add_walkins_bulk).
      ========================================================= -->
 
 <div class="modal fade"
      id="walkinModal"
-     tabindex="-1">
+     tabindex="-1"
+     aria-labelledby="walkinTitle">
 
-<div class="modal-dialog">
+<div class="modal-dialog modal-lg" id="walkinDialog">
 
     <div class="modal-content">
 
         <form
             method="POST"
-            action="{{ url_for('manifests.add_walkin', trip_id=trip.id) }}"
+            action="{{ url_for('manifests.add_walkins_bulk', trip_id=trip.id) }}"
             id="walkinForm"
+            data-seats-left="{{ (capacity - occupied_count) if capacity else 0 }}"
             novalidate
         >
 
-            <div class="modal-header text-white"
-                 style="background-color: var(--navy);">
+            <div class="modal-header wk-header">
 
-                <h5 class="modal-title">
-                    Walk-In Passenger
-                </h5>
+                <div>
+                    <h5 class="modal-title" id="walkinTitle">
+                        Add walk-in passengers
+                    </h5>
+                    <p class="wk-sub">
+                        Add one passenger, or several. They are saved together.
+                    </p>
+                </div>
 
                 <button
                     type="button"
-                    class="btn-close btn-close-white"
+                    class="btn-close"
                     data-bs-dismiss="modal"
+                    aria-label="Close"
                 ></button>
 
             </div>
 
 
-            <div class="modal-body">
+            <div class="modal-body wk-body">
 
-                <div class="row g-3">
+                <div class="wk-error" id="walkinError" role="alert" hidden></div>
 
-                    <div class="col-6">
+                <div class="wk-list" id="walkinList"></div>
 
-                        <label class="form-label small text-muted">
-                            Full Name
-                        </label>
-
-                        <input
-                            type="text"
-                            name="full_name"
-                            id="walkinFullName"
-                            class="form-control{% if walkin_error %} is-invalid{% endif %}"
-                            value="{{ walkin_form.get('full_name', '') }}"
-                            maxlength="100"
-                            required
-                        >
-
-                    </div>
-
-
-                    <div class="col-6">
-
-                        <label class="form-label small text-muted">
-                            Age
-                        </label>
-
-                        <input
-                            type="number"
-                            name="age"
-                            id="walkinAge"
-                            class="form-control"
-                            value="{{ walkin_form.get('age', '') }}"
-                            min="0"
-                            required
-                        >
-
-                    </div>
-
-
-                    <div class="col-12">
-
-                        <label class="form-label small text-muted">
-                            Address
-                        </label>
-
-                        <input
-                            type="text"
-                            name="address"
-                            class="form-control"
-                            value="{{ walkin_form.get('address', '') }}"
-                        >
-
-                    </div>
-
-
-                    <div class="col-6">
-
-                        <label class="form-label small text-muted">
-                            Contact Number
-                        </label>
-
-                        <input
-                            type="text"
-                            name="contact_number"
-                            id="walkinContact"
-                            class="form-control"
-                            value="{{ walkin_form.get('contact_number', '') }}"
-                        >
-
-                    </div>
-
-
-                    <div class="col-6">
-
-                        <label class="form-label small text-muted">
-                            Type
-                        </label>
-
-                        <select
-                            name="passenger_type"
-                            class="form-select"
-                            required
-                        >
-
-                            {% set picked_type = walkin_form.get('passenger_type', 'Regular') %}
-                            {% for value, label in [('Regular', 'Regular'), ('Student', 'Student'), ('Senior', 'Senior'), ('PWD', 'PWD'), ('Child', 'Child')] %}
-                            <option value="{{ value }}"{% if picked_type == value %} selected{% endif %}>
-                                {{ label }}
-                            </option>
-                            {% endfor %}
-
-                        </select>
-
-                    </div>
-
-                    <div class="col-12">
-                        <div class="manifest-field-error"
-                             id="walkinError"
-                             role="alert"
-                             {% if not walkin_error %}hidden{% endif %}>{{ walkin_error or '' }}</div>
-                    </div>
-
-                </div>
+                <button type="button" id="walkinAddRow" class="wk-add">
+                    Add another passenger
+                </button>
 
             </div>
 
 
-            <div class="modal-footer">
+            <div class="modal-footer wk-footer">
 
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    data-bs-dismiss="modal"
-                >
-                    Dismiss
-                </button>
+                <div class="wk-left">
 
-                <button
-                    type="submit"
-                    class="btn text-white"
-                    style="background-color: var(--navy);"
-                >
-                    Register
-                </button>
+                    <span class="wk-summary" id="walkinSummary"></span>
+
+                    <button type="button" id="walkinClear" class="wk-clear" disabled>
+                        Clear all
+                    </button>
+
+                </div>
+
+                <div class="wk-actions">
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal"
+                    >
+                        Dismiss
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="walkinSubmit"
+                        class="btn wk-submit"
+                    >
+                        Register passenger
+                    </button>
+
+                </div>
 
             </div>
 
@@ -1739,24 +1684,85 @@ select.dt-source {
 
 </div>
 
+
+<template id="walkinCardTemplate">
+    <div class="wk-card">
+
+        <div class="wk-card-head">
+            <span class="wk-card-title">Passenger <span class="wk-card-num">1</span></span>
+            <button type="button" class="wk-remove" hidden>Remove</button>
+        </div>
+
+        <div class="wk-grid">
+
+            <label class="wk-field wk-name">
+                <span class="wk-req">Full name</span>
+                <input type="text" name="bulk_full_name" class="form-control"
+                       maxlength="100" placeholder="e.g. Juan Dela Cruz"
+                       autocomplete="off">
+            </label>
+
+            <label class="wk-field wk-age">
+                <span class="wk-req">Age</span>
+                <input type="number" name="bulk_age" class="form-control"
+                       min="0" placeholder="e.g. 25">
+            </label>
+
+            <label class="wk-field wk-type">
+                <span>Type</span>
+                <select name="bulk_passenger_type" class="form-select">
+                    <option value="Regular">Regular</option>
+                    <option value="Student">Student</option>
+                    <option value="Senior">Senior</option>
+                    <option value="PWD">PWD</option>
+                    <option value="Child">Child</option>
+                </select>
+            </label>
+
+            <label class="wk-field wk-address">
+                <span class="wk-req">Address</span>
+                <input type="text" name="bulk_address" class="form-control"
+                       placeholder="e.g. Brgy. Banay-banay, Cabuyao"
+                       autocomplete="off">
+            </label>
+
+            <label class="wk-field wk-contact">
+                <span>Contact number</span>
+                <input type="text" name="bulk_contact_number" class="form-control"
+                       inputmode="tel" placeholder="e.g. 09171234567"
+                       autocomplete="off">
+            </label>
+
+        </div>
+
+        <div class="wk-card-error" role="alert" hidden></div>
+
+    </div>
+</template>
+
 <script type="application/json" id="manifestIdentities">{{ manifest_identities|tojson }}</script>
 <script type="application/json" id="walkinServerError">{{ (walkin_error or '')|tojson }}</script>
+<script type="application/json" id="walkinServerRows">{{ {'mode': walkin_mode, 'rows': walkin_rows or [], 'single': walkin_form or {}}|tojson }}</script>
 
 <script>
-/* Walk-in: instant duplicate check (the server re-checks on submit),
-   re-open with the server's message, and the capacity-banner shortcut. */
+/* Walk-in modal: one card per passenger. One card or many, they all go to
+   add_walkins_bulk, which saves everyone or no one. The server re-checks
+   every rule; the checks here only save the admin a round trip. */
 (function () {
     "use strict";
 
     var form = document.getElementById("walkinForm");
     var modalEl = document.getElementById("walkinModal");
-    var nameInput = document.getElementById("walkinFullName");
-    var ageInput = document.getElementById("walkinAge");
-    var contactInput = document.getElementById("walkinContact");
+    var list = document.getElementById("walkinList");
+    var tpl = document.getElementById("walkinCardTemplate");
+    var addBtn = document.getElementById("walkinAddRow");
     var errorEl = document.getElementById("walkinError");
+    var summaryEl = document.getElementById("walkinSummary");
+    var submitBtn = document.getElementById("walkinSubmit");
+    var clearBtn = document.getElementById("walkinClear");
+    if (!form || !modalEl || !list || !tpl) { return; }
 
-    var MSG_PASSENGER = "This passenger is already registered in this trip manifest.";
-    var MSG_NAME = "A passenger with this name already exists in this manifest.";
+    var seatsLeft = parseInt(form.dataset.seatsLeft, 10) || 0;
 
     var identities = [];
     try {
@@ -1765,64 +1771,210 @@ select.dt-source {
         ) || [];
     } catch (e) { identities = []; }
 
-    /* Same normalisation as the server: trim, collapse spaces, ignore case */
     function normalize(text) {
         return (text || "").replace(/\s+/g, " ").trim().toLowerCase();
     }
-    function digits(text) { return (text || "").replace(/\D/g, ""); }
 
-    function duplicateMessage() {
-        var name = normalize(nameInput.value);
-        if (!name) { return ""; }
-        var age = parseInt(ageInput.value, 10);
-        var contact = digits(contactInput.value);
-        var sameName = identities.filter(function (p) { return p.name === name; });
-        if (!sameName.length) { return ""; }
-        var exact = sameName.some(function (p) {
-            return contact && p.age === age && p.contact === contact;
+    function cards() { return Array.prototype.slice.call(list.children); }
+    function field(card, name) { return card.querySelector('[name="bulk_' + name + '"]'); }
+
+    function isFilled(card) {
+        return ["full_name", "age", "address", "contact_number"].some(function (n) {
+            return field(card, n).value.trim() !== "";
         });
-        return exact ? MSG_PASSENGER : MSG_NAME;
+    }
+
+    function filledCards() { return cards().filter(isFilled); }
+
+    function setCardError(card, message) {
+        var box = card.querySelector(".wk-card-error");
+        box.textContent = message || "";
+        box.hidden = !message;
+        card.classList.toggle("has-error", !!message);
     }
 
     function showError(message) {
-        if (!errorEl) { return; }
         errorEl.textContent = message || "";
         errorEl.hidden = !message;
-        if (nameInput) { nameInput.classList.toggle("is-invalid", !!message); }
     }
 
-    if (form && nameInput && errorEl) {
-        [nameInput, ageInput, contactInput].forEach(function (el) {
-            if (el) { el.addEventListener("input", function () { showError(duplicateMessage()); }); }
+    /* Message for a card whose name clashes with the manifest or an earlier card */
+    function duplicateFor(card) {
+        var name = normalize(field(card, "full_name").value);
+        if (!name) { return ""; }
+        if (identities.some(function (p) { return p.name === name; })) {
+            return "A passenger with this name is already on this manifest.";
+        }
+        var all = cards();
+        for (var i = 0; i < all.indexOf(card); i++) {
+            if (normalize(field(all[i], "full_name").value) === name) {
+                return "Same name as passenger " + (i + 1) + ".";
+            }
+        }
+        return "";
+    }
+
+    function refresh() {
+        var all = cards();
+        all.forEach(function (card, i) {
+            card.querySelector(".wk-card-num").textContent = i + 1;
+            card.querySelector(".wk-remove").hidden = all.length < 2;
         });
-        form.addEventListener("submit", function (event) {
-            var message = duplicateMessage();
+
+        var n = filledCards().length;
+        if (n === 0) {
+            summaryEl.textContent = seatsLeft + (seatsLeft === 1 ? " seat" : " seats") + " left";
+        } else {
+            summaryEl.textContent = n + (n === 1 ? " passenger" : " passengers") +
+                " \u00b7 " + seatsLeft + (seatsLeft === 1 ? " seat" : " seats") + " left";
+        }
+        summaryEl.classList.toggle("is-over", n > seatsLeft);
+
+        submitBtn.textContent = n > 1 ? "Register " + n + " passengers" : "Register passenger";
+        addBtn.disabled = all.length >= seatsLeft;
+        clearBtn.disabled = all.length < 2 && n === 0;
+    }
+
+    function addCard(values) {
+        values = values || {};
+        var card = tpl.content.firstElementChild.cloneNode(true);
+
+        ["full_name", "age", "address", "contact_number"].forEach(function (n) {
+            field(card, n).value = values[n] || "";
+        });
+        field(card, "passenger_type").value = values.passenger_type || "Regular";
+
+        card.addEventListener("input", function (event) {
+            event.target.classList.remove("is-invalid");
+            if (event.target === field(card, "full_name")) {
+                setCardError(card, duplicateFor(card));
+            } else if (card.classList.contains("has-error") &&
+                       !field(card, "full_name").classList.contains("is-invalid")) {
+                setCardError(card, duplicateFor(card));
+            }
+            refresh();
+        });
+
+        card.querySelector(".wk-remove").addEventListener("click", function () {
+            card.remove();
+            cards().forEach(function (c) { setCardError(c, duplicateFor(c)); });
+            refresh();
+        });
+
+        list.appendChild(card);
+        refresh();
+        return card;
+    }
+
+    addBtn.addEventListener("click", function () {
+        var card = addCard();
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        field(card, "full_name").focus({ preventScroll: true });
+    });
+
+    /* Clear all: back to one empty card */
+    clearBtn.addEventListener("click", function () {
+        cards().forEach(function (c) { c.remove(); });
+        showError("");
+        var card = addCard();
+        field(card, "full_name").focus();
+    });
+
+    form.addEventListener("submit", function (event) {
+        var filled = filledCards();
+        var topProblems = [];
+        var firstBad = null;
+
+        showError("");
+        cards().forEach(function (c) {
+            setCardError(c, "");
+            Array.prototype.forEach.call(c.querySelectorAll(".is-invalid"), function (el) {
+                el.classList.remove("is-invalid");
+            });
+        });
+
+        if (!filled.length) {
+            topProblems.push("Add at least one passenger.");
+            firstBad = cards()[0];
+        }
+        if (filled.length > seatsLeft) {
+            topProblems.push(
+                "Only " + seatsLeft + (seatsLeft === 1 ? " seat is" : " seats are") +
+                " left, but " + filled.length + " passengers were entered."
+            );
+        }
+
+        filled.forEach(function (card) {
+            var name = field(card, "full_name");
+            var age = field(card, "age");
+            var address = field(card, "address");
+            var message = "";
+
+            /* Full name, age and address must all be filled in */
+            var missing = [];
+            if (!normalize(name.value)) { missing.push("full name"); name.classList.add("is-invalid"); }
+            if (age.value.trim() === "") { missing.push("age"); age.classList.add("is-invalid"); }
+            if (!normalize(address.value)) { missing.push("address"); address.classList.add("is-invalid"); }
+
+            if (missing.length) {
+                message = "Please enter the " +
+                    (missing.length > 1
+                        ? missing.slice(0, -1).join(", ") + " and " + missing[missing.length - 1]
+                        : missing[0]) + ".";
+            } else {
+                message = duplicateFor(card);
+                if (message) { name.classList.add("is-invalid"); }
+            }
             if (message) {
-                event.preventDefault();
-                showError(message);
-                nameInput.focus();
+                setCardError(card, message);
+                firstBad = firstBad || card;
             }
         });
-        if (modalEl) {
-            modalEl.addEventListener("show.bs.modal", function () {
-                if (!errorEl.hasAttribute("data-server")) { showError(""); }
-            });
-            modalEl.addEventListener("hidden.bs.modal", function () {
-                errorEl.removeAttribute("data-server");
-            });
-        }
-    }
 
-    /* The server refused the submission: reopen with its message */
+        if (topProblems.length || firstBad) {
+            event.preventDefault();
+            showError(topProblems.join("\n"));
+            if (firstBad) {
+                firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+            return;
+        }
+
+        /* Drop untouched cards so the server's passenger numbers match ours */
+        cards().forEach(function (c) { if (!isFilled(c)) { c.remove(); } });
+    });
+
+    /* Start with one blank card, or restore what the server sent back */
+    var server = { mode: null, rows: [], single: {} };
     var serverError = "";
     try {
-        serverError = JSON.parse(
-            document.getElementById("walkinServerError").textContent
-        ) || "";
-    } catch (e) { serverError = ""; }
+        server = JSON.parse(document.getElementById("walkinServerRows").textContent) || server;
+        serverError = JSON.parse(document.getElementById("walkinServerError").textContent) || "";
+    } catch (e) { /* ignore */ }
 
-    if (serverError && errorEl && modalEl) {
-        errorEl.setAttribute("data-server", "1");
+    var restored = server.mode === "bulk" ? (server.rows || []) : [];
+    if (!restored.length && serverError && server.single && Object.keys(server.single).length) {
+        restored = [server.single];     // refused by the single-passenger route
+    }
+
+    if (restored.length) {
+        restored.forEach(function (row) { addCard(row); });
+    } else {
+        addCard();
+    }
+
+    if (serverError) {
+        var general = [];
+        serverError.split("\n").forEach(function (line) {
+            var match = /^Passenger (\d+): (.*)$/.exec(line);
+            var card = match ? cards()[parseInt(match[1], 10) - 1] : null;
+            if (card) {
+                setCardError(card, match[2]);
+            } else if (line.trim()) {
+                general.push(line);
+            }
+        });
+        showError(general.join("\n"));
 
         // Bootstrap's JS loads after this script, so wait until the page is ready
         window.addEventListener("load", function () {
@@ -1831,6 +1983,11 @@ select.dt-source {
             }
         });
     }
+
+    modalEl.addEventListener("shown.bs.modal", function () {
+        var first = cards()[0];
+        if (first) { field(first, "full_name").focus(); }
+    });
 
     /* Edit Capacity: scroll to the existing capacity field and highlight it */
     var editBtn = document.getElementById("editCapacityBtn");
@@ -2870,6 +3027,13 @@ document.addEventListener("DOMContentLoaded", function () {
         leaving = true;
     });
 
+    const clearForm = document.getElementById("clearTripInfoForm");
+    if (clearForm) {
+        clearForm.addEventListener("submit", function () {
+            leaving = true;
+        });
+    }
+
     window.addEventListener("beforeunload", function (event) {
         if (!leaving && isDirty()) {
             event.preventDefault();
@@ -2967,6 +3131,36 @@ document.addEventListener("DOMContentLoaded", function () {
         usedBrowserBack = false;
         pendingHref = null;
         pendingReload = true;
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+
+    /* ---- Any other link (sidebar, header, logo, ...) ----
+       Same Discard modal instead of the browser's own "Leave site?" box.
+       The Back links above handle themselves (they already prevented the
+       default by the time this runs). */
+    document.addEventListener("click", function (event) {
+        if (event.defaultPrevented || leaving) { return; }
+        if (event.button !== 0 || event.ctrlKey || event.metaKey ||
+            event.shiftKey || event.altKey) { return; }   /* new tab / window */
+
+        const link = event.target && event.target.closest
+            ? event.target.closest("a[href]")
+            : null;
+        if (!link || link.hasAttribute("data-back-link")) { return; }
+        if (link.hasAttribute("download") || link.hasAttribute("data-bs-toggle")) { return; }
+        if (link.target && link.target !== "_self") { return; }
+        if (link.protocol !== "http:" && link.protocol !== "https:") { return; }
+
+        /* Same page, only the #hash differs: nothing is being left */
+        if (link.hash &&
+            link.href.split("#")[0] === window.location.href.split("#")[0]) { return; }
+
+        if (!isDirty() || !modalEl || !window.bootstrap) { return; }   /* clean: go on */
+
+        event.preventDefault();
+        usedBrowserBack = false;
+        pendingReload = false;
+        pendingHref = link.href;
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
     });
 
@@ -4299,6 +4493,141 @@ document.addEventListener("DOMContentLoaded", function () {
     sync();
 });
 </script>
+
+{% if not read_only and not has_passengers and (trip.operator_name or trip.crew_name or trip.boat) %}
+<!-- =========================================================
+     CLEAR TRIP INFORMATION: confirm before returning to Unassigned
+     (same look as the Discard Changes modal)
+     ========================================================= -->
+
+<div class="modal fade manifest-discard-modal"
+     id="clearTripInfoModal"
+     tabindex="-1"
+     aria-labelledby="clearTripInfoTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <h5 class="manifest-discard-title" id="clearTripInfoTitle">Clear Trip Information</h5>
+                <p class="manifest-discard-text">
+                    This clears the operator, crew, boat and capacity.
+                    The trip will go back to Unassigned.
+                </p>
+            </div>
+            <div class="modal-footer manifest-discard-footer">
+                <button type="button" class="btn manifest-discard-stay" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn manifest-discard-confirm" id="clearTripInfoConfirmBtn">Clear</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var openBtn = document.getElementById("clearTripInfoBtn");
+    var form = document.getElementById("clearTripInfoForm");
+    var modalEl = document.getElementById("clearTripInfoModal");
+    var confirmBtn = document.getElementById("clearTripInfoConfirmBtn");
+    if (!openBtn || !form || !modalEl || !confirmBtn) { return; }
+
+    function send() {
+        confirmBtn.disabled = true;
+        /* requestSubmit fires the "submit" event, so the unsaved-changes guard
+           knows this is an intended leave and does not show its warning. */
+        if (form.requestSubmit) {
+            form.requestSubmit();
+        } else {
+            form.dispatchEvent(new Event("submit", { cancelable: true }));
+            form.submit();
+        }
+    }
+
+    /* Bootstrap's JS loads after this script, so it is looked up at click time */
+    openBtn.addEventListener("click", function () {
+        if (window.bootstrap && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        } else if (window.confirm("Clear the trip information? The trip will go back to Unassigned.")) {
+            send();
+        }
+    });
+
+    confirmBtn.addEventListener("click", send);
+
+    /* Back/forward cache can restore this page with the button disabled */
+    window.addEventListener("pageshow", function () {
+        confirmBtn.disabled = false;
+    });
+})();
+</script>
+{% endif %}
+
+{% if conditions_unsafe and not read_only %}
+<!-- =========================================================
+     UNSAFE CONDITIONS: confirm before departing
+     (same look as the Discard Changes modal)
+     ========================================================= -->
+
+<div class="modal fade manifest-discard-modal"
+     id="unsafeDepartModal"
+     tabindex="-1"
+     aria-labelledby="unsafeDepartTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <h5 class="manifest-discard-title" id="unsafeDepartTitle">Are you sure you want to proceed?</h5>
+                <p class="manifest-discard-text">
+                    Current conditions are rated <strong>Unsafe</strong>. Departing now is
+                    not recommended, and this trip will be recorded as departed under
+                    Unsafe conditions.
+                </p>
+            </div>
+            <div class="modal-footer manifest-discard-footer">
+                <button type="button" class="btn manifest-discard-stay" data-bs-dismiss="modal">Go back</button>
+                <button type="button" class="btn manifest-discard-confirm" id="unsafeDepartConfirmBtn">Depart anyway</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var form = document.querySelector('form[action*="confirm-departure"]');
+    var modalEl = document.getElementById("unsafeDepartModal");
+    var confirmBtn = document.getElementById("unsafeDepartConfirmBtn");
+    if (!form || !modalEl || !confirmBtn) { return; }
+
+    var confirmed = false;
+
+    /* Runs only after the form's own checks pass (the audit checkbox enables
+       the button). Bootstrap's JS loads after this script, so it is looked up
+       at click time. */
+    form.addEventListener("submit", function (event) {
+        if (confirmed) { return; }
+        if (!window.bootstrap || !window.bootstrap.Modal) { return; }  /* server still asks for confirmation */
+        event.preventDefault();
+        window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+
+    confirmBtn.addEventListener("click", function () {
+        confirmed = true;
+        confirmBtn.disabled = true;
+        var flag = document.createElement("input");
+        flag.type = "hidden";
+        flag.name = "unsafe_confirmed";
+        flag.value = "1";
+        form.appendChild(flag);
+        form.submit();
+    });
+
+    /* Back/forward cache can restore this page with the button disabled */
+    window.addEventListener("pageshow", function () {
+        confirmed = false;
+        confirmBtn.disabled = false;
+    });
+})();
+</script>
+{% endif %}
 
 {% endblock %}
 

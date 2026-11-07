@@ -735,3 +735,47 @@ def get_current_overall_condition(assessment: SchedulingAssessment | None = None
         "badge": _OVERALL_BADGE_LABEL[status],
         "summary": _OVERALL_SUMMARY_TEXT[status],
     }
+
+# ---------------------------------------------------------------------------
+# Departure advisory snapshot.
+# Captured once when a trip departs and stored on the Trip, so later views
+# (success page, trip log, PDF) show the advisory as it was at departure,
+# never the current one.
+# ---------------------------------------------------------------------------
+
+_SNAPSHOT_STATUSES = {"safe", "caution", "unsafe", "unavailable"}
+
+_NO_SNAPSHOT = {
+    "status": "none",
+    "label": "",
+    "message": "No advisory was recorded for this departure.",
+}
+
+
+def build_departure_snapshot(assessment: SchedulingAssessment | None = None) -> dict[str, str]:
+    """Freeze the current overall condition as a JSON-serializable dict.
+
+    Call this at the moment the departure is confirmed. Pass the assessment
+    you already have to avoid evaluating twice."""
+    info = get_current_overall_condition(assessment)
+    return {
+        "status": info["css_class"],   # safe / caution / unsafe / unavailable
+        "label": info["label"],        # Good Condition / Caution / Poor Condition / Unavailable
+        "message": info["summary"],
+    }
+
+
+def departure_conditions_for(trip: Any) -> dict[str, str]:
+    """The advisory recorded when `trip` departed, shaped for the template.
+
+    Trips that departed before snapshots existed (or with a malformed value)
+    get the neutral 'none' state. They are never back-filled with the
+    current advisory, because that would be the same bug again."""
+    snap = getattr(trip, "departure_conditions", None)
+    if not isinstance(snap, dict) or snap.get("status") not in _SNAPSHOT_STATUSES:
+        return dict(_NO_SNAPSHOT)
+    return {
+        "status": snap["status"],
+        "label": snap.get("label", ""),
+        "message": snap.get("message", ""),
+    }

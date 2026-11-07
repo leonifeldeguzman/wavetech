@@ -4,7 +4,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from flask import (
     abort, current_app, flash, jsonify, redirect, render_template,
-    request, session, url_for,
+    request, Response, session, url_for,
 )
 
 from app.blueprints.manifests import manifests_bp
@@ -20,6 +20,7 @@ from app.services import (
     activity_log_service,
     announcement_service,
     manifest_service,
+    pdf_service,
     registration_service,
     scheduling_service,
     unisms_service as sms_service,   # the provider announcement_service already uses
@@ -99,6 +100,9 @@ def _fmt_time(value):
     return value.strftime("%I:%M %p").lstrip("0")
 
 
+PAST_DATE_DELETE_MSG = "Time slots on past dates cannot be deleted."
+
+
 def _parse_date_arg(value):
     """YYYY-MM-DD -> date, falling back to today (PH) when missing/invalid."""
     if value:
@@ -154,22 +158,28 @@ def _render_list(selected_date, add_form=None, add_error=None, status=200):
         for s in slots
     }
 
-    # Slots with passenger records (or already departed) get no trash button.
-    # The delete route re-checks this on the backend.
-    blocked_ids = timeslot_service.undeletable_trip_ids(slots)
-    deletable_ids = {s.id for s in slots if s.id not in blocked_ids}
+    now = ph_now()
+    is_past_date = selected_date < now.date()
+
+    # Slots with passenger records (or already departed) get no trash button,
+    # and neither does any slot on a past date (view-only). With no deletable
+    # slots the template also hides the checkboxes, Select toggle and bulk bar.
+    # The delete routes re-check this on the backend.
+    if is_past_date:
+        deletable_ids = set()
+    else:
+        blocked_ids = timeslot_service.undeletable_trip_ids(slots)
+        deletable_ids = {s.id for s in slots if s.id not in blocked_ids}
 
     prev_date = selected_date - timedelta(days=1)
     next_date = selected_date + timedelta(days=1)
-
-    now = ph_now()
 
     return render_template(
         "manifests/list.html",
         slots=slots,
         # Add Time Slot is disabled for a date before today (PH). The
         # browser recomputes this when the date changes; add_slot enforces it.
-        is_past_date=selected_date < now.date(),
+        is_past_date=is_past_date,
         expired_ids=expired_ids,
         display_status=display_status,
         deletable_ids=deletable_ids,
@@ -423,6 +433,20 @@ def _conditions_unavailable():
     return (condition or {}).get("status") == scheduling_service.STATUS_UNAVAILABLE
 
 
+def _conditions_unsafe():
+    """True when the overall condition is "Unsafe" right now.
+
+    Same source as the timetable indicator and the Confirm Departure
+    warning. If the lookup fails the state is unknown, so this returns False
+    (the Unavailable warning already covers the unknown case)."""
+    try:
+        condition = scheduling_service.get_current_overall_condition()
+    except Exception:
+        current_app.logger.exception("Overall condition lookup failed")
+        return False
+    return (condition or {}).get("status") == scheduling_service.STATUS_UNSAFE
+
+
 def _notice_choices(form):
     """Which channels the admin ticked: (announcement, sms).
 
@@ -632,6 +656,11 @@ def delete_slot(trip_id):
         "manifests.list_slots", date=trip.departure_time.date().isoformat()
     )
 
+    if trip.departure_time.date() < ph_today():
+        db.session.rollback()  # release the row lock, nothing was changed
+        flash(PAST_DATE_DELETE_MSG, "danger")
+        return redirect(back)
+
     reason = timeslot_service.deletion_block_reason(trip)
     if reason:
         db.session.rollback()  # release the row lock, nothing was changed
@@ -684,7 +713,10 @@ def bulk_delete_slots():
         if trip is None:
             continue    # already gone
 
-        reason = timeslot_service.deletion_block_reason(trip)
+        if trip.departure_time.date() < ph_today():
+            reason = PAST_DATE_DELETE_MSG
+        else:
+            reason = timeslot_service.deletion_block_reason(trip)
         if reason:
             db.session.rollback()   # release the row lock, nothing changed
             blocked_count += 1
@@ -751,7 +783,8 @@ def trip_detail(trip_id):
 
 
 def _render_trip_detail(trip, form_values=None, field_errors=None, status=200,
-                        walkin_form=None, walkin_error=None):
+                        walkin_form=None, walkin_error=None,
+                        walkin_rows=None, walkin_mode=None):
     """Render the trip page. After a failed Trip Information save, the
     submitted values and per-field errors come back in so nothing the admin
     typed is lost."""
@@ -822,6 +855,8 @@ def _render_trip_detail(trip, form_values=None, field_errors=None, status=200,
         capacity_full=capacity_full,
         walkin_form=walkin_form or {},
         walkin_error=walkin_error,
+        walkin_rows=walkin_rows,
+        walkin_mode=walkin_mode,
         # Names/identity of the manifest rows, for the instant duplicate check
         # in the Add modal (the server re-checks on submit).
         manifest_identities=[
@@ -862,6 +897,8 @@ def _render_trip_detail(trip, form_values=None, field_errors=None, status=200,
         details_assigned=_details_assigned(trip),
         # Same source as the timetable's overall-condition indicator
         conditions_unavailable=_conditions_unavailable(),
+        # Unsafe: the Depart button asks for confirmation in a modal first.
+        conditions_unsafe=_conditions_unsafe(),
         has_passengers=_has_passengers(trip),
         # Delay Trip modal
         terminal_open=TERMINAL_OPEN.strftime("%H:%M"),
@@ -920,6 +957,49 @@ def assign_boat(trip_id):
     flash("Trip details saved.", "success")
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
+@manifests_bp.route("/manifests/<int:trip_id>/clear-trip-info", methods=["POST"])
+@login_required
+def clear_trip_info(trip_id):
+    """Clear operator, crew, boat and capacity, returning the trip to Unassigned.
+
+    Only allowed while nobody holds a place on the trip (no manifest entry and
+    no pending/approved registration), the same rule that stops Save Changes
+    from leaving the details empty."""
+    trip = Trip.query.filter_by(id=trip_id).with_for_update().first_or_404()
+    blocked = _block_if_read_only(trip)
+    if blocked:
+        return blocked
+
+    if _has_passengers(trip):
+        flash(TRIP_INFO_LOCKED_MSG)
+        return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
+    trip.operator_name = None
+    trip.crew_name = None
+    trip.boat = None
+    db.session.commit()
+
+    flash("Trip details cleared. This trip is unassigned.", "success")
+    return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
+
+def _missing_walkin_fields(values):
+    """Walk-in passengers must have a full name, age and address.
+    Returns e.g. "age and address" for what is missing, or "" if complete."""
+    missing = [
+        label
+        for key, label in (
+            ("full_name", "full name"),
+            ("age", "age"),
+            ("address", "address"),
+        )
+        if not (values.get(key) or "").strip()
+    ]
+    if len(missing) > 1:
+        return ", ".join(missing[:-1]) + " and " + missing[-1]
+    return missing[0] if missing else ""
+
+
 @manifests_bp.route("/manifests/<int:trip_id>/add-walkin", methods=["POST"])
 @login_required
 def add_walkin(trip_id):
@@ -946,9 +1026,12 @@ def add_walkin(trip_id):
         key: request.form.get(key, "")
         for key in ("full_name", "age", "address", "contact_number", "passenger_type")
     }
+    missing = _missing_walkin_fields(form)
     field_errors, cleaned = validate_passenger_fields(request.form)
     error = None
-    if field_errors:
+    if missing:
+        error = f"Please enter the {missing}."
+    elif field_errors:
         field, message = next(iter(field_errors.items()))
         error = f"{field.replace('_', ' ').capitalize()}: {message}"
     else:
@@ -991,6 +1074,137 @@ def add_walkin(trip_id):
     )
 
     return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
+@manifests_bp.route("/manifests/<int:trip_id>/add-walkins-bulk", methods=["POST"])
+@login_required
+def add_walkins_bulk(trip_id):
+    """Register several walk-in passengers at once. All or nothing: if any
+    row is invalid, a duplicate, or there are not enough seats, no one is
+    saved and the rows come back to the modal with the problems listed."""
+    trip = Trip.query.filter_by(id=trip_id).with_for_update().first_or_404()
+    blocked = _block_if_read_only(trip)
+    if blocked:
+        return blocked
+
+    unassigned = _block_if_unassigned(trip)
+    if unassigned:
+        return unassigned
+
+    confirmed = _confirmed_count(trip.id)
+    if manifest_service.is_at_capacity(trip.boat.capacity, confirmed):
+        manifest_service.sync_trip_status(trip, confirmed)
+        db.session.commit()
+        flash("This trip is at full capacity. No additional passengers can be registered.")
+        return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
+    fields = ("full_name", "age", "address", "contact_number", "passenger_type")
+    columns = {f: request.form.getlist(f"bulk_{f}") for f in fields}
+    total = max(len(values) for values in columns.values())
+
+    rows = []
+    for i in range(total):
+        row = {
+            f: (columns[f][i] if i < len(columns[f]) else "").strip()
+            for f in fields
+        }
+        # Skip rows the admin left empty (the type always has a default).
+        if any(row[f] for f in ("full_name", "age", "address", "contact_number")):
+            rows.append(row)
+
+    def _reject(message):
+        db.session.rollback()   # nothing was changed; release the row lock
+        return _render_trip_detail(
+            trip, walkin_rows=rows, walkin_error=message,
+            walkin_mode="bulk", status=400,
+        )
+
+    if not rows:
+        return _reject("Add at least one passenger.")
+
+    seats_left = trip.boat.capacity - confirmed
+    if len(rows) > seats_left:
+        return _reject(
+            f"Only {seats_left} seat{'' if seats_left == 1 else 's'} left, "
+            f"but {len(rows)} passengers were entered. "
+            f"Remove {len(rows) - seats_left} to continue."
+        )
+
+    problems = []
+    cleaned_rows = []
+    first_seen = {}   # normalized name -> row number, for repeats in this list
+    for number, row in enumerate(rows, start=1):
+        missing = _missing_walkin_fields(row)
+        if missing:
+            problems.append(f"Passenger {number}: Please enter the {missing}.")
+            continue
+
+        field_errors, cleaned = validate_passenger_fields(row)
+        if field_errors:
+            field, message = next(iter(field_errors.items()))
+            problems.append(
+                f"Passenger {number}: {field.replace('_', ' ').capitalize()}: {message}"
+            )
+            continue
+
+        duplicate = manifest_service.find_duplicate_message(
+            trip.id,
+            cleaned["full_name"],
+            age=cleaned["age"],
+            contact_number=cleaned["contact_number"],
+        )
+        if duplicate:
+            problems.append(f"Passenger {number}: {duplicate}")
+            continue
+
+        key = " ".join(cleaned["full_name"].split()).lower()
+        if key in first_seen:
+            problems.append(
+                f"Passenger {number}: same name as passenger {first_seen[key]}."
+            )
+            continue
+        first_seen[key] = number
+        cleaned_rows.append(cleaned)
+
+    if problems:
+        return _reject("\n".join(problems))
+
+    new_entries = []
+    for cleaned in cleaned_rows:
+        entry = ManifestEntry(
+            trip_id=trip.id,
+            full_name=manifest_service.clean_name(cleaned["full_name"]),
+            age=cleaned["age"],
+            address=cleaned["address"],
+            contact_number=cleaned["contact_number"],
+            passenger_type=cleaned["passenger_type"],
+            source="walkin",
+        )
+        db.session.add(entry)
+        new_entries.append(entry)
+
+    db.session.flush()
+    manifest_service.sync_trip_status(trip, _confirmed_count(trip.id))
+    db.session.commit()
+
+    for entry in new_entries:
+        activity_log_service.log_action(
+            user_id=session.get("user_id"),
+            admin_name=session.get("full_name", "Unknown"),
+            action=activity_log_service.ACTION_MANIFEST_CREATED,
+            details=(
+                "Created a new manifest for a scheduled trip. "
+                + activity_log_service.describe_trip(trip)
+                + f" | Passenger: {entry.full_name}"
+            ),
+        )
+
+    count = len(new_entries)
+    flash(
+        f"{count} walk-in passenger{'' if count == 1 else 's'} added to the manifest.",
+        "success",
+    )
+    return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
 
 @manifests_bp.route("/manifests/<int:trip_id>/manifest/<int:entry_id>/edit", methods=["POST"])
 @login_required
@@ -1558,9 +1772,23 @@ def confirm_departure(trip_id):
         flash("This trip cannot be departed — it is already Cancelled or Departed.")
         return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
 
+    # Unsafe conditions need an explicit confirmation (the modal on the trip
+    # page sends unsafe_confirmed). Checked here too, so the modal cannot be
+    # skipped and conditions that turned Unsafe after the page loaded are caught.
+    unsafe_now = _conditions_unsafe()
+    if unsafe_now and not request.form.get("unsafe_confirmed"):
+        flash(
+            "Conditions are currently Unsafe. Review them and confirm "
+            "again to depart anyway."
+        )
+        return redirect(url_for("manifests.trip_detail", trip_id=trip.id))
+
     trip.coast_guard_audit_confirmed = True
     trip.status = "Departed"
     trip.departed_at = db.func.now()
+    # Freeze the advisory as it is right now, so the success page keeps
+    # showing the condition at departure instead of the live one.
+    trip.departure_conditions = _snapshot_departure_conditions()
     db.session.commit()
 
     # Audit trail: which account confirmed the departure. The departure is
@@ -1576,6 +1804,10 @@ def confirm_departure(trip_id):
                 + activity_log_service.describe_trip(trip)
                 + f" | Confirmed by: {admin_name}"
                 + f" (account ID {session.get('user_id')})"
+                + (
+                    " | Departed under UNSAFE conditions (operator confirmed)"
+                    if unsafe_now else ""
+                )
             ),
         )
     except Exception:
@@ -1584,6 +1816,201 @@ def confirm_departure(trip_id):
         )
 
     return redirect(url_for("manifests.departure_success", trip_id=trip.id))
+
+
+def _build_manifest_detail(trip):
+    """Builds the dict pdf_service.build_manifest_pdf() expects."""
+    entries = (
+        ManifestEntry.query.filter_by(trip_id=trip.id)
+        .order_by(ManifestEntry.check_in_time)
+        .all()
+    )
+    when = trip.departure_time
+
+    passenger_list = [
+        {
+            "no": index,
+            "full_name": e.full_name,
+            "age": e.age,
+            "address": e.address,
+            "check_in_label": (
+                e.check_in_time.strftime("%I:%M %p") if e.check_in_time else "-"
+            ),
+            "passenger_type": e.passenger_type,
+        }
+        for index, e in enumerate(entries, start=1)
+    ]
+
+    return {
+        "date_label": f"{when.strftime('%B')} {when.day}, {when.year}",
+        "time_label": when.strftime("%I:%M %p").lstrip("0"),
+        "capacity": trip.boat.capacity if trip.boat else None,
+        "passengers": len(entries),
+        "boat_name": trip.boat.name if trip.boat else None,
+        "status": trip.status,
+        "driver_name": trip.operator_name,
+        "crew_name": trip.crew_name,
+        "passenger_list": passenger_list,
+    }
+
+
+@manifests_bp.route("/manifests/<int:trip_id>/export-pdf")
+@login_required
+def export_pdf(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+    detail = _build_manifest_detail(trip)
+
+    pdf_bytes = pdf_service.build_manifest_pdf(detail)
+    filename = pdf_service.manifest_filename(detail)
+
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# Water level limits (metres). Outside LOW..HIGH is Unsafe; within
+# CAUTION_MARGIN of either limit is Caution; anything else is Safe.
+WATER_LEVEL_LOW_M = 10.50
+WATER_LEVEL_HIGH_M = 12.50
+WATER_LEVEL_CAUTION_MARGIN_M = 0.50
+
+
+def _water_level_conditions(reading):
+    """Fallback: status from the latest water level reading alone.
+
+    status is one of: none, safe, caution, unsafe (the template colours the
+    banner from it)."""
+    level = getattr(reading, "water_level_m", None) if reading else None
+    if level is None:
+        return {
+            "status": "none",
+            "label": "Not recorded",
+            "message": "Environmental conditions were not recorded for this trip.",
+        }
+
+    level = float(level)
+    text = f"{level:.2f} m"
+
+    if level < WATER_LEVEL_LOW_M:
+        return {
+            "status": "unsafe",
+            "label": "Unsafe",
+            "message": f"Water level is {text}, critically low. Verify conditions before future departures.",
+        }
+    if level > WATER_LEVEL_HIGH_M:
+        return {
+            "status": "unsafe",
+            "label": "Unsafe",
+            "message": f"Water level is {text}, critically high. Verify conditions before future departures.",
+        }
+    if level < WATER_LEVEL_LOW_M + WATER_LEVEL_CAUTION_MARGIN_M:
+        return {
+            "status": "caution",
+            "label": "Caution",
+            "message": f"Water level is {text}, close to the lower limit. Keep monitoring conditions.",
+        }
+    if level > WATER_LEVEL_HIGH_M - WATER_LEVEL_CAUTION_MARGIN_M:
+        return {
+            "status": "caution",
+            "label": "Caution",
+            "message": f"Water level is {text}, close to the upper limit. Keep monitoring conditions.",
+        }
+    return {
+        "status": "safe",
+        "label": "Safe",
+        "message": f"Water level is {text}, within safe limits.",
+    }
+
+
+def _condition_level(status):
+    """Map the dashboard's status text to none/safe/caution/unsafe."""
+    text = str(status or "").strip().lower()
+    if not text or "unavailable" in text:
+        return None
+    # "unsafe" contains "safe", so it must be checked first.
+    if any(word in text for word in ("unsafe", "danger", "hazard", "avoid")):
+        return "unsafe"
+    if any(word in text for word in ("caution", "advisory", "moderate", "warning")):
+        return "caution"
+    if any(word in text for word in ("safe", "normal", "good", "clear")):
+        return "safe"
+    return None
+
+
+def _departure_conditions(reading):
+    """Banner for the departure success page.
+
+    Uses the same overall condition as the dashboard / timetable
+    (scheduling_service.get_current_overall_condition) so the two always
+    agree. Only if that is unavailable does it fall back to the latest
+    water level reading on its own."""
+    try:
+        condition = scheduling_service.get_current_overall_condition() or {}
+    except Exception:
+        current_app.logger.exception("Overall condition lookup failed")
+        condition = {}
+
+    level = _condition_level(condition.get("status"))
+    if level:
+        label = {"safe": "Safe", "caution": "Caution", "unsafe": "Unsafe"}[level]
+        detail = next(
+            (
+                str(condition[key]).strip()
+                for key in ("message", "summary", "description", "reason")
+                if condition.get(key)
+            ),
+            "",
+        )
+        return {
+            "status": level,
+            "label": label,
+            "message": detail or f"Overall environmental conditions are rated {label.lower()}.",
+        }
+
+    return _water_level_conditions(reading)
+
+
+def _snapshot_departure_conditions():
+    """The banner as it is at this moment, as a JSON-safe dict.
+
+    Called when a departure is confirmed. It must never block the departure,
+    so any failure is logged and stored as "not recorded"."""
+    try:
+        latest_reading = EnvironmentalReading.query.order_by(
+            EnvironmentalReading.retrieved_at.desc()
+        ).first()
+        conditions = _departure_conditions(latest_reading)
+        return {
+            "status": str(conditions["status"]),
+            "label": str(conditions["label"]),
+            "message": str(conditions["message"]),
+        }
+    except Exception:
+        current_app.logger.exception("Could not snapshot departure conditions")
+        return None
+
+
+def _recorded_departure_conditions(trip):
+    """The banner recorded when `trip` departed. Never the live condition:
+    trips with no recorded snapshot show "not recorded"."""
+    snap = trip.departure_conditions
+    if (
+        isinstance(snap, dict)
+        and snap.get("status") in ("none", "safe", "caution", "unsafe")
+        and snap.get("message")
+    ):
+        return {
+            "status": snap["status"],
+            "label": snap.get("label", ""),
+            "message": snap["message"],
+        }
+    return {
+        "status": "none",
+        "label": "Not recorded",
+        "message": "No advisory was recorded for this departure.",
+    }
 
 
 @manifests_bp.route("/manifests/<int:trip_id>/departure-success")
@@ -1595,19 +2022,16 @@ def departure_success(trip_id):
         EnvironmentalReading.retrieved_at.desc()
     ).first()
 
-    if latest_reading is None or latest_reading.water_level_m is None:
-        conditions_message = "Environmental conditions not yet recorded."
-    elif latest_reading.water_level_m < 10.50:
-        conditions_message = "Water level is critically low. Verify conditions before future departures."
-    elif latest_reading.water_level_m > 12.50:
-        conditions_message = "Water level is critically high. Verify conditions before future departures."
-    else:
-        conditions_message = "Current conditions are normal and within safe limits."
+    conditions = _recorded_departure_conditions(trip)
+    conditions_message = conditions["message"]
 
     return render_template(
         "manifests/departure_success.html",
         trip=trip,
+        conditions=conditions,
         conditions_message=conditions_message,
         latest_reading=latest_reading,
-        active_page="manifests"
+        passenger_count=_confirmed_count(trip.id),
+        confirmed_by=session.get("full_name"),
+        active_page="manifests",
     )
