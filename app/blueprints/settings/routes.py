@@ -1,6 +1,6 @@
 import json
 
-from flask import Response, abort, flash, redirect, render_template, request, session, url_for
+from flask import Response, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app.blueprints.settings import settings_bp
 from app.extensions import db
@@ -212,47 +212,13 @@ def update_personal_info():
         flash("Last name must be 50 characters or less.", "danger")
         return _back("account-section")
 
-        # --- Email (controls password reset, so changing it needs the password) ---
-    new_email = request.form.get("email", "").strip().lower() or None
-    old_email = (user.email or "").lower() or None
-    email_changed = new_email != old_email
-
-    if email_changed:
-        current_password = request.form.get("current_password", "")
-        if not verify_password(current_password, user.password_hash):
-            flash("Enter your current password to change your email.", "danger")
-            return _back("account-section")
-
-        if new_email:
-            if len(new_email) > 120 or not _EMAIL_RE.match(new_email):
-                flash("Please enter a valid email address.", "danger")
-                return _back("account-section")
-
-            taken = User.query.filter(
-                User.email == new_email, User.id != user.id
-            ).first()
-            if taken:
-                flash("That email is already used by another admin.", "danger")
-                return _back("account-section")
-
     full_name = f"{first_name} {last_name}"
 
     user.full_name = full_name
     session["full_name"] = full_name
     user.phone = phone
 
-    if email_changed:
-        user.email = new_email
-
     db.session.commit()
-
-    if email_changed:
-        activity_log_service.log_action(
-            user_id=user.id,
-            admin_name=user.full_name,
-            action=getattr(activity_log_service, "ACTION_UPDATED_EMAIL", "Updated email"),
-            details="Recovery email changed." if new_email else "Recovery email removed.",
-        )
 
     flash("Personal information updated successfully.", "success")
     return _back("account-section")
