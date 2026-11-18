@@ -88,6 +88,7 @@ class Config:
     SEMAPHORE_SENDER_NAME = os.environ.get("SEMAPHORE_SENDER_NAME", "")
     SEMAPHORE_API_TIMEOUT_SECONDS = 10
 
+    SMS_ENABLED = os.environ.get("SMS_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
     UNISMS_API_URL = "https://unismsapi.com/api/sms"
     UNISMS_API_KEY = os.environ.get("UNISMS_API_KEY", "")
     UNISMS_API_TIMEOUT_SECONDS = 10
