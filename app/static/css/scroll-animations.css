@@ -1,0 +1,78 @@
+/* Hidden state: before the element scrolls into view */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+/* Visible state: JS adds this class */
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Optional delays so cards appear one after another */
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+
+/* Respect users who turn off animations in their OS settings */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Hero entrance: plays once on page load */
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-hero-content h1,
+.home-hero-content p,
+.home-hero-actions {
+  animation: hero-fade-up 0.8s ease both;
+}
+
+.home-hero-content h1 { animation-delay: 0.1s; }
+.home-hero-content p { animation-delay: 0.35s; }
+.home-hero-actions { animation-delay: 0.6s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-content h1,
+  .home-hero-content p,
+  .home-hero-actions {
+    animation: none;
+  }
+}
+
+/* Hero: clip the zoomed image so it can't spill outside the hero box */
+.home-hero {
+  overflow: hidden;
+}
+
+/* Slow zoom on the lake photo */
+@keyframes hero-slow-zoom {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+
+.home-hero-image {
+  animation: hero-slow-zoom 14s ease-out forwards;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-image {
+    animation: none;
+  }
+}
